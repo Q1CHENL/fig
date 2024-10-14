@@ -1,1 +1,1 @@
-# GIF-Trimmer
+# Trif
