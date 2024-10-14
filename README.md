@@ -7,3 +7,4 @@ Simple and usable gif trimmer
 
 - Improve UI
 - Previews frames
+- Preview trimmed gif
