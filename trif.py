@@ -9,10 +9,11 @@ class Trif(Gtk.Window):
         Gtk.Window.__init__(self, title="Trif - GIF Trimmer")
         self.set_border_width(10)
         self.set_default_size(400, 400)
-
-        self.header_bar = ui.header_bar()
-        self.set_titlebar(self.header_bar)
         
+        # Toggle light/dark mode
+        settings = Gtk.Settings.get_default()
+        settings.set_property("gtk-application-prefer-dark-theme", False)
+
         self.home_box = ui.home_box()
         self.editor_box = ui.editor_box()
         self.add(self.home_box)
@@ -35,19 +36,52 @@ class Trif(Gtk.Window):
 
         self.gif_frames = []
         self.frame_durations = []
-    
-    def load_editor_ui(self):
-        self.remove(self.home_box)
-        self.add(self.editor_box)
+        
+        # Create a horizontal pane (split view)
+        pane = Gtk.Paned.new(Gtk.Orientation.HORIZONTAL)
+
+        # Create a sidebar (a vertical box to contain widgets)
+        sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+
+        # Add some items to the sidebar (buttons in this case)
+
+        sidebar.pack_start(self.info_label, False, False, 0)
+        sidebar.pack_start(self.frame_grid, False, False, 0)
+        sidebar.pack_start(self.save_button, False, False, 0)
+        sidebar.pack_start(self.image, True, True, 0)
+
+        # Add the sidebar to the left side of the pane
+        pane.pack1(sidebar, resize=False, shrink=False)
+        
+        self.editor_box.pack_start(pane, False, False, 0)        
         self.editor_box.pack_start(self.info_label, False, False, 0)
         self.editor_box.pack_start(self.frame_grid, False, False, 0)
         self.editor_box.pack_start(self.save_button, False, False, 0)
         self.editor_box.pack_start(self.image, True, True, 0)
+        
+        main_content = Gtk.Label(label="Main Content Area")
+        main_content.set_hexpand(True)  # Allow the content to expand horizontally
+        main_content.set_vexpand(True)  # Allow the content to expand vertically
+
+        self.add(pane)
+        # self.editor_box.pack_start(pane, False, False, 0)
+
+    
+    def load_editor_ui(self):
+        self.remove(self.home_box)
+        self.add(self.editor_box)
         self.editor_box.show_all()
         
+        
+    def load_home_ui(self):
+        self.remove(self.editor_box)
+        self.add(self.home_box)
+        self.home_box.show_all()
+                
     
     def show_about_dialog(self, widget):
         pass
+
 
     def select_gif(self, widget):
         dialog = Gtk.FileChooserDialog(

@@ -1,16 +1,8 @@
 from gi.repository import Gtk, GdkPixbuf
 
 
-def header_bar():
-    header_bar = Gtk.HeaderBar()
-    header_bar.set_show_close_button(True)
-    header_bar.props.title = "Trif"
-    header_bar.props.subtitle = "Trim your GIF by frames"
-    return header_bar
-
-
 def editor_box():
-    editor_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    editor_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
     editor_box.set_homogeneous(False)
     editor_box.set_margin_top(20)
     editor_box.set_margin_bottom(20)
@@ -22,7 +14,7 @@ def editor_box():
 def home_box():
     home_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
     home_box.set_homogeneous(False)
-    home_box.set_margin_top(140)
+    home_box.set_margin_top(120)
     home_box.set_margin_bottom(20)
     home_box.set_margin_start(20)
     home_box.set_margin_end(20)
@@ -46,8 +38,22 @@ def info_label():
 
 
 def select_button(trif):
-    # Initial button to select GIF
     select_button = Gtk.Button(label="Select GIF")
+    
+    # Initial button to select GIF
+    css_provider = Gtk.CssProvider()
+    css = """
+    button {
+        background-color: white;
+        color: black;
+    }
+    """
+    css_provider.load_from_data(css.encode())
+    
+    # Create a style context and add the provider
+    style_context = select_button.get_style_context()
+    style_context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+
     select_button.set_size_request(150, 50)  # Set specific size for button
     select_button.connect("clicked", trif.select_gif)
     select_button.set_halign(Gtk.Align.CENTER)  # Center the button
