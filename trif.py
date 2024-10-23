@@ -31,8 +31,8 @@ class Trif(Gtk.Window):
         # self.separator.set_margin_top(20)
 
         # Image display (hidden by default)
-        self.image = Gtk.Image()
-        self.image.set_margin_top(20)
+        self.image_display = Gtk.Image()
+        self.image_display.set_margin_top(20)
 
         self.gif_frames = []
         self.frame_durations = []
@@ -48,7 +48,7 @@ class Trif(Gtk.Window):
         sidebar.pack_start(self.info_label, False, False, 0)
         sidebar.pack_start(self.frame_grid, False, False, 0)
         sidebar.pack_start(self.save_button, False, False, 0)
-        sidebar.pack_start(self.image, True, True, 0)
+        sidebar.pack_start(self.image_display, True, True, 0)
 
         # Add the sidebar to the left side of the pane
         pane.pack1(sidebar, resize=False, shrink=False)
@@ -57,7 +57,7 @@ class Trif(Gtk.Window):
         self.editor_box.pack_start(self.info_label, False, False, 0)
         self.editor_box.pack_start(self.frame_grid, False, False, 0)
         self.editor_box.pack_start(self.save_button, False, False, 0)
-        self.editor_box.pack_start(self.image, True, True, 0)
+        self.editor_box.pack_start(self.image_display, True, True, 0)
         
         main_content = Gtk.Label(label="Main Content Area")
         main_content.set_hexpand(True)  # Allow the content to expand horizontally
@@ -123,20 +123,16 @@ class Trif(Gtk.Window):
             # Show previously hidden elements after loading a GIF
             # self.separator.show()
             self.info_label.set_text(f"Total frames: {gif.n_frames} | Total time: {total_duration:.2f} seconds")
-            self.info_label.show()
-            self.frame_grid.show()
-            self.start_frame_entry.set_text("0")
-            self.end_frame_entry.set_text(str(gif.n_frames - 1))
-            self.save_button.set_sensitive(True)
-            self.save_button.show()
             self.show_frame(0)
-            self.image.show()
+            self.image_display.show()
 
         except Exception as e:
             dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, "Error")
             dialog.format_secondary_text(f"Failed to load GIF: {str(e)}")
             dialog.run()
             dialog.destroy()
+    
+    
 
     def show_frame(self, frame_idx):
         if 0 <= frame_idx < len(self.gif_frames):
@@ -144,7 +140,8 @@ class Trif(Gtk.Window):
             frame_image = frame_image.convert("RGB")
             frame_image.save("/tmp/temp_frame.png")  # Save temp image
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale("/tmp/temp_frame.png", 300, 300, True)
-            self.image.set_from_pixbuf(pixbuf)
+            self.image_display.set_from_pixbuf(pixbuf)
+            
 
     def save_frames(self, widget):
         start_idx = int(self.start_frame_entry.get_text())
