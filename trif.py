@@ -100,9 +100,10 @@ class Trif(Gtk.Window):
         if response == Gtk.ResponseType.OK:
             gif_path = dialog.get_filename()
             self.load_gif(gif_path)
+            self.home_box.hide()
+            self.load_editor_ui()
         dialog.destroy()
-        self.home_box.hide()
-        self.load_editor_ui()
+
 
     def load_gif(self, gif_path):
         try:
