@@ -1,6 +1,7 @@
 # Trif
 
-Simple and usable gif trimmer
+A Simple and usable gif trimmer.
+
 ![UI](screenshot.png)
 
 ## Todos
