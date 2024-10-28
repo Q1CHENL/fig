@@ -17,9 +17,9 @@
 - Combine frames to GIF
 - Stop icon for the play button
 - Reverse gif
-- Port to GTK4
+- ~~Port to GTK4~~
 
 ## Notice
 
 - Homepage UI is inspired by [sly](https://github.com/kra-mo/sly)
-- Loading GIF is not fast, you may have to wait a little bit.
+- Loading GIFs is not fast, you may have to wait a bit.
