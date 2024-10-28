@@ -2,10 +2,10 @@
 
 **A simple and usable gif editor.**
 
-<div style="display: flex; gap: 10px; justify-content: center;">
-  <img src="assets/screenshot-home.png" alt="Home UI" style="max-width: 51%; height: auto;">
-  <img src="assets/screenshot-editor.png" alt="Editor UI" style="max-width: 51%; height: auto;">
-</div>
+<p>
+    <img src="assets/screenshot-home.png" width=503>
+    <img src="assets/screenshot-editor.png" width=503>
+</p>
 
 ## Todos
 
