@@ -2,10 +2,8 @@
 
 **A simple and usable gif editor.**
 
-<p>
-    <img src="assets/screenshot-home.png" width=503>
-    <img src="assets/screenshot-editor.png" width=503>
-</p>
+![UI](assets/screenshot-home.png)
+![UI](assets/screenshot-editor.png)
 
 ## Todos
 
