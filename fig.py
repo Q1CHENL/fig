@@ -1,168 +1,93 @@
 import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GdkPixbuf, Gdk
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gdk', '4.0')
+from gi.repository import Gtk, Gdk, Gio, GLib
 from PIL import Image
 import home, editor
+from utils import load_css
 
-class Fig(Gtk.Window):
-    def __init__(self):
-        Gtk.Window.__init__(self)
-        # self.set_border_width(100)
-        self.set_default_size(800, 600)
-        self.round_radius = 15
+class Fig(Gtk.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app)
         
-        # CSS to round the bottom corners
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(f"""
-            window {{
-                border-radius: 0 0 {self.round_radius}px {self.round_radius}px; /* Rounding bottom left and right corners */
-            }}
-            decoration {{
-                border-radius: {self.round_radius}px;
-            }}
-            window.background {{
-                    border-radius: 0 0 {self.round_radius}px {self.round_radius}px;
-            }}
-        """)
-    
-        # Apply the CSS to the window
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            css_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-
-        # Toggle light/dark mode
-        settings = Gtk.Settings.get_default()
-        # settings.set_property("gtk-application-prefer-dark-theme", False)
-
-        self.set_titlebar(self.header_bar())
+        self.set_default_size(800, 600)
         self.set_resizable(False)
-
-        # This sets the window the parent of the homebox and editorbox
+        
+        # Load global CSS once
+        load_css()
+        
+        # Setup header bar
+        header = Gtk.HeaderBar()
+        header.set_title_widget(Gtk.Label(label="Fig"))  # GTK4 way to set title
+        self.set_titlebar(header)
+        
+        # Settings button
+        settings_button = Gtk.Button()
+        settings_icon = Gio.ThemedIcon(name="open-menu-symbolic")
+        settings_image = Gtk.Image.new_from_gicon(settings_icon)
+        settings_button.set_child(settings_image)
+        load_css(settings_button, ["menu-button"])  # Add specific class
+        settings_button.connect("clicked", self.show_menu)
+        header.pack_end(settings_button)
+        
+        # Main content
         self.home_box = home.HomeBox()
         self.editor_box = editor.EditorBox()
-        self.add(self.home_box)
+        
+        # Start with home box
+        self.set_child(self.home_box)
+        
+        # Define and connect actions
+        preferences_action = Gio.SimpleAction.new("preferences", None)
+        preferences_action.connect("activate", self.show_preferences)
+        self.add_action(preferences_action)
+        
+        import_frames_action = Gio.SimpleAction.new("import_frames", None)
+        import_frames_action.connect("activate", self.import_frames)
+        self.add_action(import_frames_action)
 
     def load_editor_ui(self):
-        self.remove(self.home_box)
-        self.add(self.editor_box)
-        self.editor_box.show_all()
-
+        self.set_child(self.editor_box)
+        
     def load_home_ui(self):
-        self.remove(self.editor_box)
-        self.add(self.home_box)
-        self.home_box.show_all()
-
-    def header_bar(self):
-        hb = Gtk.HeaderBar()
-        hb.set_name("mw_hb")
-        hb.set_show_close_button(True)
-        hb.props.title = "Fig"
-
-        # CSS to change the background color of the HeaderBar
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(b"""
-        #mw_hb {
-            border-width: 0;
-            background-image: none; /* Clear inherited styles */
-            background-image: linear-gradient(to bottom, #242424, #242424); /* Solid color */
-            color: white; /* Text color */
-        }
-        """)
-        # Apply the CSS to the header bar
-        hb.get_style_context().add_provider(
-            css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-
-        # Add settings button on the left side of minimize
-        settings_button = Gtk.Button()
-        settings_icon = Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON)
-        settings_button.set_image(settings_icon)
-        settings_button.connect("clicked", self.show_menu)
-        
-        # Add CSS for circular hover effect
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data("""
-            button {
-                border-radius: 9999px;
-            }
-        """.encode())
-        
-        settings_button.get_style_context().add_provider(
-            css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER
-        )
-        
-        # Add the button to the header bar
-        hb.pack_end(settings_button)
-        
-        return hb
+        self.set_child(self.home_box)
 
     def show_menu(self, button):
-        # Create a popup menu
-        menu = Gtk.PopoverMenu.new()
-        menu.set_relative_to(button)
+        popover = Gtk.PopoverMenu()
+        popover.set_parent(button)
         
-        # CSS to remove border
-        # css_provider = Gtk.CssProvider()
-        # css_provider.load_from_data("""
-        #     popover * {
-        #         box-shadow: none;
-        #         border-style: hidden;
-        #         margin: 0px;
-        #         border-radius: 0px;
-        #     }
-        #         .window-frame {
-        #         box-shadow: none;
-        #         margin: 1px;
-        #     }
-        #     .suggestions {
-        #         padding-top: 0px;
-        #     }
-        # """.encode())
+        menu = Gio.Menu()
+        menu.append("Preferences", "win.preferences")
+        menu.append("Import frames", "win.import_frames")
         
-        # menu.get_style_context().add_provider(
-        #     css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        # )
-        
-        # Create a box to hold menu items
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        # box.set_margin_top(5)
-        # box.set_margin_bottom(5)
-        
-        # Add Preferences button
-        preferences_button = Gtk.ModelButton()
-        preferences_button.set_label("Preferences")
-        preferences_button.set_alignment(0.0, 0.5)  # Left align text
-        preferences_button.connect("clicked", self.show_preferences)
-        box.pack_start(preferences_button, False, False, 0)
-        
-        # Add Import frames button
-        import_button = Gtk.ModelButton()
-        import_button.set_label("Import frames")
-        import_button.set_alignment(0.0, 0.5)  # Left align text
-        import_button.connect("clicked", self.import_frames)
-        box.pack_start(import_button, False, False, 0)
-        
-        # Add the box to the menu and show it
-        menu.add(box)
-        box.show_all()
-        menu.popup()
+        popover.set_menu_model(menu)
+        popover.popup()
 
-    def show_preferences(self, button):
-        # TODO: Implement preferences dialog
-        pass
+    def show_preferences(self, action, param):
+        # Create a simple preferences window prototype
+        preferences_window = Gtk.Window(transient_for=self, modal=True, title="Preferences")
+        preferences_window.set_default_size(400, 300)
+        
+        label = Gtk.Label(label="Preferences Window Prototype")
+        preferences_window.set_child(label)
+        
+        preferences_window.show()
 
-    def import_frames(self, button):
-        # TODO: Implement frame import functionality
-        pass
+    def import_frames(self, action, param):
+        # Placeholder for import frames functionality
+        print("Import frames clicked")
 
-    def show_settings(self, widget):
-        # TODO: Implement settings dialog
-        pass
+class FigApplication(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id="com.github.fig")
+        
+    def do_activate(self):
+        win = Fig(self)
+        win.present()
 
+def main():
+    app = FigApplication()
+    return app.run(None)
 
 if __name__ == "__main__":
-    app = Fig()
-    app.connect("destroy", Gtk.main_quit)
-    app.show_all()
-    Gtk.main()
+    main()

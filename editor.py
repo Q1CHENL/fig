@@ -1,193 +1,227 @@
-from gi.repository import Gtk, GdkPixbuf, GLib
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gdk', '4.0')
+from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf
+import frameline
+import time
+from utils import load_css
 from PIL import Image
-import frameline, time
+import io
+import os
 
 
 class EditorBox(Gtk.Box):
     def __init__(self):
-        Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        self.set_homogeneous(False)
+        super().__init__()
+        self.button_height = 40
+        
+        # Main box spacing
+        self.set_orientation(Gtk.Orientation.VERTICAL)
+        self.set_spacing(0)  # Reduced from 10 to 0
         self.set_margin_top(20)
         self.set_margin_bottom(20)
-        self.set_margin_start(20)
-        self.set_margin_end(20)
-        self.set_margin_right(20)
-        self.button_height = 40
-
-        self.gif_frames = []
-        self.frame_durations = []
-
-        # Image display area (main image preview) takes up the main upper space
-        self.image_display = Gtk.Image()
-        self.image_display.set_size_request(700, 500)
+        self.set_margin_start(80)
+        self.set_margin_end(80)
+        
+        # Increase image display dimensions
+        self.image_display_width = 600   # Increased from 400
+        self.image_display_height = 450  # Increased from 300
+        
+        # Create a fixed-size container for the image
+        image_container = Gtk.Box()
+        image_container.set_size_request(self.image_display_width, self.image_display_height)
+        image_container.set_halign(Gtk.Align.CENTER)
+        image_container.set_valign(Gtk.Align.CENTER)
+        image_container.set_vexpand(True)  # Allow container to expand vertically
+        
+        # Image display area setup
+        self.image_display = Gtk.Picture()
+        self.image_display.set_can_shrink(True)
+        self.image_display.set_keep_aspect_ratio(True)
+        self.image_display.set_halign(Gtk.Align.CENTER)
+        self.image_display.set_valign(Gtk.Align.CENTER)
+        load_css(self.image_display, ["image-display"])
+        
+        # Add image display to the container
+        image_container.append(self.image_display)
+               # Info label
         self.info_label = Gtk.Label()
-
-
-        # Bottom section container for slider, play, and save button (HORIZONTAL layout)
-        self.bottom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        self.bottom_box.set_margin_start(50)
-        self.bottom_box.set_margin_end(50)
-        self.bottom_box.set_margin_bottom(20)
-
-        self.pack_start(self.image_display, True, True, 0)
-        self.pack_start(self.info_label, False, False, 0)
-        self.pack_start(self.bottom_box, False, False, 0)        
+        self.info_label.set_margin_top(10)
+        self.info_label.set_margin_bottom(10)
+        self.info_label.set_halign(Gtk.Align.CENTER)
+        self.append(self.info_label)
+        self.append(image_container)
+        
+        # Controls box - tighter positioning
+        controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        controls_box.set_margin_top(15)    # Small top margin
+        controls_box.set_margin_bottom(5) # Small bottom margin
+        controls_box.set_margin_start(5)
+        controls_box.set_margin_end(5)
+        controls_box.set_vexpand(False)
+        
+        # Frameline
+        self.frameline = frameline.FrameLine(min_value=0, max_value=0, stride=1)  # Initialize with 0 frames
+        self.frameline.set_hexpand(True)
+        self.frameline.connect('frames-changed', self.on_frames_changed)
+        controls_box.append(self.frameline)
+        
+        # Button container
+        buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        buttons_box.set_halign(Gtk.Align.END)  # Align buttons to the right
+        
+        # Add buttons
+        buttons_box.append(self.play_button())
+        buttons_box.append(self.save_button())
+        
+        # Add buttons to controls
+        controls_box.append(buttons_box)
+        
+        # Add controls to main box
+        self.append(controls_box)
+        
+        # GIF handling properties
+        self.frames = []
         self.current_frame = 0
         self.is_playing = False
-        self.playback_start_time = 0
-        self.playback_accumulated_duration = 0
+        self.play_timeout_id = None
 
+    def load_gif(self, file_path):
+        """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
+        try:
+            with Image.open(file_path) as gif:
+                frame_count = gif.n_frames
+                total_duration = 0
+                self.frames = []
+                self.frame_durations = []  # Store frame durations
+                
+                for frame in range(frame_count):
+                    gif.seek(frame)
+                    duration = gif.info.get('duration', 100) / 1000.0
+                    total_duration += duration
+                    pixbuf = self._pil_to_pixbuf(gif.convert('RGBA'))
+                    self.frames.append(pixbuf)
+                    self.frame_durations.append(duration * 1000)  # Store duration in milliseconds
+                
+                # Update frameline with 1-based frame range
+                self.frameline.min_value = 1
+                self.frameline.max_value = frame_count
+                self.frameline.left_value = 1
+                self.frameline.right_value = frame_count
+                self.frameline.queue_draw()
+                
+                # Update info label
+                self.info_label.set_text(
+                    f"Total Frames: {frame_count} • Duration: {total_duration:.2f}s"
+                )
+                
+                if self.frames:
+                    self.display_frame(0)
+                    print(f"Loaded GIF with {frame_count} frames, {total_duration:.2f}s duration")
+            
+        except Exception as e:
+            print(f"Error loading GIF: {e}")
 
-    def save_button(self):
-        save_button = Gtk.Button(label="Save")
-        save_button.set_size_request(60, self.button_height)
-        save_button.connect("clicked", self.save_frames)
-        save_button.set_halign(Gtk.Align.CENTER)
-        save_button.set_sensitive(True)
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(f"""
-            button {{
-                border-radius: {self.button_height}px;
-                /*background-color: #3584E4;*/
-                background-color: white;
-                color: black;
-            }}
-        """.encode("utf-8"))
+    def display_frame(self, frame_index):
+        """Display a specific frame in the image display"""
+        if not self.frames or not (0 <= frame_index < len(self.frames)):
+            return
+            
+        try:
+            pixbuf = self.frames[frame_index]
+            scaled_pixbuf = self.scale_pixbuf_to_fit(
+                pixbuf, 
+                self.image_display_width, 
+                self.image_display_height
+            )
+            self.image_display.set_pixbuf(scaled_pixbuf)
+            self.current_frame = frame_index
+            
+        except Exception as e:
+            print(f"Error displaying frame: {e}")
 
-        save_button.get_style_context().add_provider(
-            css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER
+    def scale_pixbuf_to_fit(self, pixbuf, max_width, max_height):
+        """Scale pixbuf to fit within the given dimensions while maintaining aspect ratio"""
+        width = pixbuf.get_width()
+        height = pixbuf.get_height()
+        
+        # Calculate scale to fill the display area while maintaining aspect ratio
+        scale_width = max_width / width
+        scale_height = max_height / height
+        scale = min(scale_width, scale_height)  # Changed from max() to min() to fit within bounds
+        
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        
+        return pixbuf.scale_simple(
+            new_width, 
+            new_height, 
+            GdkPixbuf.InterpType.HYPER
         )
-        return save_button
 
-    def play_button(self):
-        play_button = Gtk.Button()
-        icon = Gtk.Image.new_from_icon_name("media-playback-start", Gtk.IconSize.BUTTON)
-        play_button.set_image(icon)
-        play_button.set_size_request(self.button_height, self.button_height)
-        play_button.connect("clicked", self.play_edited_frames)
-
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(f"""
-            button {{
-                border-radius: {self.button_height}px;
-                color: white;
-            }}
-        """.encode("utf-8"))
-
-        play_button.get_style_context().add_provider(
-            css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER
-        )
-
-        return play_button
-
-    def info_label():
-        # Info label (hidden by default)
-        info_label = Gtk.Label()
-        info_label.set_margin_top(10)
-        return info_label
-    
-    def play_edited_frames(self, widget):
+    def play_edited_frames(self, button):
+        """Start or stop playing the edited frames"""
         if self.is_playing:
-            self.stop_playback()
+            # Stop playing
+            self.is_playing = False
+            self.update_play_button_icon(False)
+            if self.play_timeout_id:
+                GLib.source_remove(self.play_timeout_id)
+                self.play_timeout_id = None
         else:
-            self.start_playback()
-
-    def start_playback(self):
-        self.is_playing = True
-        self.current_frame = int(self.fl.left_value)
-        self.playback_start_time = time.time()
-        self.playback_accumulated_duration = 0
-        GLib.idle_add(self.play_next_frame)
-
-    def stop_playback(self):
-        self.is_playing = False
+            # Start playing
+            self.is_playing = True
+            self.update_play_button_icon(True)
+            
+            # Reset to start frame
+            start = int(round(self.frameline.left_value)) - 1  # Convert to 0-based index
+            self.current_frame = start
+            self.display_frame(self.current_frame)
+            
+            # Schedule the first frame
+            self.play_next_frame()
 
     def play_next_frame(self):
-        if not self.is_playing or self.current_frame > int(self.fl.right_value):
-            self.is_playing = False
+        """Play the next frame in the sequence"""
+        if not self.is_playing:
             return False
-
-        self.show_frame(self.current_frame)
+            
+        # Get current frame range
+        start = int(round(self.frameline.left_value)) - 1  # Convert to 0-based index
+        end = int(round(self.frameline.right_value)) - 1  # Convert to 0-based index
         
-        # Only update accumulated duration if we're not at the last frame
-        if self.current_frame < len(self.frame_durations):
-            self.playback_accumulated_duration += self.frame_durations[self.current_frame]
-
-        self.current_frame += 1
-
-        # Check if we've reached the end
-        if self.current_frame > int(self.fl.right_value):
+        # Calculate next frame within range
+        next_frame = self.current_frame + 1
+        
+        if next_frame > end:
+            # Stop playing when reaching the end frame
             self.is_playing = False
+            self.update_play_button_icon(False)  # Update icon to play
             return False
-
-        elapsed_time = time.time() - self.playback_start_time
-        delay = max(0, int((self.playback_accumulated_duration - elapsed_time) * 1000))
-
-        GLib.timeout_add(delay, self.play_next_frame)
+        
+        self.display_frame(next_frame)
+        self.current_frame = next_frame
+        
+        # Schedule next frame
+        self.play_timeout_id = GLib.timeout_add(100, self.play_next_frame)
         return False
 
-    def load_gif(self, gif_path):
-        try:
-            gif = Image.open(gif_path)
-            self.gif_frames = []
-            self.frame_durations = []
-            total_duration = 0
-
-            for frame in range(gif.n_frames):
-                gif.seek(frame)
-                frame_image = gif.copy().convert("RGBA")
-                self.gif_frames.append(frame_image)
-                frame_duration = gif.info.get(
-                    'duration', 100) / 1000.0  # ms to seconds
-                self.frame_durations.append(frame_duration)
-                total_duration += frame_duration
-
-            # Show previously hidden elements after loading a GIF
-            self.info_label.set_text(f"Total frames: {gif.n_frames} | Total time: {
-                                     total_duration:.2f} seconds"
-                                     )
-            self.fl = frameline.FrameLine(min_value=0, max_value=len(self.gif_frames), stride=1)
-            self.fl.set_value_changed_callback(self.on_frameline_value_changed)
-            self.bottom_box.pack_start(self.fl, True, True, 0)
-            self.bottom_box.pack_start(self.play_button(), False, False, 0)
-            self.bottom_box.pack_start(self.save_button(), False, False, 0)
-            self.show_frame(0)
-        except Exception as e:
-            dialog = Gtk.MessageDialog(
-                0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, "Error")
-            dialog.format_secondary_text(f"Failed to load GIF: {str(e)}")
-            dialog.run()
-            dialog.destroy()
-
-    def show_frame(self, frame_index):
-        if 0 <= frame_index < len(self.gif_frames):
-            frame_image = self.gif_frames[frame_index]
-            frame_image = frame_image.convert("RGB")
-            frame_image.save("/tmp/temp_frame.png")  # Save temp image
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                "/tmp/temp_frame.png", 650, 450, True)
-            self.image_display.set_from_pixbuf(pixbuf)
-            self.image_display.show()
-            
-    def on_frameline_value_changed(self, left_value, right_value):
-        # Update the image display based on the handle being dragged
-        if self.fl.dragging_left:
-            self.show_frame(int(round(left_value)))
-        elif self.fl.dragging_right:
-            self.show_frame(int(round(right_value)))
-
-            
-    def save_frames(self, widget):
-        start_idx = int(self.fl.left_value)
-        end_idx = int(self.fl.right_value)
+    def save_frames(self, button):
+        """Save the selected frame range as a new GIF"""
+        start_idx = int(round(self.frameline.left_value)) - 1  # Convert to 0-based index
+        end_idx = int(round(self.frameline.right_value)) - 1  # Convert to 0-based index
         
-        if 0 <= start_idx < len(self.gif_frames) and 0 <= end_idx < len(self.gif_frames) and start_idx <= end_idx:
+        if 0 <= start_idx < len(self.frames) and 0 <= end_idx < len(self.frames) and start_idx <= end_idx:
             dialog = Gtk.FileChooserDialog(
-                title="Save GIF as...", parent=self.get_parent(), action=Gtk.FileChooserAction.SAVE
+                title="Save GIF as...",
+                action=Gtk.FileChooserAction.SAVE,
+                transient_for=self.get_root(),
+                modal=True
             )
             dialog.add_buttons(
-                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_SAVE, Gtk.ResponseType.OK)
-            dialog.set_do_overwrite_confirmation(True)
+                "Cancel", Gtk.ResponseType.CANCEL,
+                "Save", Gtk.ResponseType.ACCEPT
+            )
             
             # Add file filter for .gif files
             filter_gif = Gtk.FileFilter()
@@ -195,25 +229,136 @@ class EditorBox(Gtk.Box):
             filter_gif.add_mime_type("image/gif")
             dialog.add_filter(filter_gif)
             
-            response = dialog.run()
-            if response == Gtk.ResponseType.OK:
-                save_path = dialog.get_filename()
-                # Add .gif extension if not present
-                if not save_path.lower().endswith('.gif'):
-                    save_path += '.gif'
+            def on_response(dialog, response):
+                if response == Gtk.ResponseType.ACCEPT:
+                    save_path = dialog.get_file().get_path()
+                    # Add .gif extension if not present
+                    if not save_path.lower().endswith('.gif'):
+                        save_path += '.gif'
                     
-                frames_to_save = self.gif_frames[start_idx:end_idx + 1]
-                frame_durations_to_save = self.frame_durations[start_idx:end_idx + 1]
-                frames_to_save[0].save(
-                    save_path,
-                    save_all=True,
-                    append_images=frames_to_save[1:],
-                    duration=[int(d * 1000) for d in frame_durations_to_save],
-                    loop=0
-                )
-            dialog.destroy()
+                    # Check if file exists and confirm overwrite
+                    if os.path.exists(save_path):
+                        overwrite_dialog = Gtk.MessageDialog(
+                            transient_for=self.get_root(),
+                            modal=True,
+                            message_type=Gtk.MessageType.QUESTION,
+                            buttons=Gtk.ButtonsType.YES_NO,
+                            text="File already exists. Do you want to overwrite it?"
+                        )
+                        overwrite_dialog.connect('response', lambda d, r: self._handle_overwrite_response(d, r, save_path, start_idx, end_idx))
+                        overwrite_dialog.show()
+                    else:
+                        self._save_gif(save_path, start_idx, end_idx)
+                
+                dialog.destroy()
+            
+            dialog.connect('response', on_response)
+            dialog.show()
         else:
             dialog = Gtk.MessageDialog(
-                self, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, "Invalid Frame Range")
-            dialog.run()
-            dialog.destroy()
+                transient_for=self.get_root(),
+                modal=True,
+                message_type=Gtk.MessageType.ERROR,
+                buttons=Gtk.ButtonsType.OK,
+                text="Invalid Frame Range"
+            )
+            dialog.connect('response', lambda d, r: d.destroy())
+            dialog.show()
+
+    def _handle_overwrite_response(self, dialog, response, save_path, start_idx, end_idx):
+        if response == Gtk.ResponseType.YES:
+            self._save_gif(save_path, start_idx, end_idx)
+        dialog.destroy()
+
+    def _save_gif(self, save_path, start_idx, end_idx):
+        frames_to_save = [self._pixbuf_to_pil(self.frames[i]) for i in range(start_idx, end_idx + 1)]
+        durations = self.frame_durations[start_idx:end_idx + 1]
+        
+        frames_to_save[0].save(
+            save_path,
+            save_all=True,
+            append_images=frames_to_save[1:],
+            duration=durations,
+            loop=0,
+            format='GIF'
+        )
+        print(f"Saved GIF to {save_path}")
+
+    def on_frames_changed(self, frameline, start, end):
+        """Handle frame range changes from the frameline"""
+        if self.frames:
+            # Convert 1-based frame numbers to 0-based indices
+            start_frame = int(round(start)) - 1  # Subtract 1 to convert to 0-based index
+            end_frame = int(round(end)) - 1  # Subtract 1 to convert to 0-based index
+            
+            # Ensure we're within valid frame range
+            start_frame = max(0, min(start_frame, len(self.frames) - 1))
+            end_frame = max(0, min(end_frame, len(self.frames) - 1))
+            
+            # Determine which handle was moved and update the frame
+            if frameline.dragging_left:
+                self.display_frame(start_frame)
+            elif frameline.dragging_right:
+                self.display_frame(end_frame)
+            
+            print(f"Frame range changed: {int(round(start))} to {int(round(end))}")
+
+    def save_button(self):
+        save_button = Gtk.Button(label="Save")
+        # Force the button size
+        save_button.set_size_request(80, 40)  # Increased width for better text fit
+        save_button.set_valign(Gtk.Align.CENTER)  # Center vertically
+        save_button.set_halign(Gtk.Align.CENTER)
+        load_css(save_button, ["save-button"])
+        save_button.connect('clicked', self.save_frames)
+        return save_button
+
+    def play_button(self):
+        self.play_button = Gtk.Button()
+        self.update_play_button_icon(False)  # Set initial icon to play
+        self.play_button.set_size_request(40, 40)
+        self.play_button.set_valign(Gtk.Align.CENTER)  # Center vertically
+        self.play_button.set_halign(Gtk.Align.CENTER)
+        load_css(self.play_button, ["play-button"])
+        self.play_button.connect('clicked', self.play_edited_frames)
+        return self.play_button
+
+    def _pil_to_pixbuf(self, pil_image):
+        """Convert PIL image to GdkPixbuf"""
+        # Save PIL image to buffer
+        buf = io.BytesIO()
+        pil_image.save(buf, 'ppm')
+        buf.seek(0)
+        
+        # Load from buffer into GdkPixbuf
+        loader = GdkPixbuf.PixbufLoader.new_with_type('pnm')
+        loader.write(buf.read())
+        loader.close()
+        
+        return loader.get_pixbuf()
+
+    def _pixbuf_to_pil(self, pixbuf):
+        """Convert GdkPixbuf to PIL Image"""
+        width, height = pixbuf.get_width(), pixbuf.get_height()
+        pixels = pixbuf.get_pixels()
+        stride = pixbuf.get_rowstride()
+        mode = "RGBA" if pixbuf.get_has_alpha() else "RGB"
+        
+        return Image.frombytes(mode, (width, height), pixels, "raw", mode, stride)
+
+    def update_play_button_icon(self, playing):
+        """Update the play button icon based on playing state"""
+        icon_name = "media-playback-start-symbolic" if not playing else "media-playback-pause-symbolic"
+        icon = Gio.ThemedIcon(name=icon_name)
+        image = Gtk.Image.new_from_gicon(icon)
+        self.play_button.set_child(image)
+
+
+
+
+
+
+
+
+
+

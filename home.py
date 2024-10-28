@@ -1,95 +1,84 @@
-from gi.repository import Gtk, GdkPixbuf
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gdk', '4.0')
+from gi.repository import Gtk, Gdk, Gio, GLib
 from PIL import Image
+from utils import load_css
 
 
 class HomeBox(Gtk.Box):
     def __init__(self):
-        Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        self.set_homogeneous(False)
+        super().__init__()
+        
+        self.set_orientation(Gtk.Orientation.VERTICAL)
+        self.set_spacing(10)
+        
         self.set_margin_top(220)
         self.set_margin_bottom(20)
         self.set_margin_start(20)
         self.set_margin_end(20)
-        self.info_label = Gtk.Label(
-            label="Please select a GIF file to start editing")
         
-        # can not pack a widget twice
-        self.pack_start(self.select_button(), False, False, 0)
-        self.pack_start(self.about_button(), False, False, 0)
-
+        self.append(self.select_button())
+        self.append(self.about_button())
 
     def select_button(self):
         select_button = Gtk.Button(label="Select GIF")
-
-        # Initial button to select GIF
-        css_provider = Gtk.CssProvider()
-        css = """
-        button {
-            background-color: white;
-            color: black;
-            border-radius: 25px;
-        }
-        """
-        css_provider.load_from_data(css.encode())
-
-        # Create a style context and add the provider
-        style_context = select_button.get_style_context()
-        style_context.add_provider(
-            css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-
-        select_button.set_size_request(150, 50)  # Set specific size for button
-        select_button.connect("clicked", self.select_gif)
-        select_button.set_halign(Gtk.Align.CENTER)  # Center the button
+        select_button.set_size_request(150, 50)
+        select_button.set_halign(Gtk.Align.CENTER)
+        load_css(select_button, ["select-gif-button"])
+        select_button.connect('clicked', self.select_gif)
         return select_button
 
     def about_button(self):
         about_button = Gtk.Button(label="About Fig")
         about_button.set_size_request(150, 50)
-        about_button.connect("clicked", self.show_about_dialog)
         about_button.set_halign(Gtk.Align.CENTER)
-        # Initial button to select GIF
-        css_provider = Gtk.CssProvider()
-        css = """
-        button {
-            border-radius: 25px;
-        }
-        """
-        css_provider.load_from_data(css.encode())
-
-        # Create a style context and add the provider
-        style_context = about_button.get_style_context()
-        style_context.add_provider(
-            css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        load_css(about_button, ["about-fig-button"])
+        about_button.connect('clicked', self.show_about)
         return about_button
     
-    def show_about_dialog(self, widget):
-        pass
-
-
-    def select_gif(self, widget):
+    def select_gif(self, button):
+        # GTK4 file chooser dialog
         dialog = Gtk.FileChooserDialog(
-            title="Please choose a GIF file", 
-            parent=self.get_parent(), 
-            action=Gtk.FileChooserAction.OPEN
-            )
+            title="Select a GIF file",
+            action=Gtk.FileChooserAction.OPEN,
+        )
+        dialog.set_modal(True)
+        dialog.set_transient_for(self.get_root())
         
-        dialog.add_buttons(
-            Gtk.STOCK_CANCEL, 
-            Gtk.ResponseType.CANCEL, 
-            Gtk.STOCK_OPEN, 
-            Gtk.ResponseType.OK
-            )
-
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Open", Gtk.ResponseType.ACCEPT)
+        
+        # File filter for GIF files
         filter_gif = Gtk.FileFilter()
         filter_gif.set_name("GIF files")
         filter_gif.add_mime_type("image/gif")
         dialog.add_filter(filter_gif)
+        
+        dialog.connect('response', self._on_file_dialog_response)
+        dialog.present()
 
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            gif_path = dialog.get_filename()
-            self.get_parent().editor_box.load_gif(gif_path)
-            self.hide()
-            self.get_parent().load_editor_ui()
+    def _on_file_dialog_response(self, dialog, response):
+        if response == Gtk.ResponseType.ACCEPT:
+            file = dialog.get_file()
+            file_path = file.get_path()
+            # Get the parent Fig window and trigger the editor UI
+            window = self.get_root()
+            window.load_editor_ui()
+            # Load the selected GIF into editor
+            window.editor_box.load_gif(file_path)
         dialog.destroy()
 
+    def show_about(self, button):
+        about = Gtk.AboutDialog()
+        about.set_transient_for(self.get_root())
+        about.set_modal(True)
+        
+        about.set_program_name("Fig")
+        about.set_version("1.0")
+        about.set_comments("A simple and usable GIF editor")
+        about.set_website("https://github.com/yourusername/fig")
+        about.set_authors(["Your Name"])
+        about.set_license_type(Gtk.License.MIT_X11)
+        
+        about.present()

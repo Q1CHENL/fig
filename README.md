@@ -17,6 +17,7 @@
 - Combine frames to GIF
 - Stop icon for the play button
 - Reverse gif
+- Port to GTK4
 
 ## Notice
 
