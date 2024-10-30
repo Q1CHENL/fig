@@ -18,6 +18,8 @@
 - ~~Port to GTK4~~
 - Capture GIF
 - Web version of Fig
+- Make GIF slower/faster
+- Make GIF black-and-white
 
 ## Notice
 
