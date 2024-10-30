@@ -10,7 +10,7 @@ class Fig(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app)
         
-        self.set_default_size(800, 600)
+        self.set_default_size(750, 650)
         self.set_resizable(False)
         
         # Load global CSS once
@@ -45,7 +45,7 @@ class Fig(Gtk.ApplicationWindow):
         import_frames_action = Gio.SimpleAction.new("import_frames", None)
         import_frames_action.connect("activate", self.import_frames)
         self.add_action(import_frames_action)
-
+        
     def load_editor_ui(self):
         self.set_child(self.editor_box)
         

@@ -30,7 +30,7 @@ class FrameLine(Gtk.Widget):
         # Dragging state
         self.dragging_left = False
         self.dragging_right = False
-        self.drag_offset = 0
+        self.drag_offset = 0 # prevent jump when press handle
         
         # Enable input
         self.set_can_target(True)
@@ -47,6 +47,8 @@ class FrameLine(Gtk.Widget):
         self.add_controller(self.motion_controller)
         
         self.value_changed_callback = None
+        self.playhead_visible = False
+        self.playhead_position = 0
 
     def do_measure(self, orientation, for_size):
         if orientation == Gtk.Orientation.VERTICAL:
@@ -70,15 +72,19 @@ class FrameLine(Gtk.Widget):
         right_handle_x = min(width - self.handle_radius, self.value_to_position(self.right_value, width))
         
         # Draw full grey track
-        cr.set_source_rgb(0.7, 0.7, 0.7)
+        cr.set_source_rgb(0, 0, 0)
         self.draw_rounded_rectangle(cr, self.handle_radius, (height - self.track_height) / 2,
                                   width - 2 * self.handle_radius, self.track_height, self.track_radius)
         cr.fill()
         
-        # Draw selected portion (white)
-        cr.set_source_rgb(1, 1, 1)
-        cr.rectangle(left_handle_x, (height - self.track_height) / 2,
-                    right_handle_x - left_handle_x, self.track_height)
+        # Draw selected portion (white or red depending on handle positions)
+        if self.left_value <= self.right_value:
+            cr.set_source_rgb(1, 1, 1)  # White for normal order
+        else:
+            cr.set_source_rgb(1, 0.4, 0.4)  # Light red for reverse order
+        
+        cr.rectangle(min(left_handle_x, right_handle_x), (height - self.track_height) / 2,
+                    abs(right_handle_x - left_handle_x), self.track_height)
         cr.fill()
         
         # Draw handles
@@ -110,6 +116,31 @@ class FrameLine(Gtk.Widget):
         (x, y, text_width, text_height, dx, dy) = cr.text_extents(text)
         cr.move_to(right_handle_x - text_width / 2, height / 2 + text_height / 2)
         cr.show_text(text)
+        
+        # Draw playhead if visible
+        if self.playhead_visible:
+            playhead_x = self.value_to_position(self.playhead_position + 1, width)
+            vertical_center = height / 2
+            
+            # Draw playhead circle
+            cr.set_source_rgb(1, 1, 1)
+            cr.arc(playhead_x, vertical_center, self.handle_radius, 0, 2 * math.pi)
+            cr.fill()
+            
+            # Draw frame number inside playhead (exactly like handles)
+            frame_text = str(int(self.playhead_position + 1))
+            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+            cr.set_font_size(11)
+            
+            # Get text dimensions
+            text_extents = cr.text_extents(frame_text)
+            text_x = playhead_x - text_extents.width / 2
+            text_y = vertical_center + text_extents.height / 2 - 1
+            
+            # Draw text
+            cr.set_source_rgb(0.2, 0.2, 0.2)
+            cr.move_to(text_x, text_y)
+            cr.show_text(frame_text)
 
     def draw_rounded_rectangle(self, cr, x, y, width, height, radius):
         if width < 2 * radius:
@@ -152,8 +183,10 @@ class FrameLine(Gtk.Widget):
                 self.set_right_value(new_value)
             
             self.queue_draw()
-            # Emit the signal instead of calling callback
-            self.emit('frames-changed', self.left_value, self.right_value)
+            if self.left_value <= self.right_value:
+                self.emit('frames-changed', self.left_value, self.right_value)
+            else:
+                self.emit('frames-changed', self.right_value, self.left_value)
 
     # Helper methods remain the same
     def value_to_position(self, value, width):
@@ -171,11 +204,42 @@ class FrameLine(Gtk.Widget):
 
     def set_left_value(self, value):
         rounded_value = self.round_to_stride(value)
-        self.left_value = max(self.min_value, min(rounded_value, self.right_value - self.stride))
+        self.left_value = max(self.min_value, min(rounded_value, self.max_value))
 
     def set_right_value(self, value):
         rounded_value = self.round_to_stride(value)
-        self.right_value = min(self.max_value, max(rounded_value, self.left_value + self.stride))
+        self.right_value = max(self.min_value, min(rounded_value, self.max_value))
 
     def set_value_changed_callback(self, callback):
         self.value_changed_callback = callback
+
+    def set_playhead_position(self, position):
+        """Set playhead position"""
+        self.playhead_position = position
+        # If position is -1, hide the playhead
+        if position == -1:
+            self.playhead_visible = False
+        self.queue_draw()
+
+    def show_playhead(self):
+        """Show the playhead"""
+        self.playhead_visible = True
+        self.queue_draw()
+
+    def hide_playhead(self):
+        """Hide the playhead"""
+        self.playhead_visible = False
+        self.queue_draw()
+
+    def on_handle_drag_begin(self):
+        """Called when handle drag begins"""
+        self.dragging = True
+        # Store current playhead state if not playing
+        self.playhead_position_before_drag = self.playhead_position
+
+    def on_handle_drag_end(self):
+        """Called when handle drag ends"""
+        self.dragging = False
+        # Restore playhead position if not playing
+        if not self.editor.is_playing:
+            self.set_playhead_position(self.playhead_position_before_drag)

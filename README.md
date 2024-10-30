@@ -16,8 +16,10 @@
 - ~~Export frame(s)~~
 - Combine frames to GIF
 - Stop icon for the play button
-- Reverse gif
+- Reverse GIF: switch handles
 - ~~Port to GTK4~~
+- Capture GIF
+- Web version of Fig
 
 ## Notice
 

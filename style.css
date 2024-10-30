@@ -55,10 +55,6 @@ headerbar .menu-button:hover {
     border: none;
 }
 
-/* Timeline styles */
-.frameline {
-    background-color: #252525;
-}
 
 /* Image display styles */
 .image-display {
