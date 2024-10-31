@@ -15,7 +15,7 @@ def load_css(widget=None, css_classes=None):
     
     # Get the directory containing the script
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    css_file = os.path.join(current_dir, 'style.css')
+    css_file = os.path.join(current_dir, '../style/style.css')
     
     try:
         with open(css_file, 'r', encoding='utf-8') as f:

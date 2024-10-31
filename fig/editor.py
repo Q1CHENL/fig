@@ -1,9 +1,9 @@
 import os
 import io
 from PIL import Image
-from utils import load_css
+from fig.utils import load_css
 import time
-import frameline
+import fig.frameline
 from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf
 import gi
 gi.require_version('Gtk', '4.0')
@@ -64,7 +64,7 @@ class EditorBox(Gtk.Box):
         controls_box.set_vexpand(False)
 
         # Frameline
-        self.frameline = frameline.FrameLine(
+        self.frameline = fig.frameline.FrameLine(
             min_value=0, max_value=0, stride=1)  # Initialize with 0 frames
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)

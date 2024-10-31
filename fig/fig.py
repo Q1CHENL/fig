@@ -3,8 +3,8 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
 from gi.repository import Gtk, Gdk, Gio, GLib
 from PIL import Image
-import home, editor
-from utils import load_css
+import fig.home, fig.editor
+from fig.utils import load_css
 
 class Fig(Gtk.ApplicationWindow):
     def __init__(self, app):
@@ -34,8 +34,8 @@ class Fig(Gtk.ApplicationWindow):
         header.pack_end(settings_button)
         
         # Main content
-        self.home_box = home.HomeBox()
-        self.editor_box = editor.EditorBox()
+        self.home_box = fig.home.HomeBox()
+        self.editor_box = fig.editor.EditorBox()
         window_handle.set_child(self.home_box)
         
         # Define and connect actions
