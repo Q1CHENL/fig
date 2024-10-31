@@ -20,7 +20,7 @@
 - Web version of Fig
 - Make GIF slower/faster
 - Make GIF black-and-white
-- Reverse playback
+- ~~Reverse playback~~
 - Append/Insert/Remove frames
 
 ## Notice

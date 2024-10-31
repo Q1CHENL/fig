@@ -77,8 +77,8 @@ class HomeBox(Gtk.Box):
         about.set_program_name("Fig")
         about.set_version("1.0")
         about.set_comments("A simple and usable GIF editor")
-        about.set_website("https://github.com/yourusername/fig")
-        about.set_authors(["Your Name"])
+        about.set_website("https://github.com/Q1CHENL/fig")
+        about.set_authors(["Qichen Liu 刘启辰"])
         about.set_license_type(Gtk.License.MIT_X11)
         
         about.present()
