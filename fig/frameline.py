@@ -49,6 +49,17 @@ class FrameLine(Gtk.Widget):
         self.value_changed_callback = None
         self.playhead_visible = False
         self.playhead_position = 0
+        
+        # Add hover state tracking
+        self.left_handle_hover = False
+        self.right_handle_hover = False
+        
+        # Add motion controller for hover effects
+        self.motion_controller = Gtk.EventControllerMotion.new()
+        self.motion_controller.connect('enter', self.on_enter)
+        self.motion_controller.connect('leave', self.on_leave)
+        self.motion_controller.connect('motion', self.on_motion)
+        self.add_controller(self.motion_controller)
 
     def do_measure(self, orientation, for_size):
         if orientation == Gtk.Orientation.VERTICAL:
@@ -62,14 +73,21 @@ class FrameLine(Gtk.Widget):
         width = self.get_width()
         height = self.get_height()
         
-        # Create Cairo context
-        cr = snapshot.append_cairo(
-            Graphene.Rect().init(0, 0, width, height)
-        )
+        # Calculate padding needed for scaled handles
+        scale_factor = 1.05
+        padding = self.handle_radius * (scale_factor - 1)
         
-        # Calculate positions
-        left_handle_x = max(self.handle_radius, self.value_to_position(self.left_value, width))
-        right_handle_x = min(width - self.handle_radius, self.value_to_position(self.right_value, width))
+        # Adjust positions to account for padding
+        left_handle_x = max(self.handle_radius + padding, 
+                           self.value_to_position(self.left_value, width))
+        right_handle_x = min(width - self.handle_radius - padding, 
+                            self.value_to_position(self.right_value, width))
+        
+        # Create Cairo context with adjusted area
+        cr = snapshot.append_cairo(
+            Graphene.Rect().init(-padding, -padding, 
+                                width + 2*padding, height + 2*padding)
+        )
         
         # Draw full grey track
         cr.set_source_rgb(0, 0, 0)
@@ -92,12 +110,28 @@ class FrameLine(Gtk.Widget):
         
         # Left handle
         cr.new_path()
-        cr.arc(left_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
+        if self.left_handle_hover or self.dragging_left:
+            cr.save()
+            cr.translate(left_handle_x, height / 2)
+            cr.scale(1.05, 1.05)
+            cr.translate(-left_handle_x, -height / 2)
+            cr.arc(left_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
+            cr.restore()
+        else:
+            cr.arc(left_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
         cr.fill()
         
         # Right handle
         cr.new_path()
-        cr.arc(right_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
+        if self.right_handle_hover or self.dragging_right:
+            cr.save()
+            cr.translate(right_handle_x, height / 2)
+            cr.scale(1.05, 1.05)
+            cr.translate(-right_handle_x, -height / 2)
+            cr.arc(right_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
+            cr.restore()
+        else:
+            cr.arc(right_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
         cr.fill()
         
         # Draw text on handles
@@ -187,6 +221,10 @@ class FrameLine(Gtk.Widget):
                 self.emit('frames-changed', self.left_value, self.right_value)
             else:
                 self.emit('frames-changed', self.right_value, self.left_value)
+        else:
+            # Handle hover effects when not dragging
+            self.check_handle_hover(x, y)
+            self.queue_draw()
 
     # Helper methods remain the same
     def value_to_position(self, value, width):
@@ -243,3 +281,21 @@ class FrameLine(Gtk.Widget):
         # Restore playhead position if not playing
         if not self.editor.is_playing:
             self.set_playhead_position(self.playhead_position_before_drag)
+
+    def on_enter(self, controller, x, y):
+        self.check_handle_hover(x, y)
+        self.queue_draw()
+
+    def on_leave(self, controller):
+        self.left_handle_hover = False
+        self.right_handle_hover = False
+        self.queue_draw()
+
+    def check_handle_hover(self, x, y):
+        width = self.get_width()
+        left_handle_x = self.value_to_position(self.left_value, width)
+        right_handle_x = self.value_to_position(self.right_value, width)
+        
+        # Check if mouse is over either handle
+        self.left_handle_hover = abs(x - left_handle_x) <= self.handle_radius and not self.dragging_right
+        self.right_handle_hover = abs(x - right_handle_x) <= self.handle_radius and not self.dragging_left
