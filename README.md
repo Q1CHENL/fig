@@ -30,4 +30,4 @@
 
 ## Contribute
 
-PRs and Issues are welcome. 
+PRs and Issues are welcome.

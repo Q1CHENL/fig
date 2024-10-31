@@ -2,8 +2,7 @@ import os
 import io
 from PIL import Image
 from fig.utils import load_css
-import time
-import fig.frameline
+from fig.frameline import FrameLine
 from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf
 import gi
 gi.require_version('Gtk', '4.0')
@@ -64,7 +63,7 @@ class EditorBox(Gtk.Box):
         controls_box.set_vexpand(False)
 
         # Frameline
-        self.frameline = fig.frameline.FrameLine(
+        self.frameline = FrameLine(
             min_value=0, max_value=0, stride=1)  # Initialize with 0 frames
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)
@@ -126,9 +125,6 @@ class EditorBox(Gtk.Box):
 
                 if self.frames:
                     self.display_frame(0)
-                    print(f"Loaded GIF with {frame_count} frames, {
-                          total_duration:.2f}s duration")
-
         except Exception as e:
             print(f"Error loading GIF: {e}")
 
@@ -252,14 +248,6 @@ class EditorBox(Gtk.Box):
             current_duration, self.play_next_frame)
         return False
 
-    def stop_playback(self):
-        """Stop playback and reset play button state"""
-        self.is_playing = False
-        if self.play_timeout_id is not None:
-            GLib.source_remove(self.play_timeout_id)
-            self.play_timeout_id = None
-        self.update_play_button_icon(False)
-        self.current_frame_index = 0
 
     def show_playhead(self):
         """Show playhead and update state"""
@@ -357,8 +345,6 @@ class EditorBox(Gtk.Box):
             loop=0,
             format='GIF'
         )
-        print(f"Saved GIF to {save_path}")
-
 
     def on_frames_changed(self, frameline, start, end):
         """Handle frame range changes from the frameline"""
