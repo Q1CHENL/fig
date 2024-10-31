@@ -21,7 +21,7 @@
 - Make GIF slower/faster
 - Make GIF black-and-white
 - Reverse playback
-- Append/Insert frame
+- Append/Insert/Remove frames
 
 ## Notice
 
