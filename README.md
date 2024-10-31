@@ -1,6 +1,6 @@
 # Fig
 
-**A simple and usable gif editor.**
+**A simple and usable GIF editor.**
 
 ![UI](assets/screenshot-home.png)
 ![UI](assets/screenshot-editor.png)
@@ -27,3 +27,7 @@
 
 - Homepage UI is inspired by [sly](https://github.com/kra-mo/sly)
 - Loading GIFs is not fast, you may have to wait a bit.
+
+## Contribute
+
+PRs and Issues are welcome. 
