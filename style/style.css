@@ -31,14 +31,24 @@ headerbar .menu-button:hover {
     background-color: white;
     color: black;
     border-radius: 25px;
+    transition: all 0.2s ease-in-out;
+}
+
+.select-gif-button:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .about-fig-button {
     border-radius: 25px;
+    transition: all 0.2s ease-in-out;
 }
 
 .about-fig-button:hover {
     background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 /* Editor buttons */
@@ -46,6 +56,13 @@ headerbar .menu-button:hover {
     border-radius: 20px;
     background-color: white;
     color: black;
+    transition: all 0.2s ease-in-out;
+}
+
+.save-button:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .play-button {
@@ -53,6 +70,13 @@ headerbar .menu-button:hover {
     color: white;
     background-color: #383838;
     border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.play-button:hover {
+    background-color: #454545;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 
@@ -62,4 +86,10 @@ headerbar .menu-button:hover {
     padding: 0;
     margin-top: 0;
     background-color: grey;
+}
+
+/* Handle styles */
+.handle-hover {
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.2));
+    transform: scale(1.05);
 }

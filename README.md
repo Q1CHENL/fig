@@ -23,6 +23,7 @@
 - ~~Reverse playback~~
 - Append/Insert/Remove frames
 - Design GTK-Style icon
+- Button and handles hover effects
 
 ## Notice
 
