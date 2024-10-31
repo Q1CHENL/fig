@@ -1,6 +1,5 @@
 import gi
 gi.require_version('Gtk', '4.0')
-gi.require_version('Gdk', '4.0')
 from gi.repository import Gtk, Gdk, Gio, GLib
 from PIL import Image
 from utils import load_css
@@ -78,7 +77,7 @@ class HomeBox(Gtk.Box):
         about.set_version("1.0")
         about.set_comments("A simple and usable GIF editor")
         about.set_website("https://github.com/Q1CHENL/fig")
-        about.set_authors(["Qichen Liu 刘启辰"])
+        about.set_authors(["Qichen Liu (刘启辰)"])
         about.set_license_type(Gtk.License.MIT_X11)
         
         about.present()

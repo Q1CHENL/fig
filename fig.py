@@ -15,6 +15,9 @@ class Fig(Gtk.ApplicationWindow):
         
         # Load global CSS once
         load_css()
+        window_handle = Gtk.WindowHandle()
+        self.set_child(window_handle)
+        
         
         # Setup header bar
         header = Gtk.HeaderBar()
@@ -33,9 +36,7 @@ class Fig(Gtk.ApplicationWindow):
         # Main content
         self.home_box = home.HomeBox()
         self.editor_box = editor.EditorBox()
-        
-        # Start with home box
-        self.set_child(self.home_box)
+        window_handle.set_child(self.home_box)
         
         # Define and connect actions
         preferences_action = Gio.SimpleAction.new("preferences", None)
@@ -64,14 +65,31 @@ class Fig(Gtk.ApplicationWindow):
         popover.popup()
 
     def show_preferences(self, action, param):
-        # Create a simple preferences window prototype
-        preferences_window = Gtk.Window(transient_for=self, modal=True, title="Preferences")
+        # Create a preferences window with similar styling to main window
+        preferences_window = Gtk.Window(transient_for=self, modal=True)
         preferences_window.set_default_size(400, 300)
         
-        label = Gtk.Label(label="Preferences Window Prototype")
-        preferences_window.set_child(label)
+        # Create and style headerbar
+        header = Gtk.HeaderBar()
+        header.set_title_widget(Gtk.Label(label="Preferences"))
+        preferences_window.set_titlebar(header)
         
-        preferences_window.show()
+        # Apply the same CSS classes as main window
+        load_css(preferences_window)
+        load_css(header)
+        
+        # Add content
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        content_box.set_margin_top(20)
+        content_box.set_margin_bottom(20)
+        content_box.set_margin_start(20)
+        content_box.set_margin_end(20)
+        
+        label = Gtk.Label(label="")
+        content_box.append(label)
+        
+        preferences_window.set_child(content_box)
+        preferences_window.present()
 
     def import_frames(self, action, param):
         # Placeholder for import frames functionality
