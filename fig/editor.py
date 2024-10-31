@@ -359,15 +359,22 @@ class EditorBox(Gtk.Box):
         start_frame_index = max(0, min(start_frame_index, len(self.frames) - 1))
         end_frame_index = max(0, min(end_frame_index, len(self.frames) - 1))
 
-        # Only update display during dragging if not previously playing
+        # Update display during dragging if not previously playing
         if (frameline.dragging_left or frameline.dragging_right) and not frameline.playhead_visible:
-            self.current_frame_index = start_frame_index if frameline.dragging_left else end_frame_index
-            # self.playhead_frame_index = self.current_frame_index
-            self.display_frame(self.current_frame_index)
+            # Always use the handle being dragged for preview
+            if frameline.dragging_left:
+                frame_index = int(round(frameline.left_value)) - 1
+            else:
+                frame_index = int(round(frameline.right_value)) - 1
+                
+            frame_index = max(0, min(frame_index, len(self.frames) - 1))
+            self.current_frame_index = frame_index
+            self.display_frame(frame_index)
         
-        # Update playhead visibility
-        if self.playhead_frame_index <= min(start_frame_index, end_frame_index) or \
-           self.playhead_frame_index >= max(start_frame_index, end_frame_index):
+        # Update playhead visibility using min/max for reversed handles
+        min_frame = min(start_frame_index, end_frame_index)
+        max_frame = max(start_frame_index, end_frame_index)
+        if self.playhead_frame_index < min_frame or self.playhead_frame_index > max_frame:
             self.hide_playhead()
         else:
             self.frameline.set_playhead_position(self.playhead_frame_index)
@@ -428,9 +435,11 @@ class EditorBox(Gtk.Box):
         self.display_frame(frame_index)
         self.current_frame_index = frame_index
         
-        # Get current frame range
-        start = int(round(self.frameline.left_value)) - 1
-        end = int(round(self.frameline.right_value)) - 1
+        # Get current frame range, ensuring correct order
+        start = min(int(round(self.frameline.left_value)) - 1,
+                   int(round(self.frameline.right_value)) - 1)
+        end = max(int(round(self.frameline.left_value)) - 1,
+                 int(round(self.frameline.right_value)) - 1)
         
         # If playhead exists but is out of range, set to -1
         if self.frameline.playhead_visible:
