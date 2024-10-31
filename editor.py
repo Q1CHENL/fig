@@ -188,12 +188,18 @@ class EditorBox(Gtk.Box):
             # Get current frame range
             start = int(round(self.frameline.left_value)) - 1
             end = int(round(self.frameline.right_value)) - 1
+            is_reversed = start > end
 
             # If playhead isn't visible or playback was finished, start from left handle
             if not self.frameline.playhead_visible or self.playback_finished:
-                self.current_frame_index = start if start <= end else end
-                self.playhead_frame_index = self.current_frame_index
-            
+                if is_reversed:
+                    self.current_frame_index = end if start <= end else start
+                    self.playhead_frame_index = self.current_frame_index
+                # Reverse playback
+                else:
+                    self.current_frame_index = start if start <= end else end
+                    self.playhead_frame_index = self.current_frame_index
+                    
             self.display_frame(self.current_frame_index)
             self.show_playhead()
             self.frameline.set_playhead_position(self.current_frame_index)
@@ -265,10 +271,8 @@ class EditorBox(Gtk.Box):
 
     def save_frames(self, button):
         """Save the selected frame range as a new GIF"""
-        start_idx = int(round(self.frameline.left_value)) - \
-            1  # Convert to 0-based index
-        end_idx = int(round(self.frameline.right_value)) - \
-            1  # Convert to 0-based index
+        start_idx = int(round(self.frameline.left_value)) - 1  # Convert to 0-based index
+        end_idx = int(round(self.frameline.right_value)) - 1  # Convert to 0-based index
 
         if 0 <= start_idx < len(self.frames) and 0 <= end_idx < len(self.frames):
             dialog = Gtk.FileChooserDialog(
