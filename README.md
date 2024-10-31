@@ -22,6 +22,7 @@
 - Make GIF black-and-white
 - ~~Reverse playback~~
 - Append/Insert/Remove frames
+- Design GTK-Style icon
 
 ## Notice
 
