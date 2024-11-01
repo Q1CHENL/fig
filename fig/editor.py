@@ -119,8 +119,7 @@ class EditorBox(Gtk.Box):
 
                 # Update info label
                 self.info_label.set_text(
-                    f"{frame_count} Frames • {
-                        total_duration:.2f} Seconds"
+                    f"{frame_count} Frames • {total_duration:.2f} Seconds"
                 )
 
                 if self.frames:
