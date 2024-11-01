@@ -2,10 +2,8 @@
   <img alt="Fig" src="assets/org.fig.Fig.svg" width="128" height="128"/>
   <br>
   Fig
- <h3 align="center">A simple and usable GIF editor.</h3>
 </h1>
-
-<h1></h1>
+<h4 align="center">A simple and usable GIF editor.</h4>
 
 ![UI](assets/screenshot-home.png)
 ![UI](assets/screenshot-editor.png)
