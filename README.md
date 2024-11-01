@@ -1,6 +1,11 @@
-# Fig
+<h1 align="center" style="border-bottom: none;">
+  <img alt="Fig" src="assets/org.fig.Fig.svg" width="128" height="128"/>
+  <br>
+  Fig
+ <h3 align="center">A simple and usable GIF editor.</h3>
+</h1>
 
-**A simple and usable GIF editor.**
+<h1></h1>
 
 ![UI](assets/screenshot-home.png)
 ![UI](assets/screenshot-editor.png)
@@ -21,7 +26,7 @@
 - Make GIF slower/faster
 - Make GIF black-and-white
 - ~~Reverse playback~~
-- Append/Insert/Remove frames
+- Append/Insert/Remove frames in frameline
 - Design GTK-Style icon
 - ~~Button and handles hover effects~~
 - Load GIF faster

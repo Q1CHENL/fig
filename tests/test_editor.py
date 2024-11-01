@@ -13,6 +13,10 @@ class TestGifEditor(unittest.TestCase):
     def setUp(self):
         """Set up test environment before each test"""
         self.editor = EditorBox()
+        # Create mock frames
+        self.editor.frames = [Mock(spec=GdkPixbuf.Pixbuf) for _ in range(100)]
+        # Mock display_frame method
+        self.editor.display_frame = Mock()
         self.create_test_gif()
 
     def tearDown(self):
@@ -306,6 +310,82 @@ class TestGifEditor(unittest.TestCase):
         self.assertIsNotNone(self.editor.image_display)
         self.assertIsInstance(self.editor.frameline, FrameLine)
         self.assertIsInstance(self.editor.image_display, Gtk.Picture)
+
+    def test_handle_drag_normal_order(self):
+        """Test frame preview when handles are in normal order (left < right)"""
+        self.editor.frameline.left_value = 10
+        self.editor.frameline.right_value = 50
+        
+        # Test dragging left handle
+        self.editor.on_handle_drag(15)
+        self.editor.display_frame.assert_called_with(14)  # 0-based index
+        
+        # Test dragging right handle
+        self.editor.on_handle_drag(45)
+        self.editor.display_frame.assert_called_with(44)  # 0-based index
+
+    def test_handle_drag_reversed_order(self):
+        """Test frame preview when handles are reversed (left > right)"""
+        self.editor.frameline.left_value = 80
+        self.editor.frameline.right_value = 20
+        
+        # Test dragging left handle
+        self.editor.on_handle_drag(85)
+        self.editor.display_frame.assert_called_with(84)
+        
+        # Test dragging right handle
+        self.editor.on_handle_drag(15)
+        self.editor.display_frame.assert_called_with(14)
+
+    def test_handle_drag_edge_cases(self):
+        """Test frame preview at edge cases"""
+        self.editor.frameline.left_value = 1
+        self.editor.frameline.right_value = 100
+        
+        # Test minimum bound
+        self.editor.on_handle_drag(1)
+        self.editor.display_frame.assert_called_with(0)
+        
+        # Test maximum bound
+        self.editor.on_handle_drag(100)
+        self.editor.display_frame.assert_called_with(99)
+
+    def test_handle_drag_crossing_over(self):
+        """Test frame preview when handles cross over each other"""
+        # Start with normal order
+        self.editor.frameline.left_value = 30
+        self.editor.frameline.right_value = 50
+        
+        # Drag left handle past right handle
+        self.editor.on_handle_drag(60)
+        self.editor.display_frame.assert_called_with(59)
+        
+        # Drag right handle past left handle
+        self.editor.frameline.left_value = 60
+        self.editor.frameline.right_value = 50
+        self.editor.on_handle_drag(40)
+        self.editor.display_frame.assert_called_with(39)
+
+    def test_playhead_visibility_during_drag(self):
+        """Test playhead visibility during handle dragging"""
+        self.editor.playhead_frame_index = 30
+        self.editor.frameline.playhead_visible = True
+        
+        # Test normal order
+        self.editor.frameline.left_value = 20
+        self.editor.frameline.right_value = 40
+        self.editor.on_handle_drag(25)
+        self.assertTrue(self.editor.frameline.playhead_visible)
+        
+        # Test reversed order
+        self.editor.frameline.left_value = 40
+        self.editor.frameline.right_value = 20
+        self.editor.on_handle_drag(35)
+        self.assertTrue(self.editor.frameline.playhead_visible)
+        
+        # Test playhead out of range
+        self.editor.on_handle_drag(15)
+        self.assertFalse(self.editor.frameline.playhead_visible)
 
 if __name__ == '__main__':
     unittest.main() 
