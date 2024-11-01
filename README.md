@@ -3,7 +3,7 @@
   <br>
   Fig
 </h1>
-<h4 align="center">A simple and usable GIF editor.</h4>
+<h4 align="center">Sleek GIF editor.</h4>
 
 ![UI](assets/screenshot-home.png)
 ![UI](assets/screenshot-editor.png)

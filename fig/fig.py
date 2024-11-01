@@ -31,7 +31,7 @@ class Fig(Gtk.ApplicationWindow):
         settings_button.set_child(settings_image)
         load_css(settings_button, ["menu-button"])  # Add specific class
         settings_button.connect("clicked", self.show_menu)
-        header.pack_end(settings_button)
+        # header.pack_end(settings_button)
         
         # Main content
         self.home_box = fig.home.HomeBox()
