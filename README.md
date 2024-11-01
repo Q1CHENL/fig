@@ -25,7 +25,7 @@
 - Make GIF black-and-white
 - ~~Reverse playback~~
 - Append/Insert/Remove frames in frameline
-- Design GTK-Style icon
+- ~~Design GTK-Style icon~~
 - ~~Button and handles hover effects~~
 - Load GIF faster
 
