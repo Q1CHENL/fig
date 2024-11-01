@@ -1,3 +1,4 @@
+import os
 import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Gdk, Gio, GLib
@@ -74,6 +75,9 @@ class HomeBox(Gtk.Box):
         about.set_modal(True)
         
         about.set_program_name("Fig")
+        icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../assets/org.fig.Fig.svg"))
+        icon_file = Gio.File.new_for_path(icon_path)
+        about.set_logo(Gdk.Texture.new_from_file(icon_file))
         about.set_version("1.0")
         about.set_comments("A simple and usable GIF editor")
         about.set_website("https://github.com/Q1CHENL/fig")
