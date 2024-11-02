@@ -1,0 +1,121 @@
+{
+  "app-id": "org.flatpak.fig",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "45",
+  "sdk": "org.gnome.Sdk",
+  "command": "fig",
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=x11",
+    "--socket=wayland",
+    "--filesystem=home",
+    "--device=dri",
+    "--filesystem=xdg-config/gtk-4.0:ro",
+    "--env=GTK_THEME=adw-gtk3-dark",
+    "--env=GSETTINGS_SCHEMA_DIR=/app/share/glib-2.0/schemas",
+    "--env=XDG_DATA_DIRS=/app/share:/usr/share:/usr/share/runtime/share:/run/host/share",
+    "--env=GTK4_DEBUG=interactive-debugging",
+    "--env=GTK_CSD=1"
+  ],
+  "add-extensions": {
+    "org.gnome.Platform.Compat.i386": {
+      "directory": "lib/i386-linux-gnu",
+      "version": "45"
+    },
+    "org.gtk.Gtk4theme": {
+      "directory": "share/themes",
+      "version": "4.0",
+      "subdirectories": true,
+      "no-autodownload": true,
+      "autodelete": false
+    }
+  },
+  "build-options": {
+    "env": {
+      "PYTHON": "python3"
+    }
+  },
+  "modules": [
+    {
+      "name": "libadwaita",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Dexamples=false",
+        "-Dtests=false"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://download.gnome.org/sources/libadwaita/1.4/libadwaita-1.4.0.tar.xz",
+          "sha256": "e51a098a54d43568218fc48fcf52e80e36f469b3ce912d8ce9c308a37e9f47c2"
+        }
+      ]
+    },
+    {
+      "name": "python3-setuptools",
+      "buildsystem": "simple",
+      "build-commands": [
+        "pip3 install . --prefix=${FLATPAK_DEST} --no-deps --ignore-installed"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://files.pythonhosted.org/packages/ed/22/a438e0caa4576f8c383fa4d35f1cc01655a46c75be358960d815bfbb12bd/setuptools-75.3.0.tar.gz",
+          "sha256": "fba5dd4d766e97be1b1681d98712680ae8f2f26d7881245f2ce9e40714f1a686"
+        }
+      ]
+    },
+
+    {
+      "name": "python3-pillow",
+      "buildsystem": "simple",
+      "build-commands": ["pip3 install . --prefix=${FLATPAK_DEST} --no-deps --ignore-installed  --no-build-isolation"],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://files.pythonhosted.org/packages/a5/26/0d95c04c868f6bdb0c447e3ee2de5564411845e36a858cfd63766bc7b563/pillow-11.0.0.tar.gz",
+          "sha256": "72bacbaf24ac003fea9bff9837d1eedb6088758d41e100c1552930151f677739"
+        }
+      ]
+    },
+    {
+      "name": "pygobject",
+      "buildsystem": "meson",
+      "config-opts": ["-Dtests=false", "-Dpython=/usr/bin/python3"],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://files.pythonhosted.org/packages/2b/58/d34e67a79631177e3c08e7d02b5165147f590171f2cae6769502af5f7f7e/pygobject-3.50.0.tar.gz",
+          "sha256": "4500ad3dbf331773d8dedf7212544c999a76fc96b63a91b3dcac1e5925a1d103"
+        }
+      ]
+    },
+    {
+      "name": "fig",
+      "buildsystem": "simple",
+      "build-commands": [
+        "mkdir -p ${FLATPAK_DEST}/lib/python3.11/site-packages/",
+        "cp -r fig ${FLATPAK_DEST}/lib/python3.11/site-packages/",
+        "cp -r style ${FLATPAK_DEST}/lib/python3.11/site-packages/",
+        "cp -r assets ${FLATPAK_DEST}/lib/python3.11/site-packages/",
+        "mkdir -p ${FLATPAK_DEST}/share/applications",
+        "mkdir -p ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps",
+        "mkdir -p ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps",
+        "cp assets/org.fig.Fig.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/",
+        "cp assets/org.fig.Fig-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/",
+        "install -Dm755 fig/fig.py ${FLATPAK_DEST}/bin/fig",
+        "install -Dm644 org.flatpak.fig.metainfo.xml ${FLATPAK_DEST}/share/metainfo/org.flatpak.fig.metainfo.xml",
+        "install -Dm644 org.flatpak.fig.desktop ${FLATPAK_DEST}/share/applications/org.flatpak.fig.desktop",
+        "chmod +x ${FLATPAK_DEST}/bin/fig"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "."
+        }
+      ]
+    }
+  ],
+  "cleanup": ["/include", "/lib/pkgconfig", "*.la", "*.a"]
+}

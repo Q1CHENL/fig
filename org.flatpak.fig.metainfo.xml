@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.flatpak.fig</id>
+  <name>Fig</name>
+  <summary>Your application summary here</summary>
+  <description>
+    <p>
+      A longer description of your application goes here.
+    </p>
+  </description>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Your-License-Here</project_license>
+  <releases>
+    <release version="1.0" date="2024-03-21"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component> 

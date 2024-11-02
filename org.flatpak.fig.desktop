@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Fig
+Comment=Your application description
+Exec=fig
+Icon=org.fig.Fig
+Terminal=false
+Type=Application
+Categories=Utility;
+StartupNotify=true 
