@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">
-  <img alt="Fig" src="assets/org.flatpak.fig.svg" width="128" height="128"/>
+  <img alt="Fig" src="assets/com.github.Q1CHENL.fig.svg" width="128" height="128"/>
   <br>
   Fig
 </h1>

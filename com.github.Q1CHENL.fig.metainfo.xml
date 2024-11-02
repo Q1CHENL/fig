@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>org.flatpak.fig</id>
+  <id>com.github.Q1CHENL.fig</id>
   <name>Fig</name>
   <summary>Sleek GIF editor</summary>
   <description>

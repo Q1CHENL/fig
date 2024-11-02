@@ -20,20 +20,20 @@ install_subdir('assets',
 )
 
 # Install desktop file
-install_data('org.flatpak.fig.desktop',
+install_data('com.github.Q1CHENL.fig.desktop',
   install_dir: get_option('datadir') / 'applications'
 )
 
 # Install icons
-install_data('assets/org.flatpak.fig.svg',
+install_data('assets/com.github.Q1CHENL.fig.svg',
   install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps'
 )
-install_data('assets/org.flatpak.fig-symbolic.svg',
+install_data('assets/com.github.Q1CHENL.fig-symbolic.svg',
   install_dir: get_option('datadir') / 'icons/hicolor/symbolic/apps'
 )
 
 # Install metainfo
-install_data('org.flatpak.fig.metainfo.xml',
+install_data('com.github.Q1CHENL.fig.metainfo.xml',
   install_dir: get_option('datadir') / 'metainfo'
 )
 

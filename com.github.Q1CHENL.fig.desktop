@@ -2,7 +2,7 @@
 Name=Fig
 Comment=Sleek GIF editor.
 Exec=fig
-Icon=org.flatpak.fig
+Icon=com.github.Q1CHENL.fig
 Terminal=false
 Type=Application
 Categories=Utility;

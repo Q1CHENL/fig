@@ -42,7 +42,7 @@ class Fig(Adw.ApplicationWindow):
 
 class FigApplication(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="org.flatpak.fig")
+        super().__init__(application_id="com.github.Q1CHENL.fig")
 
     def do_activate(self):
         win = Fig(self)

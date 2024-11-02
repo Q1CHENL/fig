@@ -1,5 +1,5 @@
 {
-  "id": "org.flatpak.fig",
+  "id": "com.github.Q1CHENL.fig",
   "runtime": "org.gnome.Platform",
   "runtime-version": "47",
   "sdk": "org.gnome.Sdk",
@@ -11,14 +11,11 @@
     "--device=dri",
     "--socket=wayland",
     "--filesystem=xdg-run/gvfsd",
-    "--socket=session-bus",
-    "--socket=system-bus",
     "--filesystem=home",
     "--filesystem=xdg-pictures:rw",
     "--filesystem=xdg-download:rw",
     "--env=GDK_BACKEND=x11",
-    "--filesystem=xdg-run/pipewire-0",
-    "--filesystem=xdg-config/gtk-4.0"
+    "--filesystem=xdg-run/pipewire-0"
   ],
   "build-options": {
     "env": {
@@ -108,5 +105,8 @@
   "environment": {
     "MESA_DEBUG": "silent",
     "MESA_LOADER_DRIVER_OVERRIDE": "iris"
+  },
+  "metadata": {
+    "url": "https://github.com/Q1CHENL/fig"
   }
 }
