@@ -54,11 +54,9 @@ class EditorBox(Gtk.Box):
         self.append(self.info_label)
         self.append(image_container)
 
-        # Controls box - tighter positioning
-        controls_box = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        controls_box.set_margin_top(15)    # Small top margin
-        controls_box.set_margin_bottom(5)  # Small bottom margin
+        controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        controls_box.set_margin_top(15)  
+        controls_box.set_margin_bottom(5)
         controls_box.set_margin_start(5)
         controls_box.set_margin_end(5)
         controls_box.set_vexpand(False)
@@ -71,11 +69,8 @@ class EditorBox(Gtk.Box):
         controls_box.append(self.frameline)
 
         # Button container
-        buttons_box = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         buttons_box.set_halign(Gtk.Align.END)  # Align buttons to the right
-
-        # Add buttons
         buttons_box.append(self.play_button())
         buttons_box.append(self.save_button())
 
@@ -160,15 +155,12 @@ class EditorBox(Gtk.Box):
                 height = pixbuf.get_height()
                 pixels = pixbuf.get_pixels()
                 frame_hash = hash(pixels)
-                # print(f"Frame {frame_index + 1}: type={type(frame)}, size={width}x{height}, hash={frame_hash}")
                 
                 scaled_pixbuf = self.scale_pixbuf_to_fit(pixbuf, self.image_display_width, self.image_display_height)
                 if scaled_pixbuf:
                     self.image_display.set_pixbuf(scaled_pixbuf)
                     # Force display update
                     self.image_display.queue_draw()
-                    # while Gtk.events_pending():
-                    #     Gtk.main_iteration()
 
         except Exception as e:
             print(f"Error displaying frame: {e}")
