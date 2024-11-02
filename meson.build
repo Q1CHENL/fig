@@ -18,22 +18,25 @@ install_subdir('style',
 install_subdir('assets',
   install_dir: python_dir / 'fig'
 )
+install_subdir('screenshots',
+  install_dir: python_dir / 'fig'
+)
 
 # Install desktop file
-install_data('com.github.Q1CHENL.fig.desktop',
+install_data('io.github.Q1CHENL.fig.desktop',
   install_dir: get_option('datadir') / 'applications'
 )
 
 # Install icons
-install_data('assets/com.github.Q1CHENL.fig.svg',
+install_data('assets/io.github.Q1CHENL.fig.svg',
   install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps'
 )
-install_data('assets/com.github.Q1CHENL.fig-symbolic.svg',
+install_data('assets/io.github.Q1CHENL.fig-symbolic.svg',
   install_dir: get_option('datadir') / 'icons/hicolor/symbolic/apps'
 )
 
 # Install metainfo
-install_data('com.github.Q1CHENL.fig.metainfo.xml',
+install_data('io.github.Q1CHENL.fig.metainfo.xml',
   install_dir: get_option('datadir') / 'metainfo'
 )
 

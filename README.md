@@ -1,12 +1,12 @@
 <h1 align="center" style="border-bottom: none;">
-  <img alt="Fig" src="assets/com.github.Q1CHENL.fig.svg" width="128" height="128"/>
+  <img alt="Fig" src="assets/io.github.Q1CHENL.fig.svg" width="128" height="128"/>
   <br>
   Fig
 </h1>
 <h4 align="center">Sleek GIF editor.</h4>
 
-![UI](assets/screenshot-home.png)
-![UI](assets/screenshot-editor.png)
+![UI](screenshots/screenshot-home.png)
+![UI](screenshots/screenshot-editor.png)
 
 ## Todos
 
