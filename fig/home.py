@@ -1,8 +1,7 @@
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gdk, Gio, GLib
-from PIL import Image
+from gi.repository import Gtk, Gio
 from fig.utils import load_css
 
 
@@ -38,7 +37,6 @@ class HomeBox(Gtk.Box):
         return about_button
     
     def select_gif(self, button):
-        # GTK4 file chooser dialog
         dialog = Gtk.FileChooserDialog(
             title="Select a GIF file",
             action=Gtk.FileChooserAction.OPEN,
@@ -49,7 +47,6 @@ class HomeBox(Gtk.Box):
         dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
         dialog.add_button("Open", Gtk.ResponseType.ACCEPT)
         
-        # File filter for GIF files
         filter_gif = Gtk.FileFilter()
         filter_gif.set_name("GIF files")
         filter_gif.add_mime_type("image/gif")
@@ -62,10 +59,8 @@ class HomeBox(Gtk.Box):
         if response == Gtk.ResponseType.ACCEPT:
             file = dialog.get_file()
             file_path = file.get_path()
-            # Get the parent Fig window and trigger the editor UI
             window = self.get_root()
             window.load_editor_ui()
-            # Load the selected GIF into editor
             window.editor_box.load_gif(file_path)
         dialog.destroy()
 
