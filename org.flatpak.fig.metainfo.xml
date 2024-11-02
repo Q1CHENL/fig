@@ -2,14 +2,14 @@
 <component type="desktop-application">
   <id>org.flatpak.fig</id>
   <name>Fig</name>
-  <summary>Your application summary here</summary>
+  <summary>Sleek GIF editor</summary>
   <description>
     <p>
-      A longer description of your application goes here.
+      Fig is a simple and intuitive GIF editor that lets you edit GIFs with ease.
     </p>
   </description>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>Your-License-Here</project_license>
+  <project_license>MIT</project_license>
   <releases>
     <release version="1.0" date="2024-03-21"/>
   </releases>

@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Fig
-Comment=Your application description
+Comment=Sleek GIF editor.
 Exec=fig
 Icon=org.flatpak.fig
 Terminal=false
