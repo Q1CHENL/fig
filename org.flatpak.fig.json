@@ -20,19 +20,6 @@
     "--filesystem=xdg-run/pipewire-0",
     "--filesystem=xdg-config/gtk-4.0"
   ],
-  "add-extensions": {
-    "org.gnome.Platform.Compat.i386": {
-      "directory": "lib/i386-linux-gnu",
-      "version": "47"
-    },
-    "org.gtk.Gtk4theme": {
-      "directory": "share/themes",
-      "version": "4.0",
-      "subdirectories": true,
-      "no-autodownload": true,
-      "autodelete": false
-    }
-  },
   "build-options": {
     "env": {
       "PYTHON": "python3"
@@ -108,47 +95,6 @@
           "type": "dir",
           "path": ".",
           "include": ["style/*.css"]
-        }
-      ]
-    },
-    {
-      "name": "image-formats",
-      "buildsystem": "simple",
-      "build-commands": [
-        "mkdir -p /app/lib/gdk-pixbuf-2.0/2.10.0/loaders",
-        "cp -r /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/* /app/lib/gdk-pixbuf-2.0/2.10.0/loaders/",
-        "mkdir -p /app/lib/gdk-pixbuf-2.0/2.10.0/",
-        "gdk-pixbuf-query-loaders > /app/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
-      ],
-      "modules": [
-        {
-          "name": "giflib",
-          "buildsystem": "simple",
-          "build-commands": [
-            "make",
-            "make DESTDIR=/app PREFIX=/app install"
-          ],
-          "sources": [
-            {
-              "type": "archive",
-              "url": "https://downloads.sourceforge.net/project/giflib/giflib-5.2.1.tar.gz",
-              "sha256": "31da5562f44c5f15d63340a09a4fd62b48c45620cd302f77a6d9acf0077879bd"
-            }
-          ]
-        },
-        {
-          "name": "gdk-pixbuf-xlib",
-          "buildsystem": "meson",
-          "config-opts": [
-            "-Dgtk_doc=false"
-          ],
-          "sources": [
-            {
-              "type": "archive",
-              "url": "https://download.gnome.org/sources/gdk-pixbuf-xlib/2.40/gdk-pixbuf-xlib-2.40.2.tar.xz",
-              "sha256": "8b8e1c270ec16a06f665ea841f8e4e167eaa0118d0cbfeeade43745f09198ff7"
-            }
-          ]
         }
       ]
     }
