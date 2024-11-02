@@ -34,6 +34,7 @@ setup(
     package_data={
         'fig': ['style/*.css'],  # Include CSS files
     },
+    include_package_data=True,
     entry_points={
         'console_scripts': [
             'fig=fig.fig:main',

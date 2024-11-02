@@ -42,6 +42,8 @@ headerbar .menu-button:hover {
 
 .about-fig-button {
     border-radius: 25px;
+    background-color: rgb(64, 64, 64);
+    color: white;
     transition: all 0.2s ease-in-out;
 }
 
@@ -92,4 +94,8 @@ headerbar .menu-button:hover {
 .handle-hover {
     filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.2));
     transform: scale(1.05);
+}
+
+.info-label {
+    color: white;
 }
