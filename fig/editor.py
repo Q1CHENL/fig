@@ -142,20 +142,34 @@ class EditorBox(Gtk.Box):
     def display_frame(self, frame_index):
         """Display a specific frame in the image display"""
         if not self.frames or not (0 <= frame_index < len(self.frames)):
+            print(f"Frame is not displayed: {frame_index}")
             return
 
         try:
-            # Set the current frame index BEFORE any other operations
             self.current_frame_index = frame_index
+            frame = self.frames[frame_index]
             
-            # Then handle the display
-            pixbuf = self.frames[frame_index]
-            scaled_pixbuf = self.scale_pixbuf_to_fit(
-                pixbuf,
-                self.image_display_width,
-                self.image_display_height
-            )
-            self.image_display.set_pixbuf(scaled_pixbuf)
+            if isinstance(frame, Image.Image):
+                pixbuf = self._pil_to_pixbuf(frame)
+            else:
+                pixbuf = frame
+                
+            # Debug info
+            if pixbuf:
+                width = pixbuf.get_width()
+                height = pixbuf.get_height()
+                pixels = pixbuf.get_pixels()
+                frame_hash = hash(pixels)
+                # print(f"Frame {frame_index + 1}: type={type(frame)}, size={width}x{height}, hash={frame_hash}")
+                
+                scaled_pixbuf = self.scale_pixbuf_to_fit(pixbuf, self.image_display_width, self.image_display_height)
+                if scaled_pixbuf:
+                    self.image_display.set_pixbuf(scaled_pixbuf)
+                    # Force display update
+                    self.image_display.queue_draw()
+                    # while Gtk.events_pending():
+                    #     Gtk.main_iteration()
+
         except Exception as e:
             print(f"Error displaying frame: {e}")
 
@@ -247,7 +261,7 @@ class EditorBox(Gtk.Box):
                     GLib.source_remove(self.play_timeout_id)
                     self.play_timeout_id = None
                 return False
-
+            
         self.display_frame(next_frame)
         self.current_frame_index = next_frame
         self.playhead_frame_index = next_frame
@@ -415,11 +429,11 @@ class EditorBox(Gtk.Box):
         """Convert PIL image to GdkPixbuf"""
         # Save PIL image to buffer
         buf = io.BytesIO()
-        pil_image.save(buf, 'ppm')
+        pil_image.save(buf, 'png')
         buf.seek(0)
 
         # Load from buffer into GdkPixbuf
-        loader = GdkPixbuf.PixbufLoader.new_with_type('pnm')
+        loader = GdkPixbuf.PixbufLoader.new_with_type('png')
         loader.write(buf.read())
         loader.close()
 

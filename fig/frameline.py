@@ -15,12 +15,16 @@ class FrameLine(Gtk.Widget):
     def __init__(self, min_value=0, max_value=100, stride=1):
         super().__init__()
         
-        # Slider properties
+        # Ensure max_value is always greater than min_value
         self.min_value = min_value
-        self.max_value = max_value
+        self.max_value = max(min_value + 1, max_value)  # Ensure at least 1 unit difference
+        self.left_value = min_value
+        self.right_value = self.max_value
+        self.stride = stride
+        
+        # Slider properties
         self.left_value = min_value
         self.right_value = max_value
-        self.stride = stride
         
         # Visual properties (updated to match button height)
         self.handle_radius = 20  # Diameter will be 40px to match button height
@@ -228,7 +232,13 @@ class FrameLine(Gtk.Widget):
 
     # Helper methods remain the same
     def value_to_position(self, value, width):
+        """Convert a value to its corresponding position on the widget"""
         usable_width = width - 2 * self.handle_radius
+        
+        # Prevent division by zero
+        if self.max_value == self.min_value:
+            return self.handle_radius
+        
         position = (value - self.min_value) / (self.max_value - self.min_value) * usable_width
         return position + self.handle_radius
 
