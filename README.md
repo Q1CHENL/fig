@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">
-  <img alt="Fig" src="assets/org.fig.Fig.svg" width="128" height="128"/>
+  <img alt="Fig" src="assets/org.flatpak.fig.svg" width="128" height="128"/>
   <br>
   Fig
 </h1>
@@ -28,6 +28,7 @@
 - ~~Design GTK-Style icon~~
 - ~~Button and handles hover effects~~
 - Load GIF faster
+- Improve tests and solve warnings
 
 ## Notice
 
