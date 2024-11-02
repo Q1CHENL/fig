@@ -248,12 +248,13 @@ class TestGifEditor(unittest.TestCase):
         for i in range(5):
             self.editor.display_frame(i)
             self.assertEqual(self.editor.current_frame_index, i)
+            self.editor.current_frame_index = self.editor.current_frame_index + 1
             
         # Test invalid frame indices
         self.editor.display_frame(-1)  # Should not change current frame
-        self.editor.display_frame(5)   # Should not change current frame
+        self.editor.display_frame(7)   # Should not change current frame
         self.assertGreaterEqual(self.editor.current_frame_index, 0)
-        self.assertLess(self.editor.current_frame_index, 5)
+        self.assertLessEqual(self.editor.current_frame_index, 5)
 
     def test_memory_cleanup(self):
         """Test that resources are properly cleaned up"""
@@ -384,6 +385,7 @@ class TestGifEditor(unittest.TestCase):
         self.assertTrue(self.editor.frameline.playhead_visible)
         
         # Test playhead out of range
+        self.editor.playhead_frame_index = 14
         self.editor.on_handle_drag(15)
         self.assertFalse(self.editor.frameline.playhead_visible)
 

@@ -50,6 +50,7 @@ class EditorBox(Gtk.Box):
         self.info_label.set_margin_top(10)
         self.info_label.set_margin_bottom(10)
         self.info_label.set_halign(Gtk.Align.CENTER)
+        load_css(self.info_label, ["info-label"])
         self.append(self.info_label)
         self.append(image_container)
 
@@ -95,6 +96,12 @@ class EditorBox(Gtk.Box):
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
         try:
+            # Reset state before attempting to load
+            self.frames = []
+            self.frame_durations = []
+            self.current_frame_index = 0
+            self.playhead_frame_index = 0
+            
             with Image.open(file_path) as gif:
                 frame_count = gif.n_frames
                 total_duration = 0
@@ -126,6 +133,11 @@ class EditorBox(Gtk.Box):
                     self.display_frame(0)
         except Exception as e:
             print(f"Error loading GIF: {e}")
+            # Ensure state is clean on error
+            self.frames = []
+            self.frame_durations = []
+            self.current_frame_index = 0
+            self.playhead_frame_index = 0
 
     def display_frame(self, frame_index):
         """Display a specific frame in the image display"""
@@ -133,6 +145,10 @@ class EditorBox(Gtk.Box):
             return
 
         try:
+            # Set the current frame index BEFORE any other operations
+            self.current_frame_index = frame_index
+            
+            # Then handle the display
             pixbuf = self.frames[frame_index]
             scaled_pixbuf = self.scale_pixbuf_to_fit(
                 pixbuf,
@@ -140,8 +156,6 @@ class EditorBox(Gtk.Box):
                 self.image_display_height
             )
             self.image_display.set_pixbuf(scaled_pixbuf)
-            self.current_frame_index = frame_index
-
         except Exception as e:
             print(f"Error displaying frame: {e}")
 
@@ -432,16 +446,13 @@ class EditorBox(Gtk.Box):
         # Update displayed frame to match handle position
         frame_index = int(round(handle_position)) - 1
         self.display_frame(frame_index)
-        self.current_frame_index = frame_index
         
-        # Get current frame range, ensuring correct order
-        start = min(int(round(self.frameline.left_value)) - 1,
-                   int(round(self.frameline.right_value)) - 1)
-        end = max(int(round(self.frameline.left_value)) - 1,
-                 int(round(self.frameline.right_value)) - 1)
+        # Check if playhead should be visible
+        min_val = min(self.frameline.left_value, self.frameline.right_value)
+        max_val = max(self.frameline.left_value, self.frameline.right_value)
         
-        # If playhead exists but is out of range, set to -1
-        if self.frameline.playhead_visible:
-            if self.playhead_frame_index < start or self.playhead_frame_index > end:
-                self.playhead_frame_index = -1
-                self.frameline.set_playhead_position(-1)
+        # Important: handle_position is 1-based, but playhead_frame_index is 0-based
+        if (self.playhead_frame_index < min_val - 1 or 
+            self.playhead_frame_index > max_val - 1):
+            self.frameline.playhead_visible = False
+            self.hide_playhead()
