@@ -13,7 +13,12 @@
     "--filesystem=xdg-run/gvfsd",
     "--filesystem=home"
   ],
-  "cleanup": ["/include", "/lib/pkgconfig", "*.la", "*.a"],
+  "cleanup": [
+      "/include", 
+      "/lib/pkgconfig", 
+      "*.la", 
+      "*.a"
+  ],
   "modules": [
     {
       "name": "python3-setuptools",
@@ -50,9 +55,7 @@
       "sources": [
         {
           "type": "git",
-          "url": "https://github.com/Q1CHENL/fig.git",
-          "branch": "main",
-          "include": ["style/*.css"]
+          "url": "https://github.com/Q1CHENL/fig.git"
         }
       ]
     }
