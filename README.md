@@ -16,7 +16,7 @@
 - Crop GIF
 - ~~Export frame(s)~~
 - Combine frames to GIF
-- Stop icon for the play button
+- ~~Stop icon for the play button~~
 - ~~Reverse GIF: switch handles~~
 - ~~Port to GTK4~~
 - Capture GIF
