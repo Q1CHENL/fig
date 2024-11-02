@@ -1,27 +1,29 @@
 {
-  "app-id": "org.flatpak.fig",
+  "id": "org.flatpak.fig",
   "runtime": "org.gnome.Platform",
-  "runtime-version": "45",
+  "runtime-version": "47",
   "sdk": "org.gnome.Sdk",
   "command": "fig",
   "finish-args": [
     "--share=network",
     "--share=ipc",
-    "--socket=x11",
-    "--socket=wayland",
-    "--filesystem=home",
+    "--socket=fallback-x11",
     "--device=dri",
-    "--filesystem=xdg-config/gtk-4.0:ro",
-    "--env=GTK_THEME=adw-gtk3-dark",
-    "--env=GSETTINGS_SCHEMA_DIR=/app/share/glib-2.0/schemas",
-    "--env=XDG_DATA_DIRS=/app/share:/usr/share:/usr/share/runtime/share:/run/host/share",
-    "--env=GTK4_DEBUG=interactive-debugging",
-    "--env=GTK_CSD=1"
+    "--socket=wayland",
+    "--filesystem=xdg-run/gvfsd",
+    "--socket=session-bus",
+    "--socket=system-bus",
+    "--filesystem=home",
+    "--filesystem=xdg-pictures:rw",
+    "--filesystem=xdg-download:rw",
+    "--env=GDK_BACKEND=x11",
+    "--filesystem=xdg-run/pipewire-0",
+    "--filesystem=xdg-config/gtk-4.0"
   ],
   "add-extensions": {
     "org.gnome.Platform.Compat.i386": {
       "directory": "lib/i386-linux-gnu",
-      "version": "45"
+      "version": "47"
     },
     "org.gtk.Gtk4theme": {
       "directory": "share/themes",
@@ -38,21 +40,6 @@
   },
   "modules": [
     {
-      "name": "libadwaita",
-      "buildsystem": "meson",
-      "config-opts": [
-        "-Dexamples=false",
-        "-Dtests=false"
-      ],
-      "sources": [
-        {
-          "type": "archive",
-          "url": "https://download.gnome.org/sources/libadwaita/1.4/libadwaita-1.4.0.tar.xz",
-          "sha256": "e51a098a54d43568218fc48fcf52e80e36f469b3ce912d8ce9c308a37e9f47c2"
-        }
-      ]
-    },
-    {
       "name": "python3-setuptools",
       "buildsystem": "simple",
       "build-commands": [
@@ -66,11 +53,12 @@
         }
       ]
     },
-
     {
       "name": "python3-pillow",
       "buildsystem": "simple",
-      "build-commands": ["pip3 install . --prefix=${FLATPAK_DEST} --no-deps --ignore-installed  --no-build-isolation"],
+      "build-commands": [
+        "pip3 install . --prefix=${FLATPAK_DEST} --no-deps --ignore-installed --no-build-isolation"
+      ],
       "sources": [
         {
           "type": "archive",
@@ -82,7 +70,10 @@
     {
       "name": "pygobject",
       "buildsystem": "meson",
-      "config-opts": ["-Dtests=false", "-Dpython=/usr/bin/python3"],
+      "config-opts": [
+        "-Dtests=false",
+        "-Dpython=/usr/bin/python3"
+      ],
       "sources": [
         {
           "type": "archive",
@@ -92,30 +83,84 @@
       ]
     },
     {
-      "name": "fig",
-      "buildsystem": "simple",
-      "build-commands": [
-        "mkdir -p ${FLATPAK_DEST}/lib/python3.11/site-packages/",
-        "cp -r fig ${FLATPAK_DEST}/lib/python3.11/site-packages/",
-        "cp -r style ${FLATPAK_DEST}/lib/python3.11/site-packages/",
-        "cp -r assets ${FLATPAK_DEST}/lib/python3.11/site-packages/",
-        "mkdir -p ${FLATPAK_DEST}/share/applications",
-        "mkdir -p ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps",
-        "mkdir -p ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps",
-        "cp assets/org.fig.Fig.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/",
-        "cp assets/org.fig.Fig-symbolic.svg ${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps/",
-        "install -Dm755 fig/fig.py ${FLATPAK_DEST}/bin/fig",
-        "install -Dm644 org.flatpak.fig.metainfo.xml ${FLATPAK_DEST}/share/metainfo/org.flatpak.fig.metainfo.xml",
-        "install -Dm644 org.flatpak.fig.desktop ${FLATPAK_DEST}/share/applications/org.flatpak.fig.desktop",
-        "chmod +x ${FLATPAK_DEST}/bin/fig"
+      "name": "libadwaita",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Dexamples=false",
+        "-Dtests=false",
+        "-Dgtk_doc=false",
+        "-Dintrospection=enabled"
       ],
       "sources": [
         {
+          "type": "archive",
+          "url": "https://download.gnome.org/sources/libadwaita/1.5/libadwaita-1.5.0.tar.xz",
+          "sha256": "fd92287df9bb95c963654fb6e70d3e082e2bcb37b147e0e3c905567167993783"
+        }
+      ]
+    },
+    {
+      "name": "fig",
+      "builddir": true,
+      "buildsystem": "meson",
+      "sources": [
+        {
           "type": "dir",
-          "path": "."
+          "path": ".",
+          "include": ["style/*.css"]
+        }
+      ]
+    },
+    {
+      "name": "image-formats",
+      "buildsystem": "simple",
+      "build-commands": [
+        "mkdir -p /app/lib/gdk-pixbuf-2.0/2.10.0/loaders",
+        "cp -r /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/* /app/lib/gdk-pixbuf-2.0/2.10.0/loaders/",
+        "mkdir -p /app/lib/gdk-pixbuf-2.0/2.10.0/",
+        "gdk-pixbuf-query-loaders > /app/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+      ],
+      "modules": [
+        {
+          "name": "giflib",
+          "buildsystem": "simple",
+          "build-commands": [
+            "make",
+            "make DESTDIR=/app PREFIX=/app install"
+          ],
+          "sources": [
+            {
+              "type": "archive",
+              "url": "https://downloads.sourceforge.net/project/giflib/giflib-5.2.1.tar.gz",
+              "sha256": "31da5562f44c5f15d63340a09a4fd62b48c45620cd302f77a6d9acf0077879bd"
+            }
+          ]
+        },
+        {
+          "name": "gdk-pixbuf-xlib",
+          "buildsystem": "meson",
+          "config-opts": [
+            "-Dgtk_doc=false"
+          ],
+          "sources": [
+            {
+              "type": "archive",
+              "url": "https://download.gnome.org/sources/gdk-pixbuf-xlib/2.40/gdk-pixbuf-xlib-2.40.2.tar.xz",
+              "sha256": "8b8e1c270ec16a06f665ea841f8e4e167eaa0118d0cbfeeade43745f09198ff7"
+            }
+          ]
         }
       ]
     }
   ],
-  "cleanup": ["/include", "/lib/pkgconfig", "*.la", "*.a"]
+  "cleanup": [
+    "/include",
+    "/lib/pkgconfig",
+    "*.la",
+    "*.a"
+  ],
+  "environment": {
+    "MESA_DEBUG": "silent",
+    "MESA_LOADER_DRIVER_OVERRIDE": "iris"
+  }
 }

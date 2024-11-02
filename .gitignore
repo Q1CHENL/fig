@@ -5,3 +5,7 @@ build/
 build-dir/
 builddir/
 repo/
+.pytest_cache/
+.vscode
+.flatpak
+

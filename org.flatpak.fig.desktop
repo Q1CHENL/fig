@@ -2,7 +2,7 @@
 Name=Fig
 Comment=Your application description
 Exec=fig
-Icon=org.fig.Fig
+Icon=org.flatpak.fig
 Terminal=false
 Type=Application
 Categories=Utility;
