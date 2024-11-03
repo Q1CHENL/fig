@@ -19,11 +19,11 @@
   <launchable type="desktop-id">io.github.Q1CHENL.fig.desktop</launchable>
   <screenshots>
     <screenshot type="default">
-      <image type="source">https://raw.githubusercontent.com/Q1CHENL/fig/main/screenshots/screenshot-home.png</image>
+      <image type="source">https://raw.githubusercontent.com/Q1CHENL/fig/master/screenshots/screenshot-home.png</image>
       <caption>Home Screen</caption>
     </screenshot>
     <screenshot type="default">
-      <image type="source">https://raw.githubusercontent.com/Q1CHENL/fig/main/screenshots/screenshot-editor.png</image>
+      <image type="source">https://raw.githubusercontent.com/Q1CHENL/fig/master/screenshots/screenshot-editor.png</image>
       <caption>Editor Screen</caption>
     </screenshot>
   </screenshots>
