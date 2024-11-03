@@ -39,51 +39,49 @@ class HomeBox(Gtk.Box):
     def select_gif(self, button):
         """Open native file chooser dialog for GIF selection"""
         try:
-            dialog = Gtk.FileChooserDialog(
-                title="Select a GIF file",
-                transient_for=self.get_root(),
-                action=Gtk.FileChooserAction.OPEN,
-                modal=True
-            )
-            
-            dialog.add_buttons(
-                "Cancel", Gtk.ResponseType.CANCEL,
-                "Open", Gtk.ResponseType.ACCEPT
-            )
+            dialog = Gtk.FileDialog.new()
+            dialog.set_title("Select a GIF")
+            dialog.set_modal(True)
 
             # Set up GIF file filter
             filter_gif = Gtk.FileFilter()
             filter_gif.set_name("GIF files")
             filter_gif.add_mime_type("image/gif")
-            dialog.add_filter(filter_gif)
-
-            # Show all files filter
+            
             filter_all = Gtk.FileFilter()
             filter_all.set_name("All files")
             filter_all.add_pattern("*")
-            dialog.add_filter(filter_all)
+            
+            filters = Gio.ListStore.new(Gtk.FileFilter)
+            filters.append(filter_gif)
+            filters.append(filter_all)
+            dialog.set_filters(filters)
+            dialog.set_default_filter(filter_gif)
 
             # Initialize with home directory
             home_dir = GLib.get_home_dir()
             if os.path.exists(home_dir):
-                dialog.set_current_folder(Gio.File.new_for_path(home_dir))
+                dialog.set_initial_folder(Gio.File.new_for_path(home_dir))
 
-            dialog.connect('response', self._on_file_dialog_response)
-            dialog.show()
+            dialog.open(
+                parent=self.get_root(),
+                callback=self._on_file_dialog_response
+            )
 
         except Exception as e:
             print(f"An error occurred while opening the file chooser: {e}")
 
-    def _on_file_dialog_response(self, dialog, response):
+    def _on_file_dialog_response(self, dialog, result):
         """Handle file chooser dialog response"""
-        if response == Gtk.ResponseType.ACCEPT:
-            file = dialog.get_file()
+        try:
+            file = dialog.open_finish(result)
             if file:
                 file_path = file.get_path()
                 window = self.get_root()
                 window.load_editor_ui()
                 window.editor_box.load_gif(file_path)
-        dialog.destroy()
+        except GLib.Error as e:
+            print(f"Error selecting file: {e.message}")
 
     def show_about(self, button):
         about = Gtk.AboutDialog()
