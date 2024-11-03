@@ -89,9 +89,21 @@ class HomeBox(Gtk.Box):
         about.set_modal(True)
         
         about.set_program_name("Fig")
-        icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../assets/io.github.Q1CHENL.fig.svg"))
-        icon_file = Gio.File.new_for_path(icon_path)
-        about.set_logo(Gdk.Texture.new_from_file(icon_file))
+        # Try multiple possible locations for the icon
+        icon_paths = [
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "../assets/io.github.Q1CHENL.fig.svg")),
+            os.path.join(os.path.dirname(__file__), "assets/io.github.Q1CHENL.fig.svg"),
+            "/app/share/icons/hicolor/scalable/apps/io.github.Q1CHENL.fig.svg"  # Flatpak location
+        ]
+
+        icon_file = None
+        for path in icon_paths:
+            if os.path.exists(path):
+                icon_file = Gio.File.new_for_path(path)
+                break
+
+        if icon_file:
+            about.set_logo(Gdk.Texture.new_from_file(icon_file))
         about.set_version("1.0")
         about.set_comments("A simple and usable GIF editor")
         about.set_website("https://github.com/Q1CHENL/fig")
