@@ -37,32 +37,39 @@ class HomeBox(Gtk.Box):
         return about_button
     
     def select_gif(self, button):
-        dialog = Gtk.FileChooserDialog(
+        """Open native file chooser for GIF selection"""
+        dialog = Gtk.FileChooserNative.new(
             title="Select a GIF file",
+            parent=self.get_root(),
             action=Gtk.FileChooserAction.OPEN,
+            accept_label="Open",
+            cancel_label="Cancel"
         )
-        dialog.set_modal(True)
-        dialog.set_transient_for(self.get_root())
         
-        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
-        dialog.add_button("Open", Gtk.ResponseType.ACCEPT)
-        
+        # Set up GIF file filter
         filter_gif = Gtk.FileFilter()
         filter_gif.set_name("GIF files")
         filter_gif.add_mime_type("image/gif")
         dialog.add_filter(filter_gif)
         
+        # Show all files filter
+        filter_all = Gtk.FileFilter()
+        filter_all.set_name("All files")
+        filter_all.add_pattern("*")
+        dialog.add_filter(filter_all)
+        
         dialog.connect('response', self._on_file_dialog_response)
-        dialog.present()
+        dialog.show()
 
     def _on_file_dialog_response(self, dialog, response):
+        """Handle file chooser response"""
         if response == Gtk.ResponseType.ACCEPT:
             file = dialog.get_file()
-            file_path = file.get_path()
-            window = self.get_root()
-            window.load_editor_ui()
-            window.editor_box.load_gif(file_path)
-        dialog.destroy()
+            if file:
+                file_path = file.get_path()
+                window = self.get_root()
+                window.load_editor_ui()
+                window.editor_box.load_gif(file_path)
 
     def show_about(self, button):
         about = Gtk.AboutDialog()
