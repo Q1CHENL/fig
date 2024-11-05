@@ -282,59 +282,67 @@ class EditorBox(Gtk.Box):
         end_idx = int(round(self.frameline.right_value)) - 1  # Convert to 0-based index
 
         if 0 <= start_idx < len(self.frames) and 0 <= end_idx < len(self.frames):
-            dialog = Gtk.FileChooserDialog(
-                title="Save GIF as...",
-                action=Gtk.FileChooserAction.SAVE,
-                transient_for=self.get_root(),
-                modal=True
-            )
-            dialog.add_buttons(
-                "Cancel", Gtk.ResponseType.CANCEL,
-                "Save", Gtk.ResponseType.ACCEPT
-            )
+            dialog = Gtk.FileDialog()
+            dialog.set_title("Save GIF as...")
+            dialog.set_initial_name("untitled.gif")
 
             # Add file filter for .gif files
             filter_gif = Gtk.FileFilter()
             filter_gif.set_name("GIF files")
             filter_gif.add_mime_type("image/gif")
-            dialog.add_filter(filter_gif)
+            filters = Gio.ListStore.new(Gtk.FileFilter)
+            filters.append(filter_gif)
+            dialog.set_filters(filters)
+            dialog.set_default_filter(filter_gif)
 
-            def on_response(dialog, response):
-                if response == Gtk.ResponseType.ACCEPT:
-                    save_path = dialog.get_file().get_path()
-                    # Add .gif extension if not present
-                    if not save_path.lower().endswith('.gif'):
-                        save_path += '.gif'
+            def save_callback(dialog, result):
+                try:
+                    file = dialog.save_finish(result)
+                    if file:
+                        save_path = file.get_path()
+                        # Add .gif extension if not present
+                        if not save_path.lower().endswith('.gif'):
+                            save_path += '.gif'
 
-                    # Check if file exists and confirm overwrite
-                    if os.path.exists(save_path):
-                        overwrite_dialog = Gtk.MessageDialog(
-                            transient_for=self.get_root(),
-                            modal=True,
-                            message_type=Gtk.MessageType.QUESTION,
-                            buttons=Gtk.ButtonsType.YES_NO,
-                            text="File already exists. Do you want to overwrite it?"
-                        )
-                        overwrite_dialog.connect('response', lambda d, r: self._handle_overwrite_response(
-                            d, r, save_path, start_idx, end_idx))
-                        overwrite_dialog.show()
-                    else:
-                        self._save_gif(save_path, start_idx, end_idx)
+                        # Check if file exists
+                        if os.path.exists(save_path):
+                            confirm_dialog = Gtk.AlertDialog()
+                            confirm_dialog.set_message("File already exists. Do you want to overwrite it?")
+                            confirm_dialog.set_modal(True)
+                            confirm_dialog.set_buttons(["Cancel", "Overwrite"])
+                            confirm_dialog.set_default_button(0)
+                            confirm_dialog.set_cancel_button(0)
 
-                dialog.destroy()
+                            def confirm_callback(dialog, result):
+                                try:
+                                    response = dialog.choose_finish(result)
+                                    if response == 1:  # "Overwrite" was chosen
+                                        self._save_gif(save_path, start_idx, end_idx)
+                                except GLib.Error as e:
+                                    print(f"Error in confirmation dialog: {e}")
 
-            dialog.connect('response', on_response)
-            dialog.show()
+                            confirm_dialog.choose(
+                                self.get_root(),
+                                None,
+                                confirm_callback
+                            )
+                        else:
+                            self._save_gif(save_path, start_idx, end_idx)
+
+                except GLib.Error as e:
+                    # Only show error dialog if it's not a user dismissal
+                    if not "Dismissed by user" in str(e):
+                        print(f"Error saving file: {e}")
+                        error_dialog = Gtk.AlertDialog()
+                        error_dialog.set_message("Error saving file")
+                        error_dialog.set_detail(str(e))
+                        error_dialog.show(self.get_root())
+
+            dialog.save(self.get_root(), None, save_callback)
         else:
-            dialog = Gtk.MessageDialog(
-                transient_for=self.get_root(),
-                modal=True,
-                message_type=Gtk.MessageType.ERROR,
-                buttons=Gtk.ButtonsType.OK,
-                text="Invalid Frame Range"
-            )
-            dialog.connect('response', lambda d, r: d.destroy())
-            dialog.show()
+            error_dialog = Gtk.AlertDialog()
+            error_dialog.set_message("Invalid Frame Range")
+            error_dialog.show(self.get_root())
 
     def _handle_overwrite_response(self, dialog, response, save_path, start_idx, end_idx):
         if response == Gtk.ResponseType.YES:
