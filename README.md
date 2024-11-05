@@ -30,11 +30,15 @@
 - Load GIF faster
 - Improve tests and solve warnings
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
+- Select new in editor
+
+## Test
+
+`pytest tests/test_editor.py`
 
 ## Notice
 
 - Homepage UI is inspired by [sly](https://github.com/kra-mo/sly)
-- Loading GIFs is not fast. You may have to wait a bit.
 
 ## Contribute
 
