@@ -99,3 +99,12 @@ headerbar .menu-button:hover {
 .info-label {
     color: white;
 }
+
+.loading-label {
+    font-size: 16px;
+    color: white;
+    background-color: #242424;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin: 10px;
+}

@@ -76,7 +76,7 @@ class EditorBox(Gtk.Box):
 
         # Add buttons to controls
         controls_box.append(buttons_box)
-
+        
         # Add controls to main box
         self.append(controls_box)
 
@@ -87,6 +87,8 @@ class EditorBox(Gtk.Box):
         self.is_playing = False
         self.play_timeout_id = None
         self.playback_finished = False  # Add this to track if playback reached the end
+
+
 
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
@@ -102,8 +104,15 @@ class EditorBox(Gtk.Box):
                 total_duration = 0
                 self.frames = []
                 self.frame_durations = []  # Store frame durations
-
+                
+                context = GLib.MainContext.default()
                 for frame in range(frame_count):
+                    # Update loading label
+                    self.info_label.set_text(f"Loading frames {frame + 1}/{frame_count}")
+                    # Process pending events
+                    while context.pending():
+                        context.iteration(False)
+                    
                     gif.seek(frame)
                     duration = gif.info.get('duration', 100) / 1000.0
                     total_duration += duration
@@ -111,7 +120,6 @@ class EditorBox(Gtk.Box):
                     self.frames.append(pixbuf)
                     # Store duration in milliseconds
                     self.frame_durations.append(duration * 1000)
-
                 # Update frameline with 1-based frame range
                 self.frameline.min_value = 1
                 self.frameline.max_value = frame_count
