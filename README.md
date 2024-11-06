@@ -5,6 +5,13 @@
 </h1>
 <h4 align="center">Sleek GIF editor.</h4>
 
+
+<p align="center">
+  <a href="https://flathub.org/apps/details/io.github.Q1CHENL.fig">
+    <img alt="Download on Flathub" src="https://flathub.org/api/badge?svg&locale=en&light" width="200"/>
+  </a>
+</p>
+
 ![UI](screenshots/screenshot-home.png)
 ![UI](screenshots/screenshot-editor.png)
 
