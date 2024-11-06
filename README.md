@@ -38,6 +38,7 @@
 - Improve tests and solve warnings
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
 - Select new in editor
+- Light mode
 
 ## Test
 
