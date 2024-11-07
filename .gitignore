@@ -8,4 +8,5 @@ repo/
 .pytest_cache/
 .vscode
 .flatpak
+.history
 
