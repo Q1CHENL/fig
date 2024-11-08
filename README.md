@@ -5,7 +5,6 @@
 </h1>
 <h4 align="center">Sleek GIF editor.</h4>
 
-
 <p align="center">
   <a href="https://flathub.org/apps/details/io.github.Q1CHENL.fig">
     <img alt="Download on Flathub" src="https://flathub.org/api/badge?svg&locale=en&light" width="200"/>
@@ -14,6 +13,13 @@
 
 ![UI](screenshots/screenshot-home.png)
 ![UI](screenshots/screenshot-editor.png)
+
+## Features
+
+- Trim GIF to any frame range
+- Reverse GIF
+- Remove specific frames from GIF
+- Play GIF at original speed
 
 ## Todos
 
@@ -31,7 +37,7 @@
 - Make GIF slower/faster
 - Make GIF black-and-white
 - ~~Reverse playback~~
-- Append/Insert/Remove frames in frameline
+- Append/Insert/~~Remove~~ frames in frameline
 - ~~Design GTK-Style icon~~
 - ~~Button and handles hover effects~~
 - Load GIF faster
@@ -39,6 +45,8 @@
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
 - Select new in editor
 - Light mode
+- Undo lasy action
+- Proper default name for edited gif when saving
 
 ## Test
 
