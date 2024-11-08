@@ -233,43 +233,34 @@ class EditorBox(Gtk.Box):
         if not self.is_playing:
             return False
 
-        # Get current frame range
         start = int(round(self.frameline.left_value)) - 1
         end = int(round(self.frameline.right_value)) - 1
         is_reversed = start > end
+        direction = -1 if is_reversed else 1
 
-        # Calculate next frame within range
-        if is_reversed:
-            next_frame = self.current_frame_index - 1
-            if next_frame < end:
-                self.is_playing = False
-                self.update_play_button_icon(False)
-                self.hide_playhead()
-                self.frameline.playhead_visible = False  # Explicitly set the state
-                if self.play_timeout_id:
-                    GLib.source_remove(self.play_timeout_id)
-                    self.play_timeout_id = None
-                return False
-        else:
-            next_frame = self.current_frame_index + 1
-            if next_frame > end:
-                self.is_playing = False
-                self.update_play_button_icon(False)
-                self.hide_playhead()
-                self.frameline.playhead_visible = False  # Explicitly set the state
-                if self.play_timeout_id:
-                    GLib.source_remove(self.play_timeout_id)
-                    self.play_timeout_id = None
-                return False
-            
+        # Get next valid frame, skipping removed ranges
+        next_frame = self.frameline.get_next_valid_frame(
+            self.current_frame_index, 
+            direction
+        )
+
+        # Check if we've reached the end
+        if next_frame == -1 or (direction > 0 and next_frame > end) or (direction < 0 and next_frame < end):
+            self.is_playing = False
+            self.update_play_button_icon(False)
+            self.hide_playhead()
+            self.frameline.playhead_visible = False
+            if self.play_timeout_id:
+                GLib.source_remove(self.play_timeout_id)
+                self.play_timeout_id = None
+            return False
+
         self.display_frame(next_frame)
         self.current_frame_index = next_frame
         self.playhead_frame_index = next_frame
-
-        # Update playhead position
         self.frameline.set_playhead_position(self.playhead_frame_index)
 
-        # Schedule next frame using the current frame's duration
+        # Schedule next frame
         current_duration = self.frame_durations[next_frame]
         self.play_timeout_id = GLib.timeout_add(
             current_duration, self.play_next_frame)
@@ -358,28 +349,35 @@ class EditorBox(Gtk.Box):
         dialog.destroy()
 
     def _save_gif(self, save_path, start_idx, end_idx):
+        """Save GIF excluding removed ranges"""
         # Determine if we need to reverse the frames
         is_reversed = start_idx > end_idx
         if is_reversed:
             start_idx, end_idx = end_idx, start_idx
 
-        frames_to_save = [self._pixbuf_to_pil(
-            self.frames[i]) for i in range(start_idx, end_idx + 1)]
-        durations = self.frame_durations[start_idx:end_idx + 1]
+        # Get valid frames (excluding removed ranges)
+        frames_to_save = []
+        durations = []
+        
+        for i in range(start_idx, end_idx + 1):
+            if not self.frameline.is_frame_removed(i):
+                frames_to_save.append(self._pixbuf_to_pil(self.frames[i]))
+                durations.append(self.frame_durations[i])
 
         # Reverse frames and durations if needed
         if is_reversed:
             frames_to_save.reverse()
             durations.reverse()
 
-        frames_to_save[0].save(
-            save_path,
-            save_all=True,
-            append_images=frames_to_save[1:],
-            duration=durations,
-            loop=0,
-            format='GIF'
-        )
+        if frames_to_save:  # Only save if we have valid frames
+            frames_to_save[0].save(
+                save_path,
+                save_all=True,
+                append_images=frames_to_save[1:],
+                duration=durations,
+                loop=0,
+                format='GIF'
+            )
 
     def on_frames_changed(self, frameline, start, end):
         """Handle frame range changes from the frameline"""
@@ -403,16 +401,11 @@ class EditorBox(Gtk.Box):
                 frame_index = int(round(frameline.right_value)) - 1
                 
             frame_index = max(0, min(frame_index, len(self.frames) - 1))
-            self.current_frame_index = frame_index
-            self.display_frame(frame_index)
-        
-        # Update playhead visibility using min/max for reversed handles
-        min_frame = min(start_frame_index, end_frame_index)
-        max_frame = max(start_frame_index, end_frame_index)
-        if self.playhead_frame_index < min_frame or self.playhead_frame_index > max_frame:
-            self.hide_playhead()
-        else:
-            self.frameline.set_playhead_position(self.playhead_frame_index)
+            
+            # Only update display if frame is not removed
+            if not frameline.is_frame_removed(frame_index):
+                self.current_frame_index = frame_index
+                self.display_frame(frame_index)
 
     def save_button(self):
         save_button = Gtk.Button(label="Save")
