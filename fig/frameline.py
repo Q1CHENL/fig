@@ -1,6 +1,6 @@
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gdk, GLib, Graphene, GObject
+from gi.repository import Gtk, Gdk, GLib, Graphene, GObject, Gio
 import math
 import cairo
 
@@ -64,6 +64,74 @@ class FrameLine(Gtk.Widget):
         self.motion_controller.connect('leave', self.on_leave)
         self.motion_controller.connect('motion', self.on_motion)
         self.add_controller(self.motion_controller)
+        
+        # Keep these for red highlight feature
+        self.menu_active = False
+        self.active_handle = None
+        self.hover_action = None  # Track which menu item is being hovered
+        
+        # Add right click gesture (add this near other gesture controllers)
+        self.right_click_gesture = Gtk.GestureClick.new()
+        self.right_click_gesture.set_button(3)  # 3 is right click
+        self.right_click_gesture.connect('pressed', self.on_right_click)
+        self.add_controller(self.right_click_gesture)
+        
+        # Create popup menu with better state management
+        self.popup_menu = Gtk.Popover()
+        self.popup_menu.set_has_arrow(False)
+        self.popup_menu.set_parent(self)
+        self.popup_menu.set_autohide(True)
+        
+        # Add key controller for escape key
+        key_controller = Gtk.EventControllerKey.new()
+        key_controller.connect('key-pressed', self.on_key_pressed)
+        self.popup_menu.add_controller(key_controller)
+        
+        # Create menu box
+        menu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        
+        # Create menu items as buttons
+        remove_range_btn = Gtk.Button(label="Remove Range")
+        remove_frame_btn = Gtk.Button(label="Remove Frame")
+        insert_frames_btn = Gtk.Button(label="Insert Frames")
+        
+        # Add CSS classes
+        remove_range_btn.add_css_class('menu-item')
+        remove_frame_btn.add_css_class('menu-item')
+        insert_frames_btn.add_css_class('menu-item')
+        
+        # Add hover controllers
+        range_motion = Gtk.EventControllerMotion.new()
+        range_motion.connect('enter', self.on_remove_range_hover_enter)
+        range_motion.connect('leave', self.on_menu_item_hover_leave)
+        remove_range_btn.add_controller(range_motion)
+        
+        frame_motion = Gtk.EventControllerMotion.new()
+        frame_motion.connect('enter', self.on_remove_frame_hover_enter)
+        frame_motion.connect('leave', self.on_menu_item_hover_leave)
+        remove_frame_btn.add_controller(frame_motion)
+        
+        # Add buttons to menu box
+        menu_box.append(remove_range_btn)
+        menu_box.append(remove_frame_btn)
+        menu_box.append(insert_frames_btn)
+        
+        self.popup_menu.set_child(menu_box)
+        
+        # Add popup menu closed handler
+        self.popup_menu.connect('closed', self.on_popup_closed)
+
+    def on_remove_range_hover_enter(self, controller, x, y):
+        self.hover_action = 'range'
+        self.queue_draw()
+
+    def on_remove_frame_hover_enter(self, controller, x, y):
+        self.hover_action = 'frame'
+        self.queue_draw()
+
+    def on_menu_item_hover_leave(self, controller, *args):
+        self.hover_action = None
+        self.queue_draw()
 
     def do_measure(self, orientation, for_size):
         if orientation == Gtk.Orientation.VERTICAL:
@@ -99,8 +167,10 @@ class FrameLine(Gtk.Widget):
                                   width - 2 * self.handle_radius, self.track_height, self.track_radius)
         cr.fill()
         
-        # Draw selected portion (white or red depending on handle positions)
-        if self.left_value <= self.right_value:
+        # Draw selected portion
+        if self.hover_action == 'range':
+            cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for remove range hover
+        elif self.left_value <= self.right_value:
             cr.set_source_rgb(1, 1, 1)  # White for normal order
         else:
             cr.set_source_rgb(1, 0.4, 0.4)  # Light red for reverse order
@@ -110,33 +180,33 @@ class FrameLine(Gtk.Widget):
         cr.fill()
         
         # Draw handles
-        cr.set_source_rgb(1, 1, 1)
-        
-        # Left handle
-        cr.new_path()
-        if self.left_handle_hover or self.dragging_left:
-            cr.save()
-            cr.translate(left_handle_x, height / 2)
-            cr.scale(1.05, 1.05)
-            cr.translate(-left_handle_x, -height / 2)
-            cr.arc(left_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
-            cr.restore()
+        if self.hover_action == 'range':
+            # Both handles red for range action
+            cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
+            
+            # Draw left handle
+            self.draw_handle(cr, left_handle_x, height)
+            
+            # Draw right handle
+            self.draw_handle(cr, right_handle_x, height)
+            
+        elif self.hover_action == 'frame':
+            # Left handle
+            if self.active_handle == 'left':
+                cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for left handle
+                self.draw_handle(cr, left_handle_x, height)
+                cr.set_source_rgb(1, 1, 1)  # White for right handle
+                self.draw_handle(cr, right_handle_x, height)
+            else:  # right handle
+                cr.set_source_rgb(1, 1, 1)  # White for left handle
+                self.draw_handle(cr, left_handle_x, height)
+                cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for right handle
+                self.draw_handle(cr, right_handle_x, height)
         else:
-            cr.arc(left_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
-        cr.fill()
-        
-        # Right handle
-        cr.new_path()
-        if self.right_handle_hover or self.dragging_right:
-            cr.save()
-            cr.translate(right_handle_x, height / 2)
-            cr.scale(1.05, 1.05)
-            cr.translate(-right_handle_x, -height / 2)
-            cr.arc(right_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
-            cr.restore()
-        else:
-            cr.arc(right_handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
-        cr.fill()
+            # Normal white color for both handles
+            cr.set_source_rgb(1, 1, 1)
+            self.draw_handle(cr, left_handle_x, height)
+            self.draw_handle(cr, right_handle_x, height)
         
         # Draw text on handles
         cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
@@ -191,10 +261,15 @@ class FrameLine(Gtk.Widget):
         cr.close_path()
 
     def on_pressed(self, gesture, n_press, x, y):
+        # Hide popover when clicking anywhere
+        if self.popup_menu.get_visible():
+            self.popup_menu.popdown()
+        
         width = self.get_width()
         left_handle_x = self.value_to_position(self.left_value, width)
         right_handle_x = self.value_to_position(self.right_value, width)
         
+        # Only handle dragging for left click
         if abs(x - left_handle_x) <= self.handle_radius:
             self.dragging_left = True
             self.drag_offset = left_handle_x - x
@@ -203,6 +278,13 @@ class FrameLine(Gtk.Widget):
             self.dragging_right = True
             self.drag_offset = right_handle_x - x
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        
+        # Clear any existing menu state
+        self.menu_active = False
+        self.active_handle = None
+        self.popup_menu.popdown()  # Hide menu if it's showing
+        
+        self.queue_draw()
 
     def on_released(self, gesture, n_press, x, y):
         self.dragging_left = False
@@ -309,3 +391,68 @@ class FrameLine(Gtk.Widget):
         # Check if mouse is over either handle
         self.left_handle_hover = abs(x - left_handle_x) <= self.handle_radius and not self.dragging_right
         self.right_handle_hover = abs(x - right_handle_x) <= self.handle_radius and not self.dragging_left
+
+    def on_right_click(self, gesture, n_press, x, y):
+        # First hide any existing popover
+        if self.popup_menu.get_visible():
+            self.popup_menu.popdown()
+        
+        width = self.get_width()
+        left_handle_x = self.value_to_position(self.left_value, width)
+        right_handle_x = self.value_to_position(self.right_value, width)
+        
+        # Check if click is on handles
+        if abs(x - left_handle_x) <= self.handle_radius:
+            self.active_handle = 'left'
+            rect = Gdk.Rectangle()
+            rect.x = int(x)
+            rect.y = int(y)
+            rect.width = 1
+            rect.height = 1
+            self.popup_menu.set_pointing_to(rect)
+            self.popup_menu.popup()
+        elif abs(x - right_handle_x) <= self.handle_radius:
+            self.active_handle = 'right'
+            rect = Gdk.Rectangle()
+            rect.x = int(x)
+            rect.y = int(y)
+            rect.width = 1
+            rect.height = 1
+            self.popup_menu.set_pointing_to(rect)
+            self.popup_menu.popup()
+        else:
+            # Reset all states when clicking elsewhere
+            self.active_handle = None
+            self.hover_action = None
+            self.popup_menu.popdown()
+        
+        self.queue_draw()
+
+    def draw_handle(self, cr, handle_x, height):
+        """Helper method to draw a handle"""
+        cr.new_path()
+        if (self.left_handle_hover and handle_x == self.value_to_position(self.left_value, self.get_width())) or \
+           (self.right_handle_hover and handle_x == self.value_to_position(self.right_value, self.get_width())):
+            cr.save()
+            cr.translate(handle_x, height / 2)
+            cr.scale(1.05, 1.05)
+            cr.translate(-handle_x, -height / 2)
+            cr.arc(handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
+            cr.restore()
+        else:
+            cr.arc(handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
+        cr.fill()
+
+    def on_popup_closed(self, popover):
+        """Reset states when popup menu is closed"""
+        self.menu_active = False
+        self.active_handle = None
+        self.hover_action = None
+        self.queue_draw()
+
+    def on_key_pressed(self, controller, keyval, keycode, state):
+        """Handle escape key to close popover"""
+        if keyval == Gdk.KEY_Escape:
+            self.popup_menu.popdown()
+            return True
+        return False
