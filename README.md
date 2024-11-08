@@ -39,6 +39,7 @@
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
 - Select new in editor
 - Light mode
+- More detailed description on flathub
 
 ## Test
 
