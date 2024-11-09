@@ -389,5 +389,118 @@ class TestGifEditor(unittest.TestCase):
         self.editor.on_handle_drag(15)
         self.assertFalse(self.editor.frameline.playhead_visible)
 
+    def test_remove_single_frame(self):
+        """Test removing a single frame"""
+        self.editor.load_gif('test.gif')
+        initial_frame_count = len(self.editor.frames)
+        
+        # Remove frame 3 (1-based index)
+        self.editor.frameline.add_removed_range(3, 3)
+        
+        # Verify frame is marked as removed
+        self.assertTrue(self.editor.frameline.is_frame_removed(2))  # 0-based index
+        
+        # Save and verify
+        self.editor._save_gif('output.gif', 0, 4)  # Full range
+        
+        with Image.open('output.gif') as gif:
+            self.assertEqual(gif.n_frames, initial_frame_count - 1)
+        
+        # Cleanup
+        os.remove('output.gif')
+
+    def test_remove_frame_range(self):
+        """Test removing a range of frames"""
+        self.editor.load_gif('test.gif')
+        initial_frame_count = len(self.editor.frames)
+        
+        # Remove frames 2-4 (1-based indices)
+        self.editor.frameline.add_removed_range(2, 4)
+        
+        # Verify frames are marked as removed
+        for i in range(1, 4):  # 0-based indices
+            self.assertTrue(self.editor.frameline.is_frame_removed(i))
+        
+        # Save and verify
+        self.editor._save_gif('output.gif', 0, 4)
+        
+        with Image.open('output.gif') as gif:
+            self.assertEqual(gif.n_frames, initial_frame_count - 3)
+        
+        # Cleanup
+        os.remove('output.gif')
+
+    def test_remove_overlapping_ranges(self):
+        """Test removing overlapping ranges"""
+        self.editor.load_gif('test.gif')
+        
+        # Add overlapping ranges
+        self.editor.frameline.add_removed_range(1, 3)
+        self.editor.frameline.add_removed_range(2, 4)
+        
+        # Verify merged range
+        for i in range(0, 4):  # 0-based indices
+            self.assertTrue(self.editor.frameline.is_frame_removed(i))
+        
+        # Verify ranges were merged
+        self.assertEqual(len(self.editor.frameline.removed_ranges), 1)
+        self.assertEqual(self.editor.frameline.removed_ranges[0], (0, 3))
+
+    def test_remove_adjacent_ranges(self):
+        """Test removing adjacent ranges"""
+        self.editor.load_gif('test.gif')
+        
+        # Add adjacent ranges
+        self.editor.frameline.add_removed_range(1, 2)
+        self.editor.frameline.add_removed_range(3, 4)
+        
+        # Verify merged range
+        for i in range(0, 4):  # 0-based indices
+            self.assertTrue(self.editor.frameline.is_frame_removed(i))
+        
+        # Verify ranges were merged
+        self.assertEqual(len(self.editor.frameline.removed_ranges), 1)
+        self.assertEqual(self.editor.frameline.removed_ranges[0], (0, 3))
+
+    def test_remove_edge_frames(self):
+        """Test removing frames at the edges"""
+        self.editor.load_gif('test.gif')
+        initial_frame_count = len(self.editor.frames)
+        
+        # Remove first and last frames
+        self.editor.frameline.add_removed_range(1, 1)  # First frame
+        self.editor.frameline.add_removed_range(5, 5)  # Last frame
+        
+        # Verify edge frames are marked as removed
+        self.assertTrue(self.editor.frameline.is_frame_removed(0))
+        self.assertTrue(self.editor.frameline.is_frame_removed(4))
+        
+        # Save and verify
+        self.editor._save_gif('output.gif', 0, 4)
+        
+        with Image.open('output.gif') as gif:
+            self.assertEqual(gif.n_frames, initial_frame_count - 2)
+        
+        # Cleanup
+        os.remove('output.gif')
+
+    def test_clear_removed_ranges(self):
+        """Test clearing removed ranges"""
+        self.editor.load_gif('test.gif')
+        
+        # Add some ranges
+        self.editor.frameline.add_removed_range(1, 2)
+        self.editor.frameline.add_removed_range(4, 5)
+        
+        # Clear ranges
+        self.editor.frameline.clear_removed_ranges()
+        
+        # Verify no frames are marked as removed
+        for i in range(5):
+            self.assertFalse(self.editor.frameline.is_frame_removed(i))
+        
+        # Verify removed_ranges list is empty
+        self.assertEqual(len(self.editor.frameline.removed_ranges), 0)
+
 if __name__ == '__main__':
     unittest.main() 
