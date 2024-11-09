@@ -12,7 +12,8 @@ class FrameLine(Gtk.Widget):
     # Define the custom signal
     __gsignals__ = {
         'frames-changed': (GObject.SignalFlags.RUN_LAST, None, (float, float)),
-        'insert-frames': (GObject.SignalFlags.RUN_LAST, None, (int, object))
+        'insert-frames': (GObject.SignalFlags.RUN_LAST, None, (int, object)),
+        'speed-changed': (GObject.SignalFlags.RUN_LAST, None, (float, float, float))  # start, end, speed_factor
     }
 
     def __init__(self, min_value=0, max_value=100, stride=1):
@@ -98,18 +99,18 @@ class FrameLine(Gtk.Widget):
         remove_frame_btn = Gtk.Button(label="Remove Frame")
         remove_frame_btn.connect('clicked', self.on_remove_frame_clicked)
         insert_frames_btn = Gtk.Button(label="Insert Frames")
-        speedup_frames_btn = Gtk.Button(label="Speed Up Frames")
+        changespeed_frames_btn = Gtk.Button(label="Change Speed...")
 
         # Add CSS classes and set alignment
         self.remove_range_btn.set_halign(Gtk.Align.START)
         remove_frame_btn.set_halign(Gtk.Align.START)
         insert_frames_btn.set_halign(Gtk.Align.START)
-        speedup_frames_btn.set_halign(Gtk.Align.START)
+        changespeed_frames_btn.set_halign(Gtk.Align.START)
 
         self.remove_range_btn.add_css_class('menu-item')
         remove_frame_btn.add_css_class('menu-item')
         insert_frames_btn.add_css_class('menu-item')
-        speedup_frames_btn.add_css_class('menu-item')
+        changespeed_frames_btn.add_css_class('menu-item')
 
         # Add hover controllers
         range_motion = Gtk.EventControllerMotion.new()
@@ -127,16 +128,16 @@ class FrameLine(Gtk.Widget):
         insert_motion.connect('leave', self.on_menu_item_hover_leave)
         insert_frames_btn.add_controller(insert_motion)
 
-        speedup_motion = Gtk.EventControllerMotion.new()
-        speedup_motion.connect('enter', self.on_speedup_frames_hover_enter)
-        speedup_motion.connect('leave', self.on_menu_item_hover_leave)
-        speedup_frames_btn.add_controller(speedup_motion)
+        changespeed_motion = Gtk.EventControllerMotion.new()
+        changespeed_motion.connect('enter', self.on_changespeed_frames_hover_enter)
+        changespeed_motion.connect('leave', self.on_menu_item_hover_leave)
+        changespeed_frames_btn.add_controller(changespeed_motion)
 
         # Add buttons to menu box
         menu_box.append(self.remove_range_btn)
         menu_box.append(remove_frame_btn)
         menu_box.append(insert_frames_btn)
-        menu_box.append(speedup_frames_btn)
+        menu_box.append(changespeed_frames_btn)
 
         self.popup_menu.set_child(menu_box)
 
@@ -146,9 +147,13 @@ class FrameLine(Gtk.Widget):
         # Add after other initializations
         self.removed_ranges = []  # List of tuples (start, end) for removed ranges
         self.inserted_ranges = []  # List of tuples (start, end) for inserted frames
+        self.speed_ranges = []  # Add this to track speed-modified ranges
 
         # Inside __init__ method, after creating insert_frames_btn
         insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
+
+        # Add after the insert_frames_btn connection
+        changespeed_frames_btn.connect('clicked', self.on_changespeed_frames_clicked)
 
     def on_remove_range_hover_enter(self, controller, x, y):
         self.hover_action = 'range'
@@ -162,8 +167,8 @@ class FrameLine(Gtk.Widget):
         self.hover_action = 'insert'
         self.queue_draw()
 
-    def on_speedup_frames_hover_enter(self, controller, x, y):
-        self.hover_action = 'speedup'
+    def on_changespeed_frames_hover_enter(self, controller, x, y):
+        self.hover_action = 'changespeed'
         self.queue_draw()
 
     def on_menu_item_hover_leave(self, controller, *args):
@@ -206,7 +211,7 @@ class FrameLine(Gtk.Widget):
         # 2. Draw selected portion
         if self.hover_action == 'range':  # Only highlight track for range removal
             cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
-        elif self.hover_action == 'speedup':
+        elif self.hover_action == 'changespeed':
             cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
         elif self.left_value <= self.right_value:
             cr.set_source_rgb(1, 1, 1)  # White
@@ -219,6 +224,9 @@ class FrameLine(Gtk.Widget):
 
         # 3. Draw inserted ranges in green (moved before removed ranges)
         self.draw_inserted_ranges(cr, width, height)
+        
+        # 7. Draw speed ranges (blue)
+        self.draw_speed_ranges(cr, width, height)
 
         # 4. Draw removed ranges (now on top of inserted ranges)
         cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
@@ -246,7 +254,7 @@ class FrameLine(Gtk.Widget):
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for active handle on frame hover
             elif self.hover_action == 'range':
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for both handles on range hover
-            elif self.hover_action == 'speedup':
+            elif self.hover_action == 'changespeed':
                 cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
             elif self.hover_action == 'insert' and (
                 (is_left_handle and self.active_handle == 'left') or
@@ -257,6 +265,8 @@ class FrameLine(Gtk.Widget):
                 cr.set_source_rgb(1, 1, 1)  # White
 
             self.draw_handle(cr, handle_x, height)
+
+
 
     def draw_rounded_rectangle(self, cr, x, y, width, height, radius):
         if width < 2 * radius:
@@ -521,8 +531,8 @@ class FrameLine(Gtk.Widget):
             return True
         return False
 
-    def on_speedup_frames_hover_enter(self, controller, x, y):
-        self.hover_action = 'speedup'
+    def on_changespeed_frames_hover_enter(self, controller, x, y):
+        self.hover_action = 'changespeed'
         self.queue_draw()
 
     def on_remove_range_clicked(self, button):
@@ -551,11 +561,7 @@ class FrameLine(Gtk.Widget):
         self.popup_menu.popdown()
 
     def add_removed_range(self, start, end):
-        """Add a range of frames to be removed
-        Args:
-            start (int): Start frame number (1-based)
-            end (int): End frame number (1-based)
-        """
+        """Add a range of frames to be removed"""
         # Convert to 0-based indices for internal storage
         start_idx = int(start) - 1
         end_idx = int(end) - 1
@@ -573,11 +579,23 @@ class FrameLine(Gtk.Widget):
                 merged[-1][1] = max(merged[-1][1], range_end)
         self.removed_ranges = [tuple(x) for x in merged]
         
-        # Reset handles to start and end positions
+        # Update speed ranges to exclude removed frames
+        new_speed_ranges = []
+        for speed_start, speed_end, speed in self.speed_ranges:
+            # Keep ranges that don't overlap with removed range
+            if not (speed_start <= end_idx and speed_end >= start_idx):
+                new_speed_ranges.append((speed_start, speed_end, speed))
+            else:
+                # Split range if necessary
+                if speed_start < start_idx:
+                    new_speed_ranges.append((speed_start, start_idx - 1, speed))
+                if speed_end > end_idx:
+                    new_speed_ranges.append((end_idx + 1, speed_end, speed))
+        self.speed_ranges = new_speed_ranges
+        
+        # Reset handles and emit signal
         self.left_value = self.min_value
         self.right_value = self.max_value
-        
-        # Emit frames-changed signal with new values
         self.emit('frames-changed', self.left_value, self.right_value)
         
         self.queue_draw()
@@ -680,5 +698,98 @@ class FrameLine(Gtk.Widget):
             
             # Draw green highlight
             cr.set_source_rgb(0x2d/255, 0xc6/255, 0x53/255)  # Green color
+            cr.rectangle(start_pos, track_y, end_pos - start_pos, self.track_height)
+            cr.fill()
+
+    def on_changespeed_frames_clicked(self, button):
+        # Close the main context menu
+        self.popup_menu.popdown()
+        
+        # Create speed selection popover
+        speed_popover = Gtk.Popover()
+        speed_popover.set_has_arrow(False)
+        speed_popover.set_parent(self)
+        speed_popover.set_autohide(True)
+        
+        # Create box for speed options
+        speed_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        
+        # Speed options
+        speeds = [
+            ("2.0x", 2.0),
+            ("1.5x", 1.5),
+            ("1.2x", 1.2),
+            ("1.0x", 1.0),
+            ("0.75x", 0.75),
+            ("0.5x", 0.5)
+        ]
+        
+        for label, speed in speeds:
+            speed_btn = Gtk.Button(label=label)
+            speed_btn.add_css_class('menu-item')
+            speed_btn.set_halign(Gtk.Align.START)
+            speed_btn.connect('clicked', self.on_speed_selected, speed)
+            speed_box.append(speed_btn)
+        
+        speed_popover.set_child(speed_box)
+        
+        # Position the popover near the clicked handle
+        if self.active_handle == 'left':
+            x = self.value_to_position(self.left_value, self.get_width())
+        else:
+            x = self.value_to_position(self.right_value, self.get_width())
+        
+        rect = Gdk.Rectangle()
+        rect.x = int(x)
+        rect.y = int(self.get_height() / 2)
+        rect.width = 1
+        rect.height = 1
+        
+        speed_popover.set_pointing_to(rect)
+        speed_popover.popup()
+
+    def on_speed_selected(self, button, speed_factor):
+        # Get the current range
+        start = min(self.left_value, self.right_value)
+        end = max(self.left_value, self.right_value)
+        
+        # Add to speed ranges
+        self.speed_ranges.append((int(start) - 1, int(end) - 1, speed_factor))
+        
+        # Sort and merge overlapping ranges
+        self.speed_ranges.sort()
+        merged = []
+        for range_start, range_end, speed in self.speed_ranges:
+            if not merged or merged[-1][1] + 1 < range_start:
+                merged.append([range_start, range_end, speed])
+            else:
+                merged[-1][1] = max(merged[-1][1], range_end)
+                merged[-1][2] = speed  # Use the most recent speed for overlapping ranges
+        self.speed_ranges = [tuple(x) for x in merged]
+        
+        # Emit the speed-changed signal
+        self.emit('speed-changed', start, end, speed_factor)
+        
+        # Close the speed selection popover
+        widget = button
+        while widget and not isinstance(widget, Gtk.Popover):
+            widget = widget.get_parent()
+        if widget:
+            widget.popdown()
+        
+        # Redraw to show the speed range
+        self.queue_draw()
+
+    def draw_speed_ranges(self, cr, width, height):
+        """Draw speed-modified ranges in blue"""
+        track_y = (height - self.track_height) / 2
+        
+        for start_idx, end_idx, _ in self.speed_ranges:
+            # Convert indices to positions (use same logic as inserted_ranges)
+            start_pos = self.value_to_position(start_idx + 1, width)
+            end_pos = self.value_to_position(end_idx + 2, width)  # +2 to include the full range
+            
+            # Draw blue highlight
+            cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue color
             cr.rectangle(start_pos, track_y, end_pos - start_pos, self.track_height)
             cr.fill()

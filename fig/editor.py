@@ -67,6 +67,7 @@ class EditorBox(Gtk.Box):
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)
         self.frameline.connect('insert-frames', self.on_insert_frames)
+        self.frameline.connect('speed-changed', self.on_speed_changed)
         controls_box.append(self.frameline)
 
         # Button container
@@ -97,6 +98,7 @@ class EditorBox(Gtk.Box):
             # Reset state before attempting to load
             self.frames = []
             self.frame_durations = []
+            self.original_frame_durations = []  # Store original durations
             self.current_frame_index = 0
             self.playhead_frame_index = 0
             
@@ -105,6 +107,7 @@ class EditorBox(Gtk.Box):
                 total_duration = 0
                 self.frames = []
                 self.frame_durations = []  # Store frame durations
+                self.original_frame_durations = []  # Keep original durations
                 
                 context = GLib.MainContext.default()
                 for frame in range(frame_count):
@@ -121,6 +124,7 @@ class EditorBox(Gtk.Box):
                     self.frames.append(pixbuf)
                     # Store duration in milliseconds
                     self.frame_durations.append(duration * 1000)
+                    self.original_frame_durations.append(duration * 1000)  # Keep original
                 # Update frameline with 1-based frame range
                 self.frameline.min_value = 1
                 self.frameline.max_value = frame_count
@@ -140,6 +144,7 @@ class EditorBox(Gtk.Box):
             # Ensure state is clean on error
             self.frames = []
             self.frame_durations = []
+            self.original_frame_durations = []
             self.current_frame_index = 0
             self.playhead_frame_index = 0
 
@@ -571,3 +576,51 @@ class EditorBox(Gtk.Box):
         except Exception as e:
             print(f"Error inserting frames: {e}")
             raise
+
+    def on_speed_changed(self, frameline, start, end, speed_factor):
+        """Handle speed change for the selected frame range"""
+        try:
+            # Convert from 1-based to 0-based indices
+            start_idx = int(start) - 1
+            end_idx = int(end) - 1
+            
+            # Ensure valid range
+            if not (0 <= start_idx < len(self.frames) and 0 <= end_idx < len(self.frames)):
+                return
+                
+            # Adjust frame durations for the selected range
+            for i in range(start_idx, end_idx + 1):
+                # Always use original duration as reference
+                self.frame_durations[i] = int(self.original_frame_durations[i] / speed_factor)
+            
+            # Add to frameline's speed ranges
+            self.frameline.speed_ranges.append((start_idx, end_idx, speed_factor))
+            
+            # Sort ranges by start index
+            self.frameline.speed_ranges.sort()
+            
+            # Merge only adjacent (not overlapping) ranges with same speed
+            merged = []
+            for range_start, range_end, speed in self.frameline.speed_ranges:
+                if not merged or merged[-1][1] + 1 < range_start or merged[-1][2] != speed:
+                    merged.append([range_start, range_end, speed])
+                elif merged[-1][2] == speed:  # Only merge if speeds match
+                    merged[-1][1] = max(merged[-1][1], range_end)
+            self.frameline.speed_ranges = [tuple(x) for x in merged]
+            
+            # Update info label with new total duration
+            total_duration = sum(self.frame_durations) / 1000.0
+            self.info_label.set_text(
+                f"{len(self.frames)} Frames • {total_duration:.2f} Seconds"
+            )
+            
+            # If currently playing, restart playback to apply new speeds immediately
+            if self.is_playing:
+                self.stop_playback()
+                self.play_edited_frames(None)
+                
+            # Trigger redraw of frameline
+            self.frameline.queue_draw()
+            
+        except Exception as e:
+            print(f"Error changing speed: {e}")
