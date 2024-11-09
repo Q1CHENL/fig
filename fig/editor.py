@@ -5,6 +5,7 @@ from fig.utils import load_css
 from fig.frameline import FrameLine
 from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf
 import gi
+import time
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
 
@@ -513,12 +514,11 @@ class EditorBox(Gtk.Box):
             self.hide_playhead()
 
     def on_insert_frames(self, frameline, position, file_paths):
-        """Handle frame insertion"""
         try:
             new_frames = []
             new_durations = []
             
-            # Load each image
+            # Load each image and get number of new frames
             for path in file_paths:
                 if not os.path.exists(path):
                     raise FileNotFoundError(f"File not found: {path}")
@@ -538,13 +538,30 @@ class EditorBox(Gtk.Box):
                         new_durations.append(100)  # Default 100ms duration
             
             if new_frames:
-                # Convert insert_point to 0-based index for internal operations
                 insert_idx = max(0, position - 1)
+                num_new_frames = len(new_frames)
                 
-                # Store the current right handle value before insertion
-                original_right = self.frameline.right_value
+                # Adjust speed ranges before inserting new frames
+                updated_speed_ranges = []
+                for start, end, speed in self.frameline.speed_ranges:
+                    if insert_idx <= start:
+                        # Speed range is after insertion point - shift it
+                        updated_speed_ranges.append((start + num_new_frames, end + num_new_frames, speed))
+                    elif insert_idx > end:
+                        # Speed range is before insertion point - keep it unchanged
+                        updated_speed_ranges.append((start, end, speed))
+                    else:
+                        # Speed range contains insertion point - split it into two parts
+                        if start < insert_idx:
+                            # Keep the part before insertion
+                            updated_speed_ranges.append((start, insert_idx - 1, speed))
+                        # Keep the part after insertion (shifted by the number of new frames)
+                        updated_speed_ranges.append((insert_idx + num_new_frames, end + num_new_frames, speed))
                 
-                # Insert new frames and durations at the correct position
+                # Update speed ranges with adjusted positions
+                self.frameline.speed_ranges = updated_speed_ranges
+                
+                # Insert new frames and durations
                 self.frames[insert_idx:insert_idx] = new_frames
                 self.frame_durations[insert_idx:insert_idx] = new_durations
                 
@@ -554,14 +571,11 @@ class EditorBox(Gtk.Box):
                 
                 # If inserting at left handle, adjust right handle position
                 if self.frameline.active_handle == 'left':
-                    new_right = original_right + len(new_frames)
+                    new_right = self.frameline.right_value + len(new_frames)
                     self.frameline.right_value = min(new_right, new_max)
                 
-                # Add to inserted ranges using position-based indices (1-based)
-                # This matches the UI representation and test expectations
-                self.frameline.inserted_ranges.append(
-                    (position, position + len(new_frames) - 1)
-                )
+                # Add to inserted ranges
+                self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
                 
                 # Update display
                 self.frameline.queue_draw()
@@ -584,17 +598,34 @@ class EditorBox(Gtk.Box):
             start_idx = int(start) - 1
             end_idx = int(end) - 1
             
-            # Ensure valid range
-            if not (0 <= start_idx < len(self.frames) and 0 <= end_idx < len(self.frames)):
+            # Ensure valid range and handle reversed ranges
+            if start_idx > end_idx:
+                start_idx, end_idx = end_idx, start_idx
+                
+            # Clamp indices to valid range
+            start_idx = max(0, min(start_idx, len(self.frames) - 1))
+            end_idx = max(0, min(end_idx, len(self.frames) - 1))
+            
+            # Initialize original_frame_durations if not already set
+            if not hasattr(self, 'original_frame_durations'):
+                self.original_frame_durations = self.frame_durations.copy()
+            elif len(self.original_frame_durations) != len(self.frames):
+                # Extend original_frame_durations for inserted frames
+                inserted_count = len(self.frames) - len(self.original_frame_durations)
+                self.original_frame_durations.extend(self.frame_durations[-inserted_count:])
+            
+            # Verify we have valid frames and durations
+            if not self.frames or not self.frame_durations:
+                print("Invalid frame data state")
                 return
                 
             # Adjust frame durations for the selected range
             for i in range(start_idx, end_idx + 1):
-                # Always use original duration as reference
-                self.frame_durations[i] = int(self.original_frame_durations[i] / speed_factor)
+                if i < len(self.original_frame_durations):
+                    self.frame_durations[i] = int(self.original_frame_durations[i] / speed_factor)
             
             # Add to frameline's speed ranges
-            self.frameline.speed_ranges.append((start_idx, end_idx, speed_factor))
+            self.frameline.add_speed_range(start_idx, end_idx, speed_factor)
             
             # Sort ranges by start index
             self.frameline.speed_ranges.sort()
@@ -624,3 +655,13 @@ class EditorBox(Gtk.Box):
             
         except Exception as e:
             print(f"Error changing speed: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def stop_playback(self):
+        """Stop current playback"""
+        self.is_playing = False
+        self.update_play_button_icon(False)
+        if self.play_timeout_id:
+            GLib.source_remove(self.play_timeout_id)
+            self.play_timeout_id = None

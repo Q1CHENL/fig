@@ -242,7 +242,7 @@ class FrameLine(Gtk.Widget):
         if self.playhead_visible and self.playhead_position >= 0:
             playhead_x = self.value_to_position(self.playhead_position, width)
             
-            color = self.playhead_color(self.playhead_position)
+            color = self.handle_playhead_color(self.playhead_position)
             cr.set_source_rgb(color[0], color[1], color[2])
             self.draw_handle(cr, playhead_x, height)
         
@@ -258,19 +258,37 @@ class FrameLine(Gtk.Widget):
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for active handle on frame hover
             elif self.hover_action == 'range':
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for both handles on range hover
-            elif self.hover_action == 'changespeed':
+            elif self.hover_action == 'changespeed' or self.handle_in_speed_range(handle_x):
                 cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
-            elif self.hover_action == 'insert' and (
+            elif (self.hover_action == 'insert' and (
                 (is_left_handle and self.active_handle == 'left') or
-                (not is_left_handle and self.active_handle == 'right')
-            ):
+                (not is_left_handle and self.active_handle == 'right')) or
+                self.handle_in_insert_range(handle_x)):
                 cr.set_source_rgb(0x57/255, 0xe3/255, 0x89/255)  # Green for active handle on insert hover
             else:
                 cr.set_source_rgb(1, 1, 1)  # White
 
             self.draw_handle(cr, handle_x, height)
+            
+    def handle_in_insert_range(self, handle_x):
+        # Convert handle_x screen position to frame value
+        handle_value = self.position_to_value(handle_x, self.get_width())
+        for start, end in self.inserted_ranges:
+            # Compare using frame values (ranges are stored as 1-based indices)
+            if start <= handle_value <= end:
+                return True
+        return False
     
-    def playhead_color(self, position):
+    def handle_in_speed_range(self, handle_x):
+        # Convert handle_x screen position to frame value
+        handle_value = self.position_to_value(handle_x, self.get_width())
+        for start, end, _ in self.speed_ranges:
+            # Add 1 to convert from 0-based to 1-based indices
+            if (start + 1) <= handle_value <= (end + 1):
+                return True
+        return False
+    
+    def handle_playhead_color(self, position):
         for range_start, range_end, _ in self.speed_ranges:
             if range_start <= position <= range_end:
                 return (0x62/255, 0xa0/255, 0xea/255)  # Blue
@@ -804,3 +822,46 @@ class FrameLine(Gtk.Widget):
             cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue color
             cr.rectangle(start_pos, track_y, end_pos - start_pos, self.track_height)
             cr.fill()
+
+    def add_insert_range(self, start, end):
+        """Add an insert range with current timestamp"""
+        import time
+        self.inserted_ranges_with_time.append((start, end, time.time()))
+        # Keep the simple list for backward compatibility
+        self.inserted_ranges = [(start, end) for start, end, _ in self.inserted_ranges_with_time]
+
+    def add_speed_range(self, start, end, speed):
+        """Add a speed range"""
+        self.speed_ranges.append((start, end, speed))
+
+    def draw(self, cr, width, height):
+        # ... existing drawing code until tracks ...
+
+        # Combine all ranges without timestamps
+        all_ranges = []
+        for start, end in self.inserted_ranges:
+            all_ranges.append(('insert', start, end))
+        for start, end, speed in self.speed_ranges:
+            all_ranges.append(('speed', start, end))
+
+        # Draw ranges in order (newer modifications on top)
+        for range_type, start, end in all_ranges:
+            if range_type == 'speed':
+                # Convert indices for speed tracks (0-based to 1-based)
+                start_x = self.value_to_position(start + 1, width)
+                end_x = self.value_to_position(end + 1, width)
+                
+                # Draw speed track
+                cr.set_source_rgba(0x62/255, 0xa0/255, 0xea/255, 0.3)  # Blue with alpha
+                cr.rectangle(start_x, track_y + track_height, end_x - start_x, track_height)
+                cr.fill()
+            else:  # insert
+                start_x = self.value_to_position(start, width)
+                end_x = self.value_to_position(end, width)
+                
+                # Draw insert track
+                cr.set_source_rgba(0x57/255, 0xe3/255, 0x89/255, 0.3)  # Green with alpha
+                cr.rectangle(start_x, track_y, end_x - start_x, track_height)
+                cr.fill()
+
+        # ... rest of drawing code ...
