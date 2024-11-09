@@ -721,9 +721,9 @@ class FrameLine(Gtk.Widget):
         track_y = (height - self.track_height) / 2
         
         for start_idx, end_idx in self.inserted_ranges:
-            # Convert 0-based indices to positions
-            start_pos = self.value_to_position(start_idx + 1, width)
-            end_pos = self.value_to_position(end_idx + 2, width)  # +2 to include the full range
+            # Convert indices to positions (fix the off-by-one issue)
+            start_pos = self.value_to_position(start_idx, width)  # Removed +1
+            end_pos = self.value_to_position(end_idx + 1, width)  # Changed from +2 to +1
             
             # Draw green highlight
             cr.set_source_rgb(0x2d/255, 0xc6/255, 0x53/255)  # Green color
@@ -856,8 +856,9 @@ class FrameLine(Gtk.Widget):
                 cr.rectangle(start_x, track_y + track_height, end_x - start_x, track_height)
                 cr.fill()
             else:  # insert
-                start_x = self.value_to_position(start, width)
-                end_x = self.value_to_position(end, width)
+                # Fix the off-by-one issue in insert track rendering
+                start_x = self.value_to_position(start, width)  # Removed +1
+                end_x = self.value_to_position(end + 1, width)  # Changed from +2 to +1
                 
                 # Draw insert track
                 cr.set_source_rgba(0x57/255, 0xe3/255, 0x89/255, 0.3)  # Green with alpha
