@@ -711,5 +711,127 @@ class TestGifEditor(unittest.TestCase):
             if os.path.exists('output.gif'):
                 os.remove('output.gif')
 
+    def test_basic_speed_change(self):
+        """Test basic speed change functionality"""
+        self.editor.load_gif('test.gif')
+        initial_duration = sum(self.editor.frame_durations)
+        
+        # Change speed of frames 2-3 to 2x
+        self.editor.frameline.left_value = 2
+        self.editor.frameline.right_value = 3
+        self.editor.on_speed_changed(self.editor.frameline, 2, 3, 2.0)
+        
+        # Verify durations were changed correctly
+        self.assertEqual(self.editor.frame_durations[1], self.editor.original_frame_durations[1] / 2.0)
+        self.assertEqual(self.editor.frame_durations[2], self.editor.original_frame_durations[2] / 2.0)
+        # Verify other frames unchanged
+        self.assertEqual(self.editor.frame_durations[0], self.editor.original_frame_durations[0])
+        self.assertEqual(self.editor.frame_durations[3], self.editor.original_frame_durations[3])
+        
+        # Verify speed range was recorded
+        self.assertEqual(len(self.editor.frameline.speed_ranges), 1)
+        self.assertEqual(self.editor.frameline.speed_ranges[0], (1, 2, 2.0))  # 0-based indices
+
+    def test_overlapping_speed_changes(self):
+        """Test applying multiple speed changes to overlapping ranges"""
+        self.editor.load_gif('test.gif')
+        
+        # First change: frames 2-3 to 2x
+        self.editor.frameline.left_value = 2
+        self.editor.frameline.right_value = 3
+        self.editor.on_speed_changed(self.editor.frameline, 2, 3, 2.0)
+        
+        # Second change: frames 3-4 to 0.5x
+        self.editor.frameline.left_value = 3
+        self.editor.frameline.right_value = 4
+        self.editor.on_speed_changed(self.editor.frameline, 3, 4, 0.5)
+        
+        # Verify frame 3 uses the most recent speed (0.5x)
+        self.assertEqual(self.editor.frame_durations[2], self.editor.original_frame_durations[2] * 2)
+        # Verify merged ranges
+        self.assertEqual(len(self.editor.frameline.speed_ranges), 2)
+
+    def test_speed_change_with_removed_frames(self):
+        """Test interaction between speed changes and frame removal"""
+        self.editor.load_gif('test.gif')
+        
+        # First change speed
+        self.editor.frameline.left_value = 2
+        self.editor.frameline.right_value = 4
+        self.editor.on_speed_changed(self.editor.frameline, 2, 4, 2.0)
+        
+        # Then remove frame 3
+        self.editor.frameline.add_removed_range(3, 3)
+        
+        # Verify speed ranges are adjusted
+        speed_ranges = self.editor.frameline.speed_ranges
+        self.assertTrue(any(start <= 1 <= end for start, end, _ in speed_ranges))
+        self.assertTrue(any(start <= 3 <= end for start, end, _ in speed_ranges))
+        self.assertFalse(any(start <= 2 <= end for start, end, _ in speed_ranges))
+
+    def test_speed_change_with_inserted_frames(self):
+        """Test interaction between speed changes and frame insertion"""
+        self.editor.load_gif('test.gif')
+        
+        # Create test image
+        test_image = Image.new('RGB', (100, 100), color='red')
+        test_image.save('test_insert.png')
+        
+        try:
+            # First change speed
+            self.editor.frameline.left_value = 2
+            self.editor.frameline.right_value = 3
+            self.editor.on_speed_changed(self.editor.frameline, 2, 3, 2.0)
+            
+            # Then insert frame
+            self.editor.frameline.active_handle = 'left'
+            self.editor.on_insert_frames(self.editor.frameline, 2, ['test_insert.png'])
+            
+            # Verify speed ranges are preserved and adjusted
+            self.assertTrue(len(self.editor.frameline.speed_ranges) > 0)
+            # Verify inserted frame has normal speed
+            self.assertEqual(self.editor.frame_durations[1], 100)  # Default duration
+        
+        finally:
+            if os.path.exists('test_insert.png'):
+                os.remove('test_insert.png')
+
+    def test_multiple_speed_changes_same_range(self):
+        """Test applying multiple speed changes to the same range"""
+        self.editor.load_gif('test.gif')
+        
+        # Change speed to 2x
+        self.editor.frameline.left_value = 2
+        self.editor.frameline.right_value = 3
+        self.editor.on_speed_changed(self.editor.frameline, 2, 3, 2.0)
+        
+        # Change same range to 0.5x
+        self.editor.on_speed_changed(self.editor.frameline, 2, 3, 0.5)
+        
+        # Verify final speed is 0.5x (not cumulative)
+        self.assertEqual(self.editor.frame_durations[1], self.editor.original_frame_durations[1] * 2)
+        self.assertEqual(self.editor.frame_durations[2], self.editor.original_frame_durations[2] * 2)
+
+    def test_edge_case_speed_changes(self):
+        """Test speed changes at edges and with invalid inputs"""
+        self.editor.load_gif('test.gif')
+        
+        # Test first frame
+        self.editor.on_speed_changed(self.editor.frameline, 1, 1, 2.0)
+        self.assertEqual(self.editor.frame_durations[0], self.editor.original_frame_durations[0] / 2.0)
+        
+        # Test last frame
+        last_frame = len(self.editor.frames)
+        self.editor.on_speed_changed(self.editor.frameline, last_frame, last_frame, 0.5)
+        self.assertEqual(self.editor.frame_durations[-1], self.editor.original_frame_durations[-1] * 2)
+        
+        # Test invalid range (should not raise error)
+        self.editor.on_speed_changed(self.editor.frameline, last_frame + 1, last_frame + 2, 2.0)
+        
+        # Test invalid speed factor (should be handled gracefully)
+        original_duration = self.editor.frame_durations[0]
+        self.editor.on_speed_changed(self.editor.frameline, 1, 1, 0)  # Should be ignored
+        self.assertEqual(self.editor.frame_durations[0], original_duration)
+
 if __name__ == '__main__':
     unittest.main() 
