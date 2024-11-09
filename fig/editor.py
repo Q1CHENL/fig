@@ -66,6 +66,7 @@ class EditorBox(Gtk.Box):
             min_value=0, max_value=0, stride=1)  # Initialize with 0 frames
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)
+        self.frameline.connect('insert-frames', self.on_insert_frames)
         controls_box.append(self.frameline)
 
         # Button container
@@ -349,7 +350,7 @@ class EditorBox(Gtk.Box):
         dialog.destroy()
 
     def _save_gif(self, save_path, start_idx, end_idx):
-        """Save GIF excluding removed ranges"""
+        """Save GIF including inserted frames and excluding removed ranges"""
         # Determine if we need to reverse the frames
         is_reversed = start_idx > end_idx
         if is_reversed:
@@ -359,10 +360,44 @@ class EditorBox(Gtk.Box):
         frames_to_save = []
         durations = []
         
+        # Get reference dimensions from the first non-removed frame
+        ref_frame = None
+        for frame in self.frames:
+            if frame:
+                ref_frame = self._pixbuf_to_pil(frame)
+                break
+        
+        if not ref_frame:
+            return  # No valid frames to save
+        
+        ref_size = ref_frame.size
+        
         for i in range(start_idx, end_idx + 1):
-            if not self.frameline.is_frame_removed(i):
-                frames_to_save.append(self._pixbuf_to_pil(self.frames[i]))
-                durations.append(self.frame_durations[i])
+            # Skip if frame is removed
+            if self.frameline.is_frame_removed(i):
+                continue
+                
+            # Skip if index is out of bounds
+            if i < 0 or i >= len(self.frames):
+                continue
+                
+            # Skip if frame is None
+            if not self.frames[i]:
+                continue
+            
+            # Check if this frame is part of an inserted range
+            is_inserted = any(start <= i <= end for start, end in self.frameline.inserted_ranges)
+            
+            # Get the frame and its duration
+            frame = self._pixbuf_to_pil(self.frames[i])
+            duration = self.frame_durations[i]
+            
+            # Resize inserted frames if needed
+            if is_inserted and frame.size != ref_size:
+                frame = frame.resize(ref_size, Image.Resampling.LANCZOS)
+            
+            frames_to_save.append(frame)
+            durations.append(duration)
 
         # Reverse frames and durations if needed
         if is_reversed:
@@ -471,3 +506,68 @@ class EditorBox(Gtk.Box):
             self.playhead_frame_index > max_val - 1):
             self.frameline.playhead_visible = False
             self.hide_playhead()
+
+    def on_insert_frames(self, frameline, position, file_paths):
+        """Handle frame insertion"""
+        try:
+            new_frames = []
+            new_durations = []
+            
+            # Load each image
+            for path in file_paths:
+                if not os.path.exists(path):
+                    raise FileNotFoundError(f"File not found: {path}")
+                
+                with Image.open(path) as img:
+                    if getattr(img, 'is_animated', False):
+                        # Handle animated GIFs
+                        for frame in range(img.n_frames):
+                            img.seek(frame)
+                            pixbuf = self._pil_to_pixbuf(img.convert('RGBA'))
+                            new_frames.append(pixbuf)
+                            new_durations.append(img.info.get('duration', 100))
+                    else:
+                        # Handle static images
+                        pixbuf = self._pil_to_pixbuf(img.convert('RGBA'))
+                        new_frames.append(pixbuf)
+                        new_durations.append(100)  # Default 100ms duration
+            
+            if new_frames:
+                # Convert insert_point to 0-based index for internal operations
+                insert_idx = max(0, position - 1)
+                
+                # Store the current right handle value before insertion
+                original_right = self.frameline.right_value
+                
+                # Insert new frames and durations at the correct position
+                self.frames[insert_idx:insert_idx] = new_frames
+                self.frame_durations[insert_idx:insert_idx] = new_durations
+                
+                # Update frameline max value
+                new_max = len(self.frames)
+                self.frameline.max_value = new_max
+                
+                # If inserting at left handle, adjust right handle position
+                if self.frameline.active_handle == 'left':
+                    new_right = original_right + len(new_frames)
+                    self.frameline.right_value = min(new_right, new_max)
+                
+                # Add to inserted ranges using position-based indices (1-based)
+                # This matches the UI representation and test expectations
+                self.frameline.inserted_ranges.append(
+                    (position, position + len(new_frames) - 1)
+                )
+                
+                # Update display
+                self.frameline.queue_draw()
+                self.display_frame(insert_idx)
+                
+                # Update info label
+                total_duration = sum(self.frame_durations) / 1000.0
+                self.info_label.set_text(
+                    f"{len(self.frames)} Frames • {total_duration:.2f} Seconds"
+                )
+                
+        except Exception as e:
+            print(f"Error inserting frames: {e}")
+            raise

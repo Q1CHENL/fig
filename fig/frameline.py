@@ -1,3 +1,4 @@
+import os
 import cairo
 import math
 from gi.repository import Gtk, Gdk, GLib, Graphene, GObject, Gio
@@ -10,7 +11,8 @@ class FrameLine(Gtk.Widget):
 
     # Define the custom signal
     __gsignals__ = {
-        'frames-changed': (GObject.SignalFlags.RUN_LAST, None, (float, float))
+        'frames-changed': (GObject.SignalFlags.RUN_LAST, None, (float, float)),
+        'insert-frames': (GObject.SignalFlags.RUN_LAST, None, (int, object))
     }
 
     def __init__(self, min_value=0, max_value=100, stride=1):
@@ -143,6 +145,10 @@ class FrameLine(Gtk.Widget):
 
         # Add after other initializations
         self.removed_ranges = []  # List of tuples (start, end) for removed ranges
+        self.inserted_ranges = []  # List of tuples (start, end) for inserted frames
+
+        # Inside __init__ method, after creating insert_frames_btn
+        insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
 
     def on_remove_range_hover_enter(self, controller, x, y):
         self.hover_action = 'range'
@@ -208,10 +214,13 @@ class FrameLine(Gtk.Widget):
             cr.set_source_rgb(1, 0.4, 0.4)  # Light red
 
         cr.rectangle(min(left_handle_x, right_handle_x), (height - self.track_height) / 2,
-                     abs(right_handle_x - left_handle_x), self.track_height)
+                    abs(right_handle_x - left_handle_x), self.track_height)
         cr.fill()
 
-        # 3. Draw removed ranges
+        # 3. Draw inserted ranges in green (moved before removed ranges)
+        self.draw_inserted_ranges(cr, width, height)
+
+        # 4. Draw removed ranges (now on top of inserted ranges)
         cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
         for start, end in self.removed_ranges:
             start_x = self.value_to_position(start + 1, width)
@@ -221,13 +230,13 @@ class FrameLine(Gtk.Widget):
                         self.track_height)
             cr.fill()
 
-        # 4. Draw playhead if visible
+        # 5. Draw playhead if visible
         if self.playhead_visible and self.playhead_position >= 0:
             playhead_x = self.value_to_position(self.playhead_position, width)
             cr.set_source_rgb(1, 1, 1)  # White color for playhead
             self.draw_handle(cr, playhead_x, height)
 
-        # 5. Draw handles with appropriate colors
+        # 6. Draw handles with appropriate colors
         for handle_x, is_left_handle in [(left_handle_x, True), (right_handle_x, False)]:
             # Determine handle color based on hover state and active handle
             if self.hover_action == 'frame' and (
@@ -239,6 +248,11 @@ class FrameLine(Gtk.Widget):
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for both handles on range hover
             elif self.hover_action == 'speedup':
                 cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
+            elif self.hover_action == 'insert' and (
+                (is_left_handle and self.active_handle == 'left') or
+                (not is_left_handle and self.active_handle == 'right')
+            ):
+                cr.set_source_rgb(0x57/255, 0xe3/255, 0x89/255)  # Green for active handle on insert hover
             else:
                 cr.set_source_rgb(1, 1, 1)  # White
 
@@ -497,7 +511,6 @@ class FrameLine(Gtk.Widget):
     def on_popup_closed(self, popover):
         """Reset states when popup menu is closed"""
         self.menu_active = False
-        self.active_handle = None
         self.hover_action = None
         self.queue_draw()
 
@@ -591,3 +604,81 @@ class FrameLine(Gtk.Widget):
         """Clear all removed ranges"""
         self.removed_ranges = []
         self.queue_draw()
+
+    def on_insert_frames_clicked(self, button):
+        """Handle insert frames button click"""
+        try:
+            # Close the popover immediately
+            self.popup_menu.popdown()
+            
+            dialog = Gtk.FileDialog.new()
+            dialog.set_title("Select Images to Insert")
+            dialog.set_modal(True)
+
+            # Set up file filters
+            filter_images = Gtk.FileFilter()
+            filter_images.set_name("Images")
+            filter_images.add_mime_type("image/gif")
+            filter_images.add_mime_type("image/png")
+            filter_images.add_mime_type("image/jpeg")
+            
+            filter_all = Gtk.FileFilter()
+            filter_all.set_name("All files")
+            filter_all.add_pattern("*")
+            
+            filters = Gio.ListStore.new(Gtk.FileFilter)
+            filters.append(filter_images)
+            filters.append(filter_all)
+            dialog.set_filters(filters)
+            dialog.set_default_filter(filter_images)
+
+            # Initialize with home directory
+            home_dir = GLib.get_home_dir()
+            if os.path.exists(home_dir):
+                dialog.set_initial_folder(Gio.File.new_for_path(home_dir))
+
+            # Use open_multiple for selecting multiple files
+            dialog.open_multiple(
+                parent=self.get_root(),
+                callback=self._on_insert_dialog_response
+            )
+
+        except Exception as e:
+            print(f"Error opening file dialog: {e}")
+
+    def _on_insert_dialog_response(self, dialog, result):
+        """Handle insert file dialog response"""
+        try:
+            files = dialog.open_multiple_finish(result)
+            if files and files.get_n_items() > 0:
+                # Determine the insert point based on the active handle
+                if self.active_handle == 'left':
+                    insert_point = int(self.left_value)  # Insert after the left handle
+                else:
+                    insert_point = int(self.right_value)  # Insert after the right handle
+
+                insert_point += 1  # Add 1 to insert after the current frame
+
+                # Convert files to list of paths
+                file_paths = [files.get_item(i).get_path() 
+                             for i in range(files.get_n_items())]
+
+                # Emit custom signal with insert information
+                self.emit('insert-frames', insert_point, file_paths)
+
+        except GLib.Error as e:
+            print(f"Error selecting files: {e.message}")
+
+    def draw_inserted_ranges(self, cr, width, height):
+        """Draw inserted ranges in green"""
+        track_y = (height - self.track_height) / 2
+        
+        for start_idx, end_idx in self.inserted_ranges:
+            # Convert 0-based indices to positions
+            start_pos = self.value_to_position(start_idx + 1, width)
+            end_pos = self.value_to_position(end_idx + 2, width)  # +2 to include the full range
+            
+            # Draw green highlight
+            cr.set_source_rgb(0x2d/255, 0xc6/255, 0x53/255)  # Green color
+            cr.rectangle(start_pos, track_y, end_pos - start_pos, self.track_height)
+            cr.fill()
