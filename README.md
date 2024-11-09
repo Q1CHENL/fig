@@ -20,6 +20,7 @@
 - Reverse GIF
 - Remove specific frames
 - Insert GIF/image(s) at any position
+- Speed specific frames up/down
 - Play GIF at the original speed
 
 ## Todos
