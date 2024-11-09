@@ -20,8 +20,6 @@ class FrameLine(Gtk.Widget):
         self.min_value = min_value
         # Ensure at least 1 unit difference
         self.max_value = max(min_value + 1, max_value)
-        self.left_value = min_value
-        self.right_value = self.max_value
         self.stride = stride
 
         # Slider properties
@@ -96,6 +94,7 @@ class FrameLine(Gtk.Widget):
         self.remove_range_btn = Gtk.Button(label="Remove Range")
         self.remove_range_btn.connect('clicked', self.on_remove_range_clicked)
         remove_frame_btn = Gtk.Button(label="Remove Frame")
+        remove_frame_btn.connect('clicked', self.on_remove_frame_clicked)
         insert_frames_btn = Gtk.Button(label="Insert Frames")
         speedup_frames_btn = Gtk.Button(label="Speed Up Frames")
 
@@ -199,7 +198,7 @@ class FrameLine(Gtk.Widget):
         cr.fill()
 
         # 2. Draw selected portion
-        if self.hover_action == 'range':
+        if self.hover_action == 'range':  # Only highlight track for range removal
             cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
         elif self.hover_action == 'speedup':
             cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
@@ -213,65 +212,37 @@ class FrameLine(Gtk.Widget):
         cr.fill()
 
         # 3. Draw removed ranges
-        cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Match hover red
+        cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
         for start, end in self.removed_ranges:
             start_x = self.value_to_position(start + 1, width)
             end_x = self.value_to_position(end + 1, width)
             cr.rectangle(start_x, (height - self.track_height) / 2,
-                        end_x - start_x, self.track_height)
+                        end_x - start_x + (width - 2 * self.handle_radius) / (self.max_value - self.min_value),
+                        self.track_height)
             cr.fill()
 
-        # 4. Draw handles
-        if self.hover_action == 'range':
-            cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
-        elif self.hover_action == 'speedup':
-            cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
-        else:
-            cr.set_source_rgb(1, 1, 1)  # White
+        # 4. Draw playhead if visible
+        if self.playhead_visible and self.playhead_position >= 0:
+            playhead_x = self.value_to_position(self.playhead_position, width)
+            cr.set_source_rgb(1, 1, 1)  # White color for playhead
+            self.draw_handle(cr, playhead_x, height)
 
-        # Draw both handles
-        self.draw_handle(cr, left_handle_x, height)
-        self.draw_handle(cr, right_handle_x, height)
+        # 5. Draw handles with appropriate colors
+        for handle_x, is_left_handle in [(left_handle_x, True), (right_handle_x, False)]:
+            # Determine handle color based on hover state and active handle
+            if self.hover_action == 'frame' and (
+                (is_left_handle and self.active_handle == 'left') or
+                (not is_left_handle and self.active_handle == 'right')
+            ):
+                cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for active handle on frame hover
+            elif self.hover_action == 'range':
+                cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for both handles on range hover
+            elif self.hover_action == 'speedup':
+                cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
+            else:
+                cr.set_source_rgb(1, 1, 1)  # White
 
-        # 5. Draw text on handles
-        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        cr.set_font_size(11)
-        cr.set_source_rgb(0.2, 0.2, 0.2)
-
-        # Left handle text
-        text = str(round(self.left_value))
-        text_extents = cr.text_extents(text)
-        text_x = left_handle_x - text_extents.width / 2
-        text_y = height / 2 + text_extents.height / 2 - 1
-        cr.move_to(text_x, text_y)
-        cr.show_text(text)
-
-        # Right handle text
-        text = str(round(self.right_value))
-        text_extents = cr.text_extents(text)
-        text_x = right_handle_x - text_extents.width / 2
-        text_y = height / 2 + text_extents.height / 2 - 1
-        cr.move_to(text_x, text_y)
-        cr.show_text(text)
-
-        # 6. Draw playhead last
-        if self.playhead_visible:
-            playhead_x = self.value_to_position(self.playhead_position + 1, width)
-            vertical_center = height / 2
-
-            # Draw playhead circle
-            cr.set_source_rgb(1, 1, 1)
-            cr.arc(playhead_x, vertical_center, self.handle_radius, 0, 2 * math.pi)
-            cr.fill()
-
-            # Draw frame number inside playhead
-            frame_text = str(int(self.playhead_position + 1))
-            cr.set_source_rgb(0.2, 0.2, 0.2)
-            text_extents = cr.text_extents(frame_text)
-            text_x = playhead_x - text_extents.width / 2
-            text_y = vertical_center + text_extents.height / 2 - 1
-            cr.move_to(text_x, text_y)
-            cr.show_text(frame_text)
+            self.draw_handle(cr, handle_x, height)
 
     def draw_rounded_rectangle(self, cr, x, y, width, height, radius):
         if width < 2 * radius:
@@ -476,6 +447,8 @@ class FrameLine(Gtk.Widget):
     def draw_handle(self, cr, handle_x, height):
         """Helper method to draw a handle"""
         cr.new_path()
+        
+        # Draw handle circle with scaling if hovered
         if (self.left_handle_hover and handle_x == self.value_to_position(self.left_value, self.get_width())) or \
            (self.right_handle_hover and handle_x == self.value_to_position(self.right_value, self.get_width())):
             cr.save()
@@ -487,6 +460,39 @@ class FrameLine(Gtk.Widget):
         else:
             cr.arc(handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
         cr.fill()
+
+        # Draw frame number text
+        width = self.get_width()
+        left_pos = self.value_to_position(self.left_value, width)
+        right_pos = self.value_to_position(self.right_value, width)
+        playhead_pos = self.value_to_position(self.playhead_position, width) if self.playhead_visible else -1
+        
+        # Initialize text variable
+        text = ""
+        
+        # More robust position comparison that handles edge cases
+        if abs(handle_x - left_pos) < 1 or (handle_x <= self.handle_radius + 1 and left_pos <= self.handle_radius + 1):
+            text = str(int(self.left_value))
+        elif abs(handle_x - right_pos) < 1 or (handle_x >= width - self.handle_radius - 1 and right_pos >= width - self.handle_radius - 1):
+            text = str(int(self.right_value))
+        elif self.playhead_visible and (abs(handle_x - playhead_pos) < 1):
+            text = str(int(self.playhead_position))
+        
+        if text:  # Only draw text if we have a value to display
+            # Set text color to black for contrast
+            cr.set_source_rgb(0, 0, 0)
+            
+            # Center text in handle
+            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+            cr.set_font_size(12)
+            
+            # Get text extents for centering
+            extents = cr.text_extents(text)
+            text_x = handle_x - extents.width / 2
+            text_y = height / 2 + extents.height / 2
+            
+            cr.move_to(text_x, text_y)
+            cr.show_text(text)
 
     def on_popup_closed(self, popover):
         """Reset states when popup menu is closed"""
@@ -511,8 +517,38 @@ class FrameLine(Gtk.Widget):
         start = min(self.left_value, self.right_value)
         end = max(self.left_value, self.right_value)
         
-        # Add to removed ranges (convert to 0-based)
-        self.removed_ranges.append((int(start) - 1, int(end) - 1))
+        # Add the range
+        self.add_removed_range(start, end)
+        
+        # Hide popover
+        self.popup_menu.popdown()
+
+    def on_remove_frame_clicked(self, button):
+        """Remove a single frame at the handle position"""
+        # Get the frame to remove based on which handle was right-clicked
+        if self.active_handle == 'left':
+            frame = int(self.left_value)
+        else:
+            frame = int(self.right_value)
+        
+        # Add single frame range
+        self.add_removed_range(frame, frame)
+        
+        # Hide popover
+        self.popup_menu.popdown()
+
+    def add_removed_range(self, start, end):
+        """Add a range of frames to be removed
+        Args:
+            start (int): Start frame number (1-based)
+            end (int): End frame number (1-based)
+        """
+        # Convert to 0-based indices for internal storage
+        start_idx = int(start) - 1
+        end_idx = int(end) - 1
+        
+        # Add to removed ranges
+        self.removed_ranges.append((start_idx, end_idx))
         
         # Sort and merge overlapping ranges
         self.removed_ranges.sort()
@@ -528,9 +564,6 @@ class FrameLine(Gtk.Widget):
         self.left_value = self.min_value
         self.right_value = self.max_value
         
-        # Hide popover
-        self.popup_menu.popdown()
-        
         # Emit frames-changed signal with new values
         self.emit('frames-changed', self.left_value, self.right_value)
         
@@ -538,7 +571,10 @@ class FrameLine(Gtk.Widget):
 
     def is_frame_removed(self, frame_index):
         """Check if a frame index is within any removed range"""
+        # Ensure frame_index is an integer
+        frame_index = int(frame_index)
         for start, end in self.removed_ranges:
+            # Include both start and end in the range check
             if start <= frame_index <= end:
                 return True
         return False
@@ -550,3 +586,8 @@ class FrameLine(Gtk.Widget):
         while 0 <= next_frame < self.max_value and self.is_frame_removed(next_frame):
             next_frame += direction
         return next_frame if 0 <= next_frame < self.max_value else -1
+
+    def clear_removed_ranges(self):
+        """Clear all removed ranges"""
+        self.removed_ranges = []
+        self.queue_draw()
