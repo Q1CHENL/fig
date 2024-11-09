@@ -502,5 +502,214 @@ class TestGifEditor(unittest.TestCase):
         # Verify removed_ranges list is empty
         self.assertEqual(len(self.editor.frameline.removed_ranges), 0)
 
+    def test_insert_frames(self):
+        """Test basic frame insertion functionality"""
+        self.editor.load_gif('test.gif')
+        initial_frame_count = len(self.editor.frames)
+        
+        # Create a test image for insertion
+        test_image = Image.new('RGB', (100, 100), color='red')
+        test_image.save('test_insert.png')
+        
+        try:
+            # Test inserting at left handle
+            self.editor.frameline.active_handle = 'left'
+            self.editor.frameline.left_value = 2
+            self.editor.frameline.right_value = 4
+            original_right = self.editor.frameline.right_value
+            
+            self.editor.on_insert_frames(self.editor.frameline, 2, ['test_insert.png'])
+            
+            # Verify frame count increased
+            self.assertEqual(len(self.editor.frames), initial_frame_count + 1)
+            # Verify right handle shifted
+            self.assertEqual(self.editor.frameline.right_value, original_right + 1)
+            # Verify inserted range was recorded
+            self.assertEqual(len(self.editor.frameline.inserted_ranges), 1)
+            self.assertEqual(self.editor.frameline.inserted_ranges[0], (2, 2))  # 1-based indices, inserting at position 2
+            
+            # Test inserting at right handle
+            self.editor.frameline.active_handle = 'right'
+            right_pos = self.editor.frameline.right_value
+            self.editor.on_insert_frames(self.editor.frameline, int(right_pos), ['test_insert.png'])
+            
+            # Verify frame count increased
+            self.assertEqual(len(self.editor.frames), initial_frame_count + 2)
+            # Verify right handle position unchanged
+            self.assertEqual(self.editor.frameline.right_value, right_pos)
+            
+        finally:
+            # Cleanup
+            if os.path.exists('test_insert.png'):
+                os.remove('test_insert.png')
+
+    def test_insert_multiple_frames(self):
+        """Test inserting multiple frames at once"""
+        self.editor.load_gif('test.gif')
+        initial_frame_count = len(self.editor.frames)
+        
+        # Create test images
+        test_images = []
+        try:
+            for i in range(3):
+                img_path = f'test_insert_{i}.png'
+                test_images.append(img_path)
+                Image.new('RGB', (100, 100), color='red').save(img_path)
+            
+            # Insert multiple frames at left handle
+            self.editor.frameline.active_handle = 'left'
+            self.editor.frameline.left_value = 2
+            original_right = self.editor.frameline.right_value
+            
+            self.editor.on_insert_frames(self.editor.frameline, 2, test_images)
+            
+            # Verify frame count
+            self.assertEqual(len(self.editor.frames), initial_frame_count + 3)
+            # Verify right handle shifted by number of inserted frames
+            self.assertEqual(self.editor.frameline.right_value, original_right + 3)
+            
+        finally:
+            # Cleanup
+            for img_path in test_images:
+                if os.path.exists(img_path):
+                    os.remove(img_path)
+
+    def test_insert_animated_gif(self):
+        """Test inserting an animated GIF"""
+        self.editor.load_gif('test.gif')
+        initial_frame_count = len(self.editor.frames)
+        
+        # Create a simple animated GIF
+        frames = []
+        for i in range(2):
+            frame = Image.new('RGB', (100, 100), color=('red' if i == 0 else 'blue'))
+            frames.append(frame)
+        
+        try:
+            # Save animated GIF
+            frames[0].save(
+                'test_animated.gif',
+                save_all=True,
+                append_images=frames[1:],
+                duration=100,
+                loop=0
+            )
+            
+            # Insert animated GIF
+            self.editor.frameline.active_handle = 'left'
+            self.editor.frameline.left_value = 2
+            original_right = self.editor.frameline.right_value
+            
+            self.editor.on_insert_frames(self.editor.frameline, 2, ['test_animated.gif'])
+            
+            # Verify all frames were inserted
+            self.assertEqual(len(self.editor.frames), initial_frame_count + 2)
+            # Verify right handle shifted by number of frames
+            self.assertEqual(self.editor.frameline.right_value, original_right + 2)
+            
+        finally:
+            # Cleanup
+            if os.path.exists('test_animated.gif'):
+                os.remove('test_animated.gif')
+
+    def test_insert_edge_cases(self):
+        """Test insertion edge cases"""
+        self.editor.load_gif('test.gif')
+        initial_frame_count = len(self.editor.frames)
+        
+        test_image = Image.new('RGB', (100, 100), color='red')
+        test_image.save('test_insert.png')
+        
+        try:
+            # Test inserting at beginning
+            self.editor.frameline.active_handle = 'left'
+            self.editor.frameline.left_value = 1
+            self.editor.on_insert_frames(self.editor.frameline, 1, ['test_insert.png'])
+            
+            # Verify insertion at beginning
+            self.assertEqual(len(self.editor.frames), initial_frame_count + 1)
+            self.assertTrue((1, 1) in self.editor.frameline.inserted_ranges)
+            
+            # Test inserting at end
+            self.editor.frameline.active_handle = 'right'
+            self.editor.frameline.right_value = len(self.editor.frames)
+            self.editor.on_insert_frames(self.editor.frameline, len(self.editor.frames), ['test_insert.png'])
+            
+            # Verify insertion at end
+            self.assertEqual(len(self.editor.frames), initial_frame_count + 2)
+            
+            # Test inserting with invalid file
+            with self.assertRaises(Exception):
+                self.editor.on_insert_frames(self.editor.frameline, 1, ['nonexistent.png'])
+                
+        finally:
+            if os.path.exists('test_insert.png'):
+                os.remove('test_insert.png')
+
+    def test_insert_with_removed_frames(self):
+        """Test interaction between insert and remove operations"""
+        self.editor.load_gif('test.gif')
+        
+        test_image = Image.new('RGB', (100, 100), color='red')
+        test_image.save('test_insert.png')
+        
+        try:
+            # Remove a frame first
+            self.editor.frameline.add_removed_range(2, 2)
+            
+            # Insert frame after removed frame
+            self.editor.frameline.active_handle = 'left'
+            self.editor.frameline.left_value = 2
+            self.editor.on_insert_frames(self.editor.frameline, 2, ['test_insert.png'])
+            
+            # Verify both operations are tracked correctly
+            self.assertTrue(self.editor.frameline.is_frame_removed(1))  # 0-based index
+            self.assertFalse(self.editor.frameline.is_frame_removed(2))  # Inserted frame
+            self.assertTrue((2, 2) in self.editor.frameline.inserted_ranges)
+            
+        finally:
+            if os.path.exists('test_insert.png'):
+                os.remove('test_insert.png')
+
+    def test_insert_then_remove(self):
+        """Test removing frames after insertion"""
+        self.editor.load_gif('test.gif')
+        initial_frame_count = len(self.editor.frames)
+        
+        test_image = Image.new('RGB', (100, 100), color='red')
+        test_image.save('test_insert.png')
+        
+        try:
+            # First insert a frame
+            self.editor.frameline.active_handle = 'left'
+            self.editor.frameline.left_value = 2
+            self.editor.on_insert_frames(self.editor.frameline, 2, ['test_insert.png'])
+            
+            # Verify insertion
+            self.assertEqual(len(self.editor.frames), initial_frame_count + 1)
+            self.assertTrue((2, 2) in self.editor.frameline.inserted_ranges)
+            
+            # Now remove a frame that includes the inserted frame
+            self.editor.frameline.add_removed_range(2, 3)
+            
+            # Verify both operations are tracked correctly
+            self.assertTrue((2, 2) in self.editor.frameline.inserted_ranges)  # Insert still tracked
+            self.assertTrue(self.editor.frameline.is_frame_removed(1))  # 0-based index for frame 2
+            self.assertTrue(self.editor.frameline.is_frame_removed(2))  # 0-based index for frame 3
+            
+            # Save and verify the final result
+            self.editor._save_gif('output.gif', 0, len(self.editor.frames))
+            
+            with Image.open('output.gif') as gif:
+                # Should have initial frames minus removed frames
+                self.assertEqual(gif.n_frames, initial_frame_count - 1)  # -2 removed +1 inserted
+                
+        finally:
+            # Cleanup
+            if os.path.exists('test_insert.png'):
+                os.remove('test_insert.png')
+            if os.path.exists('output.gif'):
+                os.remove('output.gif')
+
 if __name__ == '__main__':
     unittest.main() 
