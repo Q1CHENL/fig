@@ -241,8 +241,12 @@ class FrameLine(Gtk.Widget):
         # 5. Draw playhead if visible
         if self.playhead_visible and self.playhead_position >= 0:
             playhead_x = self.value_to_position(self.playhead_position, width)
-            cr.set_source_rgb(1, 1, 1)  # White color for playhead
+            
+            color = self.playhead_color(self.playhead_position)
+            cr.set_source_rgb(color[0], color[1], color[2])
             self.draw_handle(cr, playhead_x, height)
+        
+        cr.set_source_rgb(1, 1, 1)
 
         # 6. Draw handles with appropriate colors
         for handle_x, is_left_handle in [(left_handle_x, True), (right_handle_x, False)]:
@@ -265,8 +269,15 @@ class FrameLine(Gtk.Widget):
                 cr.set_source_rgb(1, 1, 1)  # White
 
             self.draw_handle(cr, handle_x, height)
-
-
+    
+    def playhead_color(self, position):
+        for range_start, range_end, _ in self.speed_ranges:
+            if range_start <= position <= range_end:
+                return (0x62/255, 0xa0/255, 0xea/255)  # Blue
+        for range_start, range_end in self.inserted_ranges:
+            if range_start <= position <= range_end:
+                return (0x57/255, 0xe3/255, 0x89/255)  # Green
+        return (1, 1, 1)  # White
 
     def draw_rounded_rectangle(self, cr, x, y, width, height, radius):
         if width < 2 * radius:
