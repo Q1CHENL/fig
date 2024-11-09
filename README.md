@@ -18,8 +18,9 @@
 
 - Trim GIF to any frame range
 - Reverse GIF
-- Remove specific frames from GIF
-- Play GIF at original speed
+- Remove specific frames
+- Insert GIF/image(s) at any position
+- Play GIF at the original speed
 
 ## Todos
 
@@ -37,16 +38,18 @@
 - Make GIF slower/faster
 - Make GIF black-and-white
 - ~~Reverse playback~~
-- Append/Insert/~~Remove~~ frames in frameline
+- ~~Append/Insert/Remove frames in frameline~~
 - ~~Design GTK-Style icon~~
 - ~~Button and handles hover effects~~
 - Load GIF faster
 - Improve tests and solve warnings
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
-- Select new in editor
 - Light mode
-- Undo lasy action
-- Proper default name for edited gif when saving
+- Undo last action
+- Proper default name for edited GIF when saving
+- Menu in headerbar: new window, open, help etc.
+- New About page
+- Better info label UI
 
 ## Test
 
