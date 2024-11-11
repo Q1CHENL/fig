@@ -4,6 +4,7 @@
 .flatpak
 .history
 .venv
+.idea
 build-dir/
 builddir/
 repo/
