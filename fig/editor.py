@@ -39,7 +39,7 @@ class EditorBox(Gtk.Box):
         # Image display area setup
         self.image_display = Gtk.Picture()
         self.image_display.set_can_shrink(True)
-        self.image_display.set_keep_aspect_ratio(True)
+        self.image_display.set_content_fit(Gtk.ContentFit.CONTAIN)
         self.image_display.set_halign(Gtk.Align.CENTER)
         self.image_display.set_valign(Gtk.Align.CENTER)
         load_css(self.image_display, ["image-display"])

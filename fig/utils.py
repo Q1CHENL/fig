@@ -1,5 +1,5 @@
 import os
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk, GLib
 import gi
 gi.require_version('Gtk', '4.0')
 
@@ -37,7 +37,7 @@ def load_css(widget=None, css_classes=None):
         if not css_data:
             raise FileNotFoundError(f"CSS file not found in: {css_paths}")
             
-        css_provider.load_from_data(css_data.encode('utf-8'))
+        css_provider.load_from_bytes(GLib.Bytes.new(css_data.encode('utf-8')))
         Gtk.StyleContext.add_provider_for_display(
             Gdk.Display.get_default(),
             css_provider,
