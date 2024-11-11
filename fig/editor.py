@@ -624,8 +624,15 @@ class EditorBox(Gtk.Box):
                 if i < len(self.original_frame_durations):
                     self.frame_durations[i] = int(self.original_frame_durations[i] / speed_factor)
             
-            # Add to frameline's speed ranges
-            self.frameline.add_speed_range(start_idx, end_idx, speed_factor)
+            # Remove speed range if speed factor is 1.0
+            if speed_factor == 1.0:
+                self.frameline.speed_ranges = [
+                    (s, e, spd) for s, e, spd in self.frameline.speed_ranges
+                    if not (s == start_idx and e == end_idx)
+                ]
+            else:
+                # Add to frameline's speed ranges
+                self.frameline.add_speed_range(start_idx, end_idx, speed_factor)
             
             # Sort ranges by start index
             self.frameline.speed_ranges.sort()
