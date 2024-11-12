@@ -23,8 +23,8 @@ class EditorBox(Gtk.Box):
         self.set_margin_end(80)
 
         # Increase image display dimensions
-        self.image_display_width = 600   # Increased from 400
-        self.image_display_height = 450  # Increased from 300
+        self.image_display_width = 600
+        self.image_display_height = 450
 
         # Create a fixed-size container for the image
         image_container = Gtk.Box()
@@ -85,10 +85,10 @@ class EditorBox(Gtk.Box):
         # GIF handling properties
         self.frames = []
         self.current_frame_index = 0
-        self.playhead_frame_index = 0  # New variable to track playhead position
+        self.playhead_frame_index = 0
         self.is_playing = False
         self.play_timeout_id = None
-        self.playback_finished = False  # Add this to track if playback reached the end
+        self.playback_finished = False
 
 
 
@@ -163,7 +163,6 @@ class EditorBox(Gtk.Box):
             else:
                 pixbuf = frame
                 
-            # Debug info
             if pixbuf:
                 width = pixbuf.get_width()
                 height = pixbuf.get_height()
@@ -187,7 +186,6 @@ class EditorBox(Gtk.Box):
         # Calculate scale to fill the display area while maintaining aspect ratio
         scale_width = max_width / width
         scale_height = max_height / height
-        # Changed from max() to min() to fit within bounds
         scale = min(scale_width, scale_height)
 
         new_width = int(width * scale)

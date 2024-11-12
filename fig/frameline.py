@@ -828,8 +828,6 @@ class FrameLine(Gtk.Widget):
         self.speed_ranges.append((start, end, speed))
 
     def draw(self, cr, width, height):
-        # ... existing drawing code until tracks ...
-
         all_ranges = []
         for start, end in self.inserted_ranges:
             all_ranges.append(('insert', start, end))
@@ -856,5 +854,4 @@ class FrameLine(Gtk.Widget):
                 cr.set_source_rgba(0x57/255, 0xe3/255, 0x89/255, 0.3)  # Green with alpha
                 cr.rectangle(start_x, track_y, end_x - start_x, track_height)
                 cr.fill()
-
-        # ... rest of drawing code ...
+                
