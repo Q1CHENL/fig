@@ -823,13 +823,6 @@ class FrameLine(Gtk.Widget):
             cr.rectangle(start_pos, track_y, end_pos - start_pos, self.track_height)
             cr.fill()
 
-    def add_insert_range(self, start, end):
-        """Add an insert range with current timestamp"""
-        import time
-        self.inserted_ranges_with_time.append((start, end, time.time()))
-        # Keep the simple list for backward compatibility
-        self.inserted_ranges = [(start, end) for start, end, _ in self.inserted_ranges_with_time]
-
     def add_speed_range(self, start, end, speed):
         """Add a speed range"""
         self.speed_ranges.append((start, end, speed))
@@ -837,7 +830,6 @@ class FrameLine(Gtk.Widget):
     def draw(self, cr, width, height):
         # ... existing drawing code until tracks ...
 
-        # Combine all ranges without timestamps
         all_ranges = []
         for start, end in self.inserted_ranges:
             all_ranges.append(('insert', start, end))
