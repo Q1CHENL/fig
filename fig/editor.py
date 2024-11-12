@@ -5,7 +5,6 @@ from fig.utils import load_css
 from fig.frameline import FrameLine
 from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf
 import gi
-import time
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
 
@@ -576,6 +575,11 @@ class EditorBox(Gtk.Box):
                 
                 # Add to inserted ranges
                 self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
+                
+                for i, r in enumerate(self.frameline.removed_ranges):
+                    # Shift removed ranges after insertion point
+                    if r[0] >= insert_idx:
+                        self.frameline.removed_ranges[i] = (r[0] + num_new_frames, r[1] + num_new_frames)
                 
                 # Update display
                 self.frameline.queue_draw()

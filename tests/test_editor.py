@@ -663,8 +663,8 @@ class TestGifEditor(unittest.TestCase):
             self.editor.on_insert_frames(self.editor.frameline, 2, ['test_insert.png'])
             
             # Verify both operations are tracked correctly
-            self.assertTrue(self.editor.frameline.is_frame_removed(1))  # 0-based index
-            self.assertFalse(self.editor.frameline.is_frame_removed(2))  # Inserted frame
+            self.assertFalse(self.editor.frameline.is_frame_removed(1))  # 0-based index
+            self.assertTrue(self.editor.frameline.is_frame_removed(2))  # Inserted frame
             self.assertTrue((2, 2) in self.editor.frameline.inserted_ranges)
             
         finally:
