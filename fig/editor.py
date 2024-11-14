@@ -23,8 +23,8 @@ class EditorBox(Gtk.Box):
         self.set_margin_end(80)
 
         # Increase image display dimensions
-        self.image_display_width = 600   # Increased from 400
-        self.image_display_height = 450  # Increased from 300
+        self.image_display_width = 600
+        self.image_display_height = 450
 
         # Create a fixed-size container for the image
         image_container = Gtk.Box()
@@ -38,7 +38,7 @@ class EditorBox(Gtk.Box):
         # Image display area setup
         self.image_display = Gtk.Picture()
         self.image_display.set_can_shrink(True)
-        self.image_display.set_keep_aspect_ratio(True)
+        self.image_display.set_content_fit(Gtk.ContentFit.CONTAIN)
         self.image_display.set_halign(Gtk.Align.CENTER)
         self.image_display.set_valign(Gtk.Align.CENTER)
         load_css(self.image_display, ["image-display"])
@@ -66,6 +66,8 @@ class EditorBox(Gtk.Box):
             min_value=0, max_value=0, stride=1)  # Initialize with 0 frames
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)
+        self.frameline.connect('insert-frames', self.on_insert_frames)
+        self.frameline.connect('speed-changed', self.on_speed_changed)
         controls_box.append(self.frameline)
 
         # Button container
@@ -83,10 +85,10 @@ class EditorBox(Gtk.Box):
         # GIF handling properties
         self.frames = []
         self.current_frame_index = 0
-        self.playhead_frame_index = 0  # New variable to track playhead position
+        self.playhead_frame_index = 0
         self.is_playing = False
         self.play_timeout_id = None
-        self.playback_finished = False  # Add this to track if playback reached the end
+        self.playback_finished = False
 
 
 
@@ -96,6 +98,7 @@ class EditorBox(Gtk.Box):
             # Reset state before attempting to load
             self.frames = []
             self.frame_durations = []
+            self.original_frame_durations = []  # Store original durations
             self.current_frame_index = 0
             self.playhead_frame_index = 0
             
@@ -104,6 +107,7 @@ class EditorBox(Gtk.Box):
                 total_duration = 0
                 self.frames = []
                 self.frame_durations = []  # Store frame durations
+                self.original_frame_durations = []  # Keep original durations
                 
                 context = GLib.MainContext.default()
                 for frame in range(frame_count):
@@ -120,6 +124,7 @@ class EditorBox(Gtk.Box):
                     self.frames.append(pixbuf)
                     # Store duration in milliseconds
                     self.frame_durations.append(duration * 1000)
+                    self.original_frame_durations.append(duration * 1000)  # Keep original
                 # Update frameline with 1-based frame range
                 self.frameline.min_value = 1
                 self.frameline.max_value = frame_count
@@ -139,6 +144,7 @@ class EditorBox(Gtk.Box):
             # Ensure state is clean on error
             self.frames = []
             self.frame_durations = []
+            self.original_frame_durations = []
             self.current_frame_index = 0
             self.playhead_frame_index = 0
 
@@ -157,7 +163,6 @@ class EditorBox(Gtk.Box):
             else:
                 pixbuf = frame
                 
-            # Debug info
             if pixbuf:
                 width = pixbuf.get_width()
                 height = pixbuf.get_height()
@@ -181,7 +186,6 @@ class EditorBox(Gtk.Box):
         # Calculate scale to fill the display area while maintaining aspect ratio
         scale_width = max_width / width
         scale_height = max_height / height
-        # Changed from max() to min() to fit within bounds
         scale = min(scale_width, scale_height)
 
         new_width = int(width * scale)
@@ -233,43 +237,34 @@ class EditorBox(Gtk.Box):
         if not self.is_playing:
             return False
 
-        # Get current frame range
         start = int(round(self.frameline.left_value)) - 1
         end = int(round(self.frameline.right_value)) - 1
         is_reversed = start > end
+        direction = -1 if is_reversed else 1
 
-        # Calculate next frame within range
-        if is_reversed:
-            next_frame = self.current_frame_index - 1
-            if next_frame < end:
-                self.is_playing = False
-                self.update_play_button_icon(False)
-                self.hide_playhead()
-                self.frameline.playhead_visible = False  # Explicitly set the state
-                if self.play_timeout_id:
-                    GLib.source_remove(self.play_timeout_id)
-                    self.play_timeout_id = None
-                return False
-        else:
-            next_frame = self.current_frame_index + 1
-            if next_frame > end:
-                self.is_playing = False
-                self.update_play_button_icon(False)
-                self.hide_playhead()
-                self.frameline.playhead_visible = False  # Explicitly set the state
-                if self.play_timeout_id:
-                    GLib.source_remove(self.play_timeout_id)
-                    self.play_timeout_id = None
-                return False
-            
+        # Get next valid frame, skipping removed ranges
+        next_frame = self.frameline.get_next_valid_frame(
+            self.current_frame_index, 
+            direction
+        )
+
+        # Check if we've reached the end
+        if next_frame == -1 or (direction > 0 and next_frame > end) or (direction < 0 and next_frame < end):
+            self.is_playing = False
+            self.update_play_button_icon(False)
+            self.hide_playhead()
+            self.frameline.playhead_visible = False
+            if self.play_timeout_id:
+                GLib.source_remove(self.play_timeout_id)
+                self.play_timeout_id = None
+            return False
+
         self.display_frame(next_frame)
         self.current_frame_index = next_frame
         self.playhead_frame_index = next_frame
-
-        # Update playhead position
         self.frameline.set_playhead_position(self.playhead_frame_index)
 
-        # Schedule next frame using the current frame's duration
+        # Schedule next frame
         current_duration = self.frame_durations[next_frame]
         self.play_timeout_id = GLib.timeout_add(
             current_duration, self.play_next_frame)
@@ -358,28 +353,69 @@ class EditorBox(Gtk.Box):
         dialog.destroy()
 
     def _save_gif(self, save_path, start_idx, end_idx):
+        """Save GIF including inserted frames and excluding removed ranges"""
         # Determine if we need to reverse the frames
         is_reversed = start_idx > end_idx
         if is_reversed:
             start_idx, end_idx = end_idx, start_idx
 
-        frames_to_save = [self._pixbuf_to_pil(
-            self.frames[i]) for i in range(start_idx, end_idx + 1)]
-        durations = self.frame_durations[start_idx:end_idx + 1]
+        # Get valid frames (excluding removed ranges)
+        frames_to_save = []
+        durations = []
+        
+        # Get reference dimensions from the first non-removed frame
+        ref_frame = None
+        for frame in self.frames:
+            if frame:
+                ref_frame = self._pixbuf_to_pil(frame)
+                break
+        
+        if not ref_frame:
+            return  # No valid frames to save
+        
+        ref_size = ref_frame.size
+        
+        for i in range(start_idx, end_idx + 1):
+            # Skip if frame is removed
+            if self.frameline.is_frame_removed(i):
+                continue
+                
+            # Skip if index is out of bounds
+            if i < 0 or i >= len(self.frames):
+                continue
+                
+            # Skip if frame is None
+            if not self.frames[i]:
+                continue
+            
+            # Check if this frame is part of an inserted range
+            is_inserted = any(start <= i <= end for start, end in self.frameline.inserted_ranges)
+            
+            # Get the frame and its duration
+            frame = self._pixbuf_to_pil(self.frames[i])
+            duration = self.frame_durations[i]
+            
+            # Resize inserted frames if needed
+            if is_inserted and frame.size != ref_size:
+                frame = frame.resize(ref_size, Image.Resampling.LANCZOS)
+            
+            frames_to_save.append(frame)
+            durations.append(duration)
 
         # Reverse frames and durations if needed
         if is_reversed:
             frames_to_save.reverse()
             durations.reverse()
 
-        frames_to_save[0].save(
-            save_path,
-            save_all=True,
-            append_images=frames_to_save[1:],
-            duration=durations,
-            loop=0,
-            format='GIF'
-        )
+        if frames_to_save:  # Only save if we have valid frames
+            frames_to_save[0].save(
+                save_path,
+                save_all=True,
+                append_images=frames_to_save[1:],
+                duration=durations,
+                loop=0,
+                format='GIF'
+            )
 
     def on_frames_changed(self, frameline, start, end):
         """Handle frame range changes from the frameline"""
@@ -403,16 +439,11 @@ class EditorBox(Gtk.Box):
                 frame_index = int(round(frameline.right_value)) - 1
                 
             frame_index = max(0, min(frame_index, len(self.frames) - 1))
-            self.current_frame_index = frame_index
-            self.display_frame(frame_index)
-        
-        # Update playhead visibility using min/max for reversed handles
-        min_frame = min(start_frame_index, end_frame_index)
-        max_frame = max(start_frame_index, end_frame_index)
-        if self.playhead_frame_index < min_frame or self.playhead_frame_index > max_frame:
-            self.hide_playhead()
-        else:
-            self.frameline.set_playhead_position(self.playhead_frame_index)
+            
+            # Only update display if frame is not removed
+            if not frameline.is_frame_removed(frame_index):
+                self.current_frame_index = frame_index
+                self.display_frame(frame_index)
 
     def save_button(self):
         save_button = Gtk.Button(label="Save")
@@ -478,3 +509,168 @@ class EditorBox(Gtk.Box):
             self.playhead_frame_index > max_val - 1):
             self.frameline.playhead_visible = False
             self.hide_playhead()
+
+    def on_insert_frames(self, frameline, position, file_paths):
+        try:
+            new_frames = []
+            new_durations = []
+            
+            # Load each image and get number of new frames
+            for path in file_paths:
+                if not os.path.exists(path):
+                    raise FileNotFoundError(f"File not found: {path}")
+                
+                with Image.open(path) as img:
+                    if getattr(img, 'is_animated', False):
+                        # Handle animated GIFs
+                        for frame in range(img.n_frames):
+                            img.seek(frame)
+                            pixbuf = self._pil_to_pixbuf(img.convert('RGBA'))
+                            new_frames.append(pixbuf)
+                            new_durations.append(img.info.get('duration', 100))
+                    else:
+                        # Handle static images
+                        pixbuf = self._pil_to_pixbuf(img.convert('RGBA'))
+                        new_frames.append(pixbuf)
+                        new_durations.append(100)  # Default 100ms duration
+            
+            if new_frames:
+                insert_idx = max(0, position - 1)
+                num_new_frames = len(new_frames)
+                
+                # Adjust speed ranges before inserting new frames
+                updated_speed_ranges = []
+                for start, end, speed in self.frameline.speed_ranges:
+                    if insert_idx <= start:
+                        # Speed range is after insertion point - shift it
+                        updated_speed_ranges.append((start + num_new_frames, end + num_new_frames, speed))
+                    elif insert_idx > end:
+                        # Speed range is before insertion point - keep it unchanged
+                        updated_speed_ranges.append((start, end, speed))
+                    else:
+                        # Speed range contains insertion point - split it into two parts
+                        if start < insert_idx:
+                            # Keep the part before insertion
+                            updated_speed_ranges.append((start, insert_idx - 1, speed))
+                        # Keep the part after insertion (shifted by the number of new frames)
+                        updated_speed_ranges.append((insert_idx + num_new_frames, end + num_new_frames, speed))
+                
+                # Update speed ranges with adjusted positions
+                self.frameline.speed_ranges = updated_speed_ranges
+                
+                # Insert new frames and durations
+                self.frames[insert_idx:insert_idx] = new_frames
+                self.frame_durations[insert_idx:insert_idx] = new_durations
+                
+                # Update frameline max value
+                new_max = len(self.frames)
+                self.frameline.max_value = new_max
+                
+                # If inserting at left handle, adjust right handle position
+                if self.frameline.active_handle == 'left':
+                    new_right = self.frameline.right_value + len(new_frames)
+                    self.frameline.right_value = min(new_right, new_max)
+                
+                # Add to inserted ranges
+                self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
+                
+                for i, r in enumerate(self.frameline.removed_ranges):
+                    # Shift removed ranges after insertion point
+                    if r[0] >= insert_idx:
+                        self.frameline.removed_ranges[i] = (r[0] + num_new_frames, r[1] + num_new_frames)
+                
+                # Update display
+                self.frameline.queue_draw()
+                self.display_frame(insert_idx)
+                
+                # Update info label
+                total_duration = sum(self.frame_durations) / 1000.0
+                self.info_label.set_text(
+                    f"{len(self.frames)} Frames • {total_duration:.2f} Seconds"
+                )
+                
+        except Exception as e:
+            print(f"Error inserting frames: {e}")
+            raise
+
+    def on_speed_changed(self, frameline, start, end, speed_factor):
+        """Handle speed change for the selected frame range"""
+        try:
+            # Convert from 1-based to 0-based indices
+            start_idx = int(start) - 1
+            end_idx = int(end) - 1
+            
+            # Ensure valid range and handle reversed ranges
+            if start_idx > end_idx:
+                start_idx, end_idx = end_idx, start_idx
+                
+            # Clamp indices to valid range
+            start_idx = max(0, min(start_idx, len(self.frames) - 1))
+            end_idx = max(0, min(end_idx, len(self.frames) - 1))
+            
+            # Initialize original_frame_durations if not already set
+            if not hasattr(self, 'original_frame_durations'):
+                self.original_frame_durations = self.frame_durations.copy()
+            elif len(self.original_frame_durations) != len(self.frames):
+                # Extend original_frame_durations for inserted frames
+                inserted_count = len(self.frames) - len(self.original_frame_durations)
+                self.original_frame_durations.extend(self.frame_durations[-inserted_count:])
+            
+            # Verify we have valid frames and durations
+            if not self.frames or not self.frame_durations:
+                print("Invalid frame data state")
+                return
+                
+            # Adjust frame durations for the selected range
+            for i in range(start_idx, end_idx + 1):
+                if i < len(self.original_frame_durations):
+                    self.frame_durations[i] = int(self.original_frame_durations[i] / speed_factor)
+            
+            # Remove speed range if speed factor is 1.0
+            if speed_factor == 1.0:
+                self.frameline.speed_ranges = [
+                    (s, e, spd) for s, e, spd in self.frameline.speed_ranges
+                    if not (s == start_idx and e == end_idx)
+                ]
+            else:
+                # Add to frameline's speed ranges
+                self.frameline.add_speed_range(start_idx, end_idx, speed_factor)
+            
+            # Sort ranges by start index
+            self.frameline.speed_ranges.sort()
+            
+            # Merge only adjacent (not overlapping) ranges with same speed
+            merged = []
+            for range_start, range_end, speed in self.frameline.speed_ranges:
+                if not merged or merged[-1][1] + 1 < range_start or merged[-1][2] != speed:
+                    merged.append([range_start, range_end, speed])
+                elif merged[-1][2] == speed:  # Only merge if speeds match
+                    merged[-1][1] = max(merged[-1][1], range_end)
+            self.frameline.speed_ranges = [tuple(x) for x in merged]
+            
+            # Update info label with new total duration
+            total_duration = sum(self.frame_durations) / 1000.0
+            self.info_label.set_text(
+                f"{len(self.frames)} Frames • {total_duration:.2f} Seconds"
+            )
+            
+            # If currently playing, restart playback to apply new speeds immediately
+            if self.is_playing:
+                self.stop_playback()
+                self.play_edited_frames(None)
+                
+            # Trigger redraw of frameline
+            self.frameline.queue_draw()
+            
+        except Exception as e:
+            print(f"Error changing speed: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def stop_playback(self):
+        """Stop current playback"""
+        self.is_playing = False
+        self.update_play_button_icon(False)
+        if self.play_timeout_id:
+            GLib.source_remove(self.play_timeout_id)
+            self.play_timeout_id = None

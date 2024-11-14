@@ -108,3 +108,24 @@ headerbar .menu-button:hover {
     border-radius: 5px;
     margin: 10px;
 }
+
+/* Make menu items transparent by default and add hover effect */
+button.menu-item {
+    min-height: 0;
+    min-width: 0;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    margin: 2px;
+    color: white;
+}
+
+button.menu-item:hover {
+    background-color: alpha(white, 0.1);
+}
+
+/* Style the popover content area */
+popover contents {
+    background-color: #333333;
+}
