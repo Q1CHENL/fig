@@ -99,7 +99,6 @@ def show_about_dialog(window):
 
     about.set_comments("Sleek GIF editor.")
     about.set_release_notes("""
-    <p>What's new in version 1.0.0:</p>
     <ul>
         <li>Remove certain frames</li>
         <li>Insert frame(s) at any position</li>
