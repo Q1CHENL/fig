@@ -1,7 +1,7 @@
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gio, GLib, Gdk
+from gi.repository import Gtk, Gio, GLib, Gdk, Adw
 from fig.utils import load_css
 
 
@@ -84,30 +84,44 @@ class HomeBox(Gtk.Box):
             print(f"Error selecting file: {e.message}")
 
     def show_about(self, button):
-        about = Gtk.AboutDialog()
-        about.set_transient_for(self.get_root())
-        about.set_modal(True)
-        
-        about.set_program_name("Fig")
-        # Try multiple possible locations for the icon
-        icon_paths = [
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "../assets/io.github.Q1CHENL.fig.svg")),
-            os.path.join(os.path.dirname(__file__), "assets/io.github.Q1CHENL.fig.svg"),
-            "/app/share/icons/hicolor/scalable/apps/io.github.Q1CHENL.fig.svg"  # Flatpak location
-        ]
+        show_about_dialog(self.get_root())
 
-        icon_file = None
-        for path in icon_paths:
-            if os.path.exists(path):
-                icon_file = Gio.File.new_for_path(path)
-                break
 
-        if icon_file:
-            about.set_logo(Gdk.Texture.new_from_file(icon_file))
-        about.set_version("1.0")
-        about.set_comments("A simple and usable GIF editor")
-        about.set_website("https://github.com/Q1CHENL/fig")
-        about.set_authors(["Qichen Liu (刘启辰)"])
-        about.set_license_type(Gtk.License.MIT_X11)
-        
-        about.present()
+def show_about_dialog(window):
+    about = Adw.AboutDialog.new()
+    
+    about.set_application_name("Fig")
+    about.set_application_icon("io.github.Q1CHENL.fig")
+    about.set_version("1.0.0")
+    about.set_developer_name("Qichen Liu")
+    about.set_website("https://github.com/fig")
+    about.set_issue_url("https://github.com/fig/issues")
+
+    about.set_comments("Sleek GIF editor.")
+    about.set_release_notes("""
+    <p>What's new in version 1.0.0:</p>
+    <ul>
+        <li>Remove certain frames</li>
+        <li>Insert frame(s) at any position</li>
+        <li>Speed up/slow down certain frames</li>
+        <li>Bug fixes and improvements</li>
+    </ul>
+    """)
+    
+    developers = [
+        "Qichen Liu https://github.com/Q1CHENL",
+    ]
+    designers = ["Qichen Liu"]
+    artists = ["Qichen Liu"]
+    
+    about.set_developers(developers)
+    about.set_designers(designers)
+    about.set_artists(artists)
+
+    about.set_copyright("© 2024 Qichen Liu")
+    about.set_license_type(Gtk.License.MIT_X11)
+    
+    about.set_debug_info("Version: 1.0.0\nPlatform: Linux\nGTK: 4.0")
+    about.set_debug_info_filename("debug-info.txt")
+
+    about.present(window)
