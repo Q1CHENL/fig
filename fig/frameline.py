@@ -855,3 +855,12 @@ class FrameLine(Gtk.Widget):
                 cr.rectangle(start_x, track_y, end_x - start_x, track_height)
                 cr.fill()
                 
+    def reset(self):
+        """Reset framline state"""
+        self.left_value = self.min_value
+        self.right_value = self.max_value
+        self.removed_ranges = []
+        self.inserted_ranges = []
+        self.speed_ranges = []
+        self.playhead_position = 1
+        self.queue_draw()

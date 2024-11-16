@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-import os
-import sys
+import os, sys
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
@@ -18,6 +17,13 @@ class Fig(Adw.ApplicationWindow):
 
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         headerbar = Adw.HeaderBar()
+        
+        self.back_button = Gtk.Button()
+        self.back_button.set_icon_name("go-previous-symbolic")
+        self.back_button.connect("clicked", lambda _: self.load_home_ui())
+        self.back_button.set_visible(False)  # Hidden by default
+        headerbar.pack_start(self.back_button)
+        
         headerbar.set_title_widget(Gtk.Label(label="Fig"))
         main_box.append(headerbar)
 
@@ -34,11 +40,15 @@ class Fig(Adw.ApplicationWindow):
         if self.content_box.get_first_child():
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.editor_box)
+        self.back_button.set_visible(True)  # Show back button in editor view
 
     def load_home_ui(self):
         if self.content_box.get_first_child():
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.home_box)
+        self.back_button.set_visible(False)  # Hide back button in home view
+        self.editor_box.reset()
+        
 
 class FigApplication(Adw.Application):
     def __init__(self):

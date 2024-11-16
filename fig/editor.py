@@ -674,3 +674,19 @@ class EditorBox(Gtk.Box):
         if self.play_timeout_id:
             GLib.source_remove(self.play_timeout_id)
             self.play_timeout_id = None
+            
+    def reset(self):
+        """Reset editor state"""
+        self.frames = []
+        self.frame_durations = []
+        self.original_frame_durations = []
+        self.current_frame_index = 0
+        self.playhead_frame_index = 0
+        self.is_playing = False
+        self.play_timeout_id = None
+        self.playback_finished = False
+        self.frameline.reset()
+        self.info_label.set_text("")
+        self.image_display.set_pixbuf(None)
+        self.image_display.queue_draw()
+        self.queue_draw()
