@@ -857,8 +857,8 @@ class FrameLine(Gtk.Widget):
                 
     def reset(self):
         """Reset framline state"""
-        self.left_value = self.min_value
-        self.right_value = self.max_value
+        self.left_value = 0
+        self.right_value = 0
         self.removed_ranges = []
         self.inserted_ranges = []
         self.speed_ranges = []
