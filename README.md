@@ -22,7 +22,30 @@
 - Insert GIF/image(s) at any position
 - Speed specific frames up/down
 - Play GIF at the original speed
-> Tip: right click on the handles to discover more 
+
+> **Tip: right click on the handles to discover more**
+
+## Build and Run
+
+- Run as python module:
+
+  `python -m fig.main`
+
+- Flatpak:
+
+  - Build and install
+
+    `flatpak run org.flatpak.Builder --force-clean --sandbox --user --install --install-deps-from=flathub --ccache --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=repo builddir io.github.Q1CHENL.fig.json`
+
+  - Run
+
+    `flatpak run io.github.Q1CHENL.fig`
+
+## Test
+
+`pip install pytest`
+
+`pytest tests/test_editor.py`
 
 ## Todos
 
@@ -53,10 +76,6 @@
 - ~~New About page~~
 - Better info label UI
 - Loop playback option
-
-## Test
-
-`pytest tests/test_editor.py`
 
 ## Notice
 
