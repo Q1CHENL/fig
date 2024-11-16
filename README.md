@@ -22,6 +22,7 @@
 - Insert GIF/image(s) at any position
 - Speed specific frames up/down
 - Play GIF at the original speed
+> Tip: right click on the handles to discover more 
 
 ## Todos
 
