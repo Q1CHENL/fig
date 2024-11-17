@@ -34,6 +34,13 @@ class FrameLine(Gtk.Widget):
         self.track_height = 4
         self.track_radius = 2
 
+        # Theme colors (will be updated by update_theme)
+        self.track_color = (0, 0, 0, 0.1)  # Default track color with opacity
+        self.handle_color = (0, 0, 0, 1)   # Default handle color
+        self.text_color = (0, 0, 0, 1)     # Default text color
+        self.playhead_color = (0, 0, 0, 1)  # Default playhead color
+        self.selected_track_color = (1, 1, 1, 1)  # Default selected track color
+
         # Dragging state
         self.dragging_left = False
         self.dragging_right = False
@@ -203,7 +210,8 @@ class FrameLine(Gtk.Widget):
         )
 
         # 1. Draw base track first
-        cr.set_source_rgb(0, 0, 0)
+        cr.set_source_rgba(self.track_color[0], self.track_color[1], 
+                          self.track_color[2], self.track_color[3])
         self.draw_rounded_rectangle(cr, self.handle_radius, (height - self.track_height) / 2,
                                     width - 2 * self.handle_radius, self.track_height, self.track_radius)
         cr.fill()
@@ -214,7 +222,8 @@ class FrameLine(Gtk.Widget):
         elif self.hover_action == 'changespeed':
             cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
         elif self.left_value <= self.right_value:
-            cr.set_source_rgb(1, 1, 1)  # White
+            cr.set_source_rgba(self.selected_track_color[0], self.selected_track_color[1],
+                             self.selected_track_color[2], self.selected_track_color[3])
         else:
             cr.set_source_rgb(1, 0.4, 0.4)  # Light red
 
@@ -243,10 +252,11 @@ class FrameLine(Gtk.Widget):
             playhead_x = self.value_to_position(self.playhead_position, width)
             
             color = self.handle_playhead_color(self.playhead_position)
-            cr.set_source_rgb(color[0], color[1], color[2])
+            cr.set_source_rgba(self.playhead_color[0], self.playhead_color[1], self.playhead_color[2], self.playhead_color[3])
             self.draw_handle(cr, playhead_x, height)
         
-        cr.set_source_rgb(1, 1, 1)
+        cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
+                             self.handle_color[2], self.handle_color[3])
 
         # 6. Draw handles with appropriate colors
         for handle_x, is_left_handle in [(left_handle_x, True), (right_handle_x, False)]:
@@ -266,7 +276,8 @@ class FrameLine(Gtk.Widget):
                 self.handle_in_insert_range(handle_x)):
                 cr.set_source_rgb(0x57/255, 0xe3/255, 0x89/255)  # Green for active handle on insert hover
             else:
-                cr.set_source_rgb(1, 1, 1)  # White
+                cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
+                             self.handle_color[2], self.handle_color[3])  # White
 
             self.draw_handle(cr, handle_x, height)
             
@@ -533,7 +544,8 @@ class FrameLine(Gtk.Widget):
         
         if text:  # Only draw text if we have a value to display
             # Set text color to black for contrast
-            cr.set_source_rgb(0, 0, 0)
+            cr.set_source_rgba(self.text_color[0], self.text_color[1],
+                              self.text_color[2], self.text_color[3])
             
             # Center text in handle
             cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
@@ -827,34 +839,33 @@ class FrameLine(Gtk.Widget):
         """Add a speed range"""
         self.speed_ranges.append((start, end, speed))
 
-    def draw(self, cr, width, height):
-        all_ranges = []
-        for start, end in self.inserted_ranges:
-            all_ranges.append(('insert', start, end))
-        for start, end, speed in self.speed_ranges:
-            all_ranges.append(('speed', start, end))
+    def update_theme(self, is_dark):
+        """Update theme colors"""
+        from fig.utils import clear_css
+        
+        # Clear existing theme classes
+        clear_css(self)
+        
+        # Add appropriate theme class
+        self.add_css_class("frameline-dark" if is_dark else "frameline-light")
+        
+        # Update colors based on theme
+        if is_dark:
+            self.track_color = (1, 1, 1, 0.1)    
+            self.handle_color = (1, 1, 1, 1)
+            self.text_color = (0, 0, 0, 1)       
+            self.playhead_color = (1, 1, 1, 1)
+            self.selected_track_color = (1, 1, 1, 1)  # White selected portion
+        else:
+            self.track_color = (0, 0, 0, 0.1)  
+            self.handle_color = (0.141, 0.141, 0.141, 1)     
+            self.text_color = (1, 1, 1, 1)
+            self.playhead_color = (0.141, 0.141, 0.141, 1)
+            self.selected_track_color = (0.141, 0.141, 0.141, 1)  # Black selected portion
+        
+        # Queue a redraw
+        self.queue_draw()
 
-        # Draw ranges in order (newer modifications on top)
-        for range_type, start, end in all_ranges:
-            if range_type == 'speed':
-                # Convert indices for speed tracks (0-based to 1-based)
-                start_x = self.value_to_position(start + 1, width)
-                end_x = self.value_to_position(end + 1, width)
-                
-                # Draw speed track
-                cr.set_source_rgba(0x62/255, 0xa0/255, 0xea/255, 0.3)  # Blue with alpha
-                cr.rectangle(start_x, track_y + track_height, end_x - start_x, track_height)
-                cr.fill()
-            else:  # insert
-                # Fix the off-by-one issue in insert track rendering
-                start_x = self.value_to_position(start, width)  # Removed +1
-                end_x = self.value_to_position(end + 1, width)  # Changed from +2 to +1
-                
-                # Draw insert track
-                cr.set_source_rgba(0x57/255, 0xe3/255, 0x89/255, 0.3)  # Green with alpha
-                cr.rectangle(start_x, track_y, end_x - start_x, track_height)
-                cr.fill()
-                
     def reset(self):
         """Reset framline state"""
         self.left_value = 0

@@ -1,9 +1,9 @@
 import os
 import io
 from PIL import Image
-from fig.utils import load_css
+from fig.utils import load_css, clear_css
 from fig.frameline import FrameLine
-from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf
+from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf, Adw
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
@@ -73,8 +73,12 @@ class EditorBox(Gtk.Box):
         # Button container
         buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         buttons_box.set_halign(Gtk.Align.END)  # Align buttons to the right
-        buttons_box.append(self.play_button())
-        buttons_box.append(self.save_button())
+        
+        # Create and store button references
+        self.play_btn = self.play_button()
+        self.save_btn = self.save_button()
+        buttons_box.append(self.play_btn)
+        buttons_box.append(self.save_btn)
 
         # Add buttons to controls
         controls_box.append(buttons_box)
@@ -90,7 +94,7 @@ class EditorBox(Gtk.Box):
         self.play_timeout_id = None
         self.playback_finished = False
 
-
+        self.update_theme(True)  # Set initial theme to dark
 
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
@@ -217,15 +221,10 @@ class EditorBox(Gtk.Box):
             end = int(round(self.frameline.right_value)) - 1
             is_reversed = start > end
 
-            # If playhead isn't visible or playback was finished, start from left handle
+            # Always start from the left handle when starting new playback
             if not self.frameline.playhead_visible or self.playback_finished:
-                if is_reversed:
-                    self.current_frame_index = end if start <= end else start
-                    self.playhead_frame_index = self.current_frame_index
-                # Reverse playback
-                else:
-                    self.current_frame_index = start if start <= end else end
-                    self.playhead_frame_index = self.current_frame_index
+                self.current_frame_index = start
+                self.playhead_frame_index = start
                     
             self.display_frame(self.current_frame_index)
             self.show_playhead()
@@ -450,50 +449,39 @@ class EditorBox(Gtk.Box):
         save_button.set_size_request(80, 40)
         save_button.set_valign(Gtk.Align.CENTER)  # Center vertically
         save_button.set_halign(Gtk.Align.CENTER)
-        load_css(save_button, ["save-button"])
         save_button.connect('clicked', self.save_frames)
         return save_button
 
     def play_button(self):
-        self.play_button = Gtk.Button()
-        self.update_play_button_icon(False)  # Set initial icon to play
-        self.play_button.set_size_request(40, 40)
-        self.play_button.set_valign(Gtk.Align.CENTER)  # Center vertically
-        self.play_button.set_halign(Gtk.Align.CENTER)
-        load_css(self.play_button, ["play-button"])
-        self.play_button.connect('clicked', self.play_edited_frames)
-        return self.play_button
-
-    def _pil_to_pixbuf(self, pil_image):
-        """Convert PIL image to GdkPixbuf"""
-        # Save PIL image to buffer
-        buf = io.BytesIO()
-        pil_image.save(buf, 'png')
-        buf.seek(0)
-
-        # Load from buffer into GdkPixbuf
-        loader = GdkPixbuf.PixbufLoader.new_with_type('png')
-        loader.write(buf.read())
-        loader.close()
-
-        return loader.get_pixbuf()
-
-    def _pixbuf_to_pil(self, pixbuf):
-        """Convert GdkPixbuf to PIL Image"""
-        width, height = pixbuf.get_width(), pixbuf.get_height()
-        pixels = pixbuf.get_pixels()
-        stride = pixbuf.get_rowstride()
-        mode = "RGBA" if pixbuf.get_has_alpha() else "RGB"
-
-        return Image.frombytes(mode, (width, height), pixels, "raw", mode, stride)
-
-    def update_play_button_icon(self, playing):
-        """Update the play button icon based on playing state"""
-        icon_name = "media-playback-start-symbolic" if not playing else "media-playback-pause-symbolic"
+        play_button = Gtk.Button()
+        play_button.set_size_request(40, 40)
+        play_button.set_valign(Gtk.Align.CENTER)  # Center vertically
+        play_button.set_halign(Gtk.Align.CENTER)
+        play_button.connect('clicked', self.play_edited_frames)
+        
+        # Set initial icon
+        icon_name = "media-playback-start-symbolic"
         icon = Gio.ThemedIcon(name=icon_name)
         image = Gtk.Image.new_from_gicon(icon)
-        self.play_button.set_child(image)
+        play_button.set_child(image)
+        
+        return play_button
 
+    def update_theme(self, is_dark):
+        """Update theme for all buttons"""
+        from fig.utils import clear_css
+        
+        # Update Save button
+        clear_css(self.save_btn)
+        self.save_btn.add_css_class("save-button-dark" if is_dark else "save-button-light")
+        
+        # Update Play button
+        clear_css(self.play_btn)
+        self.play_btn.add_css_class("play-button-dark" if is_dark else "play-button-light")
+        
+        # Update Frameline
+        self.frameline.update_theme(is_dark)
+    
     def on_handle_drag(self, handle_position):
         """Called when either handle is being dragged"""
         # Update displayed frame to match handle position
@@ -690,3 +678,33 @@ class EditorBox(Gtk.Box):
         self.image_display.set_pixbuf(None)
         self.image_display.queue_draw()
         self.queue_draw()
+    
+    def _pil_to_pixbuf(self, pil_image):
+        """Convert PIL image to GdkPixbuf"""
+        # Save PIL image to buffer
+        buf = io.BytesIO()
+        pil_image.save(buf, 'png')
+        buf.seek(0)
+
+        # Load from buffer into GdkPixbuf
+        loader = GdkPixbuf.PixbufLoader.new_with_type('png')
+        loader.write(buf.read())
+        loader.close()
+
+        return loader.get_pixbuf()
+
+    def _pixbuf_to_pil(self, pixbuf):
+        """Convert GdkPixbuf to PIL Image"""
+        width, height = pixbuf.get_width(), pixbuf.get_height()
+        pixels = pixbuf.get_pixels()
+        stride = pixbuf.get_rowstride()
+        mode = "RGBA" if pixbuf.get_has_alpha() else "RGB"
+
+        return Image.frombytes(mode, (width, height), pixels, "raw", mode, stride)
+
+    def update_play_button_icon(self, playing):
+        """Update the play button icon based on playing state"""
+        icon_name = "media-playback-start-symbolic" if not playing else "media-playback-pause-symbolic"
+        icon = Gio.ThemedIcon(name=icon_name)
+        image = Gtk.Image.new_from_gicon(icon)
+        self.play_btn.set_child(image)
