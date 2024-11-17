@@ -17,33 +17,24 @@ class Fig(Adw.ApplicationWindow):
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.headerbar = Adw.HeaderBar()
         
-        # Get style manager and connect to theme changes
         self.style = Adw.StyleManager.get_default()
         self.style.connect("notify::dark", self.on_color_scheme_change)
         
-        # Create main UI components
-        self.back_button = Gtk.Button()
-        self.back_button.set_icon_name("go-previous-symbolic")
-        self.back_button.connect("clicked", lambda _: self.load_home_ui())
-        self.back_button.set_visible(False)  # Hidden by default
-        self.headerbar.pack_start(self.back_button)
+        back_button = Gtk.Button()
+        back_button.set_icon_name("go-previous-symbolic")
+        back_button.connect("clicked", lambda _: self.load_home_ui())
+        back_button.set_visible(False)  # Hidden by default
+        self.headerbar.pack_start(back_button)
         
-        # Create a MenuButton
         menu_button = Gtk.MenuButton()
         menu_button.set_icon_name("open-menu-symbolic")
 
-        # Create a Menu for the MenuButton
         menu_model = Gio.Menu()
-        menu_model.append("Option 1", "app.option1")
+        menu_model.append("New Window", "app.new_window")
         menu_model.append("Option 2", "app.option2")
         menu_model.append("Option 3", "app.option3")
         menu_model.append("Option 4", "app.option4")
         menu_button.set_menu_model(menu_model)
-
-        # Add actions for menu options
-        action1 = Gio.SimpleAction.new("option1", None)
-        action1.connect("activate", self.on_option_selected, "Option 1")
-        self.add_action(action1)
 
         action2 = Gio.SimpleAction.new("option2", None)
         action2.connect("activate", self.on_option_selected, "Option 2")
@@ -71,37 +62,31 @@ class Fig(Adw.ApplicationWindow):
 
         self.set_content(main_box)
         
-        # Set initial theme
         self.update_theme(self.style.get_dark())
     
     def update_theme(self, is_dark):
         """Update theme for all components"""
-        # Update headerbar theme
         clear_css(self.headerbar)
         self.headerbar.add_css_class("headerbar-dark" if is_dark else "headerbar-light")
         
-        # Update home box theme
         self.home_box.update_theme(is_dark)
-        
-        # Update editor box theme
         self.editor_box.update_theme(is_dark)
     
     def on_color_scheme_change(self, style_manager, pspec):
         """Handle system color scheme changes"""
         self.update_theme(style_manager.get_dark())
 
-
     def load_editor_ui(self):
         if self.content_box.get_first_child():
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.editor_box)
-        self.back_button.set_visible(True)  # Show back button in editor view
+        self.back_button.set_visible(True)
 
     def load_home_ui(self):
         if self.content_box.get_first_child():
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.home_box)
-        self.back_button.set_visible(False)  # Hide back button in home view
+        self.back_button.set_visible(False)
         self.editor_box.reset()
         
     def on_option_selected(self, action, parameter, option_name):
@@ -111,8 +96,17 @@ class Fig(Adw.ApplicationWindow):
 class FigApplication(Adw.Application):
     def __init__(self):
         super().__init__(application_id="io.github.Q1CHENL.fig")
+        
+        new_window_action = Gio.SimpleAction.new("new_window", None)
+        new_window_action.connect("activate", self.on_new_window)
+        self.add_action(new_window_action)
 
     def do_activate(self):
+        win = Fig(self)
+        win.present()
+        
+    def on_new_window(self, action, parameter):
+        """Create a new window when New Window is selected"""
         win = Fig(self)
         win.present()
 
