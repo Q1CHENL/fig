@@ -69,10 +69,10 @@
 - Load GIF faster
 - ~~Improve tests and solve warnings~~
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
-- Light mode
+- ~~Light mode~~
 - Undo last action
 - Proper default name for edited GIF when saving
-- Menu in headerbar: new window, open, help etc.
+- Menu in headerbar: ~~new window~~, open, help etc.
 - ~~New About page~~
 - Better info label UI
 - Loop playback option
