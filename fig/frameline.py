@@ -378,7 +378,7 @@ class FrameLine(Gtk.Widget):
         self.right_handle_hover = abs(x - right_handle_x) <= self.handle_radius and not self.dragging_left
 
     def on_right_click(self, gesture, n_press, x, y):
-        # First hide any existing popover
+        # Hide any existing popover
         if self.popup_menu.get_visible():
             self.popup_menu.popdown()
 
@@ -406,7 +406,6 @@ class FrameLine(Gtk.Widget):
             self.popup_menu.set_pointing_to(rect)
             self.popup_menu.popup()
         else:
-            # Reset all states when clicking elsewhere
             self.active_handle = None
             self.hover_action = None
             self.popup_menu.popdown()
@@ -486,11 +485,7 @@ class FrameLine(Gtk.Widget):
         # Get current range values (1-based)
         start = min(self.left_value, self.right_value)
         end = max(self.left_value, self.right_value)
-        
-        # Add the range
         self.add_removed_range(start, end)
-        
-        # Hide popover
         self.popup_menu.popdown()
 
     def on_remove_frame_clicked(self, button):
@@ -500,11 +495,7 @@ class FrameLine(Gtk.Widget):
             frame = int(self.left_value)
         else:
             frame = int(self.right_value)
-        
-        # Add single frame range
         self.add_removed_range(frame, frame)
-        
-        # Hide popover
         self.popup_menu.popdown()
 
     def add_removed_range(self, start, end):
@@ -549,10 +540,8 @@ class FrameLine(Gtk.Widget):
 
     def is_frame_removed(self, frame_index):
         """Check if a frame index is within any removed range"""
-        # Ensure frame_index is an integer
         frame_index = int(frame_index)
         for start, end in self.removed_ranges:
-            # Include both start and end in the range check
             if start <= frame_index <= end:
                 return True
         return False
@@ -565,10 +554,6 @@ class FrameLine(Gtk.Widget):
             next_frame += direction
         return next_frame if 0 <= next_frame < self.max_value else -1
 
-    def clear_removed_ranges(self):
-        """Clear all removed ranges"""
-        self.removed_ranges = []
-        self.queue_draw()
 
     def on_insert_frames_clicked(self, button):
         """Handle insert frames button click"""
@@ -779,8 +764,7 @@ class FrameLine(Gtk.Widget):
             self.text_color = (1, 1, 1, 1)
             self.playhead_color = (0.141, 0.141, 0.141, 1)
             self.selected_track_color = (0.141, 0.141, 0.141, 1)  # Black selected portion
-        
-        # Queue a redraw
+
         self.queue_draw()
 
     def reset(self):
@@ -796,6 +780,10 @@ class FrameLine(Gtk.Widget):
     #
     # Test and Internal Methods
     #
+    
+    def clear_removed_ranges(self):
+        self.removed_ranges = []
+        self.queue_draw()
     
     def set_left_value(self, value):
         """Internal method to set left handle value"""
@@ -841,13 +829,3 @@ class FrameLine(Gtk.Widget):
         if speed_factor != 1.0:
             self.speed_ranges.append((start, end, speed_factor))
         self.speed_ranges.sort()
-
-    def reset(self):
-        """Internal method to reset widget state"""
-        self.left_value = 0
-        self.right_value = 0
-        self.removed_ranges = []
-        self.inserted_ranges = []
-        self.speed_ranges = []
-        self.playhead_pos = 1
-        self.queue_draw()
