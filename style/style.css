@@ -1,11 +1,14 @@
-/* Window and headerbar styles */
-window {
-    background-color: #242424;
-    margin: 0;
-    padding: 0;
+.headerbar-light {
+    background-color: #FAFAFA;
+    color: black;
+    box-shadow: none;
+    border: none;
+    border-radius: 12px 12px 0 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
-headerbar {
+.headerbar-dark {
     background-color: #242424;
     color: white;
     box-shadow: none;
@@ -15,59 +18,99 @@ headerbar {
     padding-bottom: 0;
 }
 
-/* Specific menu button style */
-headerbar .menu-button {
-    border-radius: 50%;
-    background: none;  /* Ensure no background by default */
+.select-gif-button-light {
+    background-color: #242424;
+    color: white;
+    border-radius: 25px;
+    transition: all 0.2s ease-in-out;
 }
 
-headerbar .menu-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);  /* Only show background on hover */
+.select-gif-button-light:hover {
+    background-color: #242424;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-
-/* Home screen buttons */
-.select-gif-button {
+.select-gif-button-dark {
     background-color: white;
     color: black;
     border-radius: 25px;
     transition: all 0.2s ease-in-out;
 }
 
-.select-gif-button:hover {
+.select-gif-button-dark:hover {
     background-color: #f0f0f0;
     transform: scale(1.05);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-.about-fig-button {
+.about-fig-button-light {
+    border-radius: 25px;
+    background-color: #e0e0e0;
+    color: black;
+    transition: all 0.2s ease-in-out;
+}
+
+.about-fig-button-light:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.about-fig-button-dark {
     border-radius: 25px;
     background-color: rgb(64, 64, 64);
     color: white;
     transition: all 0.2s ease-in-out;
 }
 
-.about-fig-button:hover {
+.about-fig-button-dark:hover {
     background: rgba(255, 255, 255, 0.1);
     transform: scale(1.05);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-/* Editor buttons */
-.save-button {
+.save-button-light {
+    border-radius: 20px;
+    background-color: #242424;
+    color: white;
+    transition: all 0.2s ease-in-out;
+}
+
+.save-button-light:hover {
+    background-color: #241f31;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.save-button-dark {
     border-radius: 20px;
     background-color: white;
     color: black;
     transition: all 0.2s ease-in-out;
 }
 
-.save-button:hover {
+.save-button-dark:hover {
     background-color: #f0f0f0;
     transform: scale(1.05);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-.play-button {
+.play-button-light:hover {
+    background-color: #241f31;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.play-button-light {
+    border-radius: 20px;
+    color: white;
+    background-color: #242424;
+    border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.play-button-dark {
     border-radius: 20px;
     color: white;
     background-color: #383838;
@@ -75,57 +118,47 @@ headerbar .menu-button:hover {
     transition: all 0.2s ease-in-out;
 }
 
-.play-button:hover {
+.play-button-dark:hover {
     background-color: #454545;
     transform: scale(1.05);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-
-/* Image display styles */
-.image-display {
-    margin: 0;
-    padding: 0;
-    margin-top: 0;
-    background-color: grey;
+.frameline-light {
+    background: none;  
+    color: #ffffff;    
 }
 
-/* Handle styles */
-.handle-hover {
-    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.2));
-    transform: scale(1.05);
+.frameline-light .track {
+    background-color: #ffffff;
+    opacity: 0.1;
 }
 
-.info-label {
-    color: white;
+.frameline-light .handle {
+    color: #000000;
+    background-color: #ffffff;
+    color: #000000;
 }
 
-.loading-label {
-    font-size: 16px;
-    color: white;
-    background-color: #242424;
-    padding: 10px 20px;
-    border-radius: 5px;
-    margin: 10px;
+.frameline-light .playhead {
+    background-color: #ffffff;
 }
 
-/* Make menu items transparent by default and add hover effect */
-button.menu-item {
-    min-height: 0;
-    min-width: 0;
-    padding: 8px 12px;
-    background: none;
-    border: none;
-    border-radius: 6px;
-    margin: 2px;
-    color: white;
+.frameline-dark {
+    background: none;  
+    color: #ffffff;
 }
 
-button.menu-item:hover {
-    background-color: alpha(white, 0.1);
+.frameline-dark .track {
+    background-color: #ffffff;
+    opacity: 0.1;
 }
 
-/* Style the popover content area */
-popover contents {
-    background-color: #333333;
+.frameline-dark .handle {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.frameline-dark .playhead {
+    background-color: #ffffff;
 }
