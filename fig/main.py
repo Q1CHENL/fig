@@ -20,11 +20,11 @@ class Fig(Adw.ApplicationWindow):
         self.style = Adw.StyleManager.get_default()
         self.style.connect("notify::dark", self.on_color_scheme_change)
         
-        back_button = Gtk.Button()
-        back_button.set_icon_name("go-previous-symbolic")
-        back_button.connect("clicked", lambda _: self.load_home_ui())
-        back_button.set_visible(False)  # Hidden by default
-        self.headerbar.pack_start(back_button)
+        self.back_button = Gtk.Button()
+        self.back_button.set_icon_name("go-previous-symbolic")
+        self.back_button.connect("clicked", lambda _: self.load_home_ui())
+        self.back_button.set_visible(False)
+        self.headerbar.pack_start(self.back_button)
         
         menu_button = Gtk.MenuButton()
         menu_button.set_icon_name("open-menu-symbolic")
