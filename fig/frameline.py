@@ -214,49 +214,14 @@ class FrameLine(Gtk.Widget):
                                     width - 2 * self.handle_radius, self.track_height, self.track_radius)
         cr.fill()
 
-        # 2. Draw selected portion
-        if self.hover_action == 'range':  # Only highlight track for range removal
-            cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
-        elif self.hover_action == 'changespeed':
-            cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
-        elif self.left_value <= self.right_value:
-            cr.set_source_rgba(self.selected_track_color[0], self.selected_track_color[1],
-                             self.selected_track_color[2], self.selected_track_color[3])
-        else:
-            cr.set_source_rgb(1, 0.4, 0.4)  # Light red
-
-        cr.rectangle(min(left_handle_x, right_handle_x), (height - self.track_height) / 2,
-                    abs(right_handle_x - left_handle_x), self.track_height)
-        cr.fill()
-
-        # 3. Draw inserted ranges in green (moved before removed ranges)
+        self.draw_selected_track(cr, self.left_value, self.right_value, width, height)
         self.draw_inserted_ranges(cr, width, height)
-        
-        # 7. Draw speed ranges (blue)
         self.draw_speed_ranges(cr, width, height)
+        self.draw_removed_ranges(cr, width, height)
+        self.draw_playhead(cr, width, height)
+        self.draw_handles(cr, left_handle_x, right_handle_x, height)
 
-        # 4. Draw removed ranges (now on top of inserted ranges)
-        cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
-        for start, end in self.removed_ranges:
-            start_x = self.value_to_position(start + 1, width)
-            end_x = self.value_to_position(end + 1, width)
-            cr.rectangle(start_x, (height - self.track_height) / 2,
-                        end_x - start_x + (width - 2 * self.handle_radius) / (self.max_value - self.min_value),
-                        self.track_height)
-            cr.fill()
-
-        # 5. Draw playhead if visible
-        if self.playhead_visible and self.playhead_pos > 0:
-            playhead_x = self.value_to_position(self.playhead_pos, width)
-            
-            color = self.get_playhead_color(self.playhead_pos)
-            cr.set_source_rgba(self.playhead_color[0], self.playhead_color[1], self.playhead_color[2], self.playhead_color[3])
-            self.draw_handle(cr, playhead_x, height)
-        
-        cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
-                             self.handle_color[2], self.handle_color[3])
-
-        # 6. Draw handles with appropriate colors
+    def draw_handles(self, cr, left_handle_x, right_handle_x, height):
         for handle_x, is_left_handle in [(left_handle_x, True), (right_handle_x, False)]:
             # Determine handle color based on hover state and active handle
             if self.hover_action == 'frame' and (
@@ -278,6 +243,32 @@ class FrameLine(Gtk.Widget):
                              self.handle_color[2], self.handle_color[3])  # White
 
             self.draw_handle(cr, handle_x, height)
+    
+    def draw_playhead(self, cr, width, height):
+        if self.playhead_visible and self.playhead_pos > 0:
+            playhead_x = self.value_to_position(self.playhead_pos, width)
+            
+            color = self.get_playhead_color(self.playhead_pos)
+            cr.set_source_rgba(self.playhead_color[0], self.playhead_color[1], self.playhead_color[2], self.playhead_color[3])
+            self.draw_handle(cr, playhead_x, height)
+        
+        cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
+                             self.handle_color[2], self.handle_color[3])
+    
+    def draw_selected_track(self, cr, start, end, width, height):
+        if self.hover_action == 'range':  # Only highlight track for range removal
+            cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
+        elif self.hover_action == 'changespeed':
+            cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
+        elif self.left_value <= self.right_value:
+            cr.set_source_rgba(self.selected_track_color[0], self.selected_track_color[1],
+                             self.selected_track_color[2], self.selected_track_color[3])
+        else:
+            cr.set_source_rgb(1, 0.4, 0.4)  # Light red
+
+        cr.rectangle(min(left_handle_x, right_handle_x), (height - self.track_height) / 2,
+                    abs(right_handle_x - left_handle_x), self.track_height)
+        cr.fill()
             
     def handle_within_insert_range(self, handle_x):
         # Convert handle_x screen position to frame value
@@ -367,87 +358,6 @@ class FrameLine(Gtk.Widget):
             # Handle hover effects when not dragging
             self.check_handle_hover(x, y)
             self.queue_draw()
-
-    # Helper methods remain the same
-    def value_to_position(self, value, width):
-        """Convert a value to its corresponding position on the widget"""
-        usable_width = width - 2 * self.handle_radius
-
-        # Prevent division by zero
-        if self.max_value == self.min_value:
-            return self.handle_radius
-
-        position = (value - self.min_value) / \
-            (self.max_value - self.min_value) * usable_width
-        return position + self.handle_radius
-
-    def position_to_value(self, x, width):
-        """Convert a position to its corresponding value, skipping removed ranges"""
-        usable_width = width - 2 * self.handle_radius
-        clamped_x = max(self.handle_radius, min(x, width - self.handle_radius))
-        raw_value = self.min_value + (clamped_x - self.handle_radius) / usable_width * (self.max_value - self.min_value)
-        
-        # Find nearest valid frame
-        rounded_value = round(raw_value)
-        if self.is_frame_removed(rounded_value - 1):  # Convert to 0-based for check
-            # Try to find nearest valid frame
-            left = right = rounded_value
-            while left > self.min_value and self.is_frame_removed(left - 1):
-                left -= 1
-            while right < self.max_value and self.is_frame_removed(right - 1):
-                right += 1
-                
-            # Choose the nearest valid frame
-            if left <= self.min_value:
-                rounded_value = right
-            elif right >= self.max_value:
-                rounded_value = left
-            else:
-                rounded_value = left if abs(raw_value - left) < abs(raw_value - right) else right
-                
-        return rounded_value
-
-    def round_to_stride(self, value):
-        return self.min_value + round((value - self.min_value) / self.stride) * self.stride
-
-    def set_left_value(self, value):
-        rounded_value = self.round_to_stride(value)
-        self.left_value = max(self.min_value, min(rounded_value, self.max_value))
-
-    def set_right_value(self, value):
-        rounded_value = self.round_to_stride(value)
-        self.right_value = max(self.min_value, min(rounded_value, self.max_value))
-
-    def set_playhead_pos(self, position):
-        """Set playhead position"""
-        self.playhead_pos = position
-        # If position is -1, hide the playhead
-        if position == -1:
-            self.playhead_visible = False
-        self.queue_draw()
-
-    def show_playhead(self):
-        """Show the playhead"""
-        self.playhead_visible = True
-        self.queue_draw()
-
-    def hide_playhead(self):
-        """Hide the playhead"""
-        self.playhead_visible = False
-        self.queue_draw()
-
-    def on_handle_drag_begin(self):
-        """Called when handle drag begins"""
-        self.dragging = True
-        # Store current playhead state if not playing
-        self.playhead_pos_before_drag = self.playhead_pos
-
-    def on_handle_drag_end(self):
-        """Called when handle drag ends"""
-        self.dragging = False
-        # Restore playhead position if not playing
-        if not self.editor.is_playing:
-            self.set_playhead_pos(self.playhead_pos_before_drag)
 
     def on_enter(self, controller, x, y):
         self.check_handle_hover(x, y)
@@ -557,6 +467,7 @@ class FrameLine(Gtk.Widget):
     def on_popup_closed(self, popover):
         """Reset states when popup menu is closed"""
         self.menu_active = False
+        self.active_handle = None
         self.hover_action = None
         self.queue_draw()
 
@@ -816,6 +727,17 @@ class FrameLine(Gtk.Widget):
         # Redraw to show the speed range
         self.queue_draw()
 
+    def draw_removed_ranges(self, cr, width, height):
+        """Draw removed ranges in red"""
+        cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
+        for start, end in self.removed_ranges:
+            start_x = self.value_to_position(start + 1, width)
+            end_x = self.value_to_position(end + 1, width)
+            cr.rectangle(start_x, (height - self.track_height) / 2,
+                        end_x - start_x + (width - 2 * self.handle_radius) / (self.max_value - self.min_value),
+                        self.track_height)
+            cr.fill()
+
     def draw_speed_ranges(self, cr, width, height):
         """Draw speed-modified ranges in blue"""
         track_y = (height - self.track_height) / 2
@@ -863,6 +785,65 @@ class FrameLine(Gtk.Widget):
 
     def reset(self):
         """Reset framline state"""
+        self.left_value = 0
+        self.right_value = 0
+        self.removed_ranges = []
+        self.inserted_ranges = []
+        self.speed_ranges = []
+        self.playhead_pos = 1
+        self.queue_draw()
+
+    #
+    # Test and Internal Methods
+    #
+    
+    def set_left_value(self, value):
+        """Internal method to set left handle value"""
+        rounded_value = self.round_to_stride(value)
+        self.left_value = max(self.min_value, min(rounded_value, self.max_value))
+
+    def set_right_value(self, value):
+        """Internal method to set right handle value"""
+        rounded_value = self.round_to_stride(value)
+        self.right_value = max(self.min_value, min(rounded_value, self.max_value))
+
+    def round_to_stride(self, value):
+        """Internal method to round value to nearest stride"""
+        return round(value / self.stride) * self.stride
+
+    def value_to_position(self, value, width):
+        """Internal method to convert value to screen position"""
+        usable_width = width - 2 * self.handle_radius
+        normalized_value = (value - self.min_value) / (self.max_value - self.min_value)
+        return self.handle_radius + normalized_value * usable_width
+
+    def position_to_value(self, position, width):
+        """Internal method to convert screen position to value"""
+        usable_width = width - 2 * self.handle_radius
+        normalized_pos = max(0, min(1, (position - self.handle_radius) / usable_width))
+        return self.min_value + normalized_pos * (self.max_value - self.min_value)
+
+    def is_frame_removed(self, frame_index):
+        """Internal method to check if a frame is in a removed range"""
+        for start, end in self.removed_ranges:
+            if start <= frame_index <= end:
+                return True
+        return False
+
+    def add_speed_range(self, start, end, speed_factor):
+        """Internal method to add a speed range"""
+        # Remove any existing speed ranges that overlap with the new range
+        self.speed_ranges = [
+            (s, e, spd) for s, e, spd in self.speed_ranges
+            if not (s <= end and e >= start)
+        ]
+        # Add the new range if speed is not 1.0
+        if speed_factor != 1.0:
+            self.speed_ranges.append((start, end, speed_factor))
+        self.speed_ranges.sort()
+
+    def reset(self):
+        """Internal method to reset widget state"""
         self.left_value = 0
         self.right_value = 0
         self.removed_ranges = []
