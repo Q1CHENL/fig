@@ -16,16 +16,16 @@ class FrameLine(Gtk.Widget):
         'speed-changed': (GObject.SignalFlags.RUN_LAST, None, (float, float, float))  # start, end, speed_factor
     }
 
-    def __init__(self, min_value=0, max_value=100, stride=1):
+    def __init__(self, min_value=0, max_value=0):
         super().__init__()
 
+        self.stride = 1
         # Ensure max_value is always greater than min_value
         self.min_value = min_value
         # Ensure at least 1 unit difference
         self.max_value = max(min_value + 1, max_value)
-        self.stride = stride
 
-        # Slider properties
+        # Handle properties
         self.left_value = min_value
         self.right_value = max_value
 
@@ -34,37 +34,35 @@ class FrameLine(Gtk.Widget):
         self.track_height = 4
         self.track_radius = 2
 
-        # Theme colors (will be updated by update_theme)
-        self.track_color = (0, 0, 0, 0.1)  # Default track color with opacity
-        self.handle_color = (0, 0, 0, 1)   # Default handle color
-        self.text_color = (0, 0, 0, 1)     # Default text color
-        self.playhead_color = (0, 0, 0, 1)  # Default playhead color
-        self.selected_track_color = (1, 1, 1, 1)  # Default selected track color
+        # Theme colors
+        self.track_color = (0, 0, 0, 0.1)
+        self.handle_color = (0, 0, 0, 1)  
+        self.text_color = (0, 0, 0, 1)
+        self.playhead_color = (0, 0, 0, 1)
+        self.selected_track_color = (1, 1, 1, 1)
 
         # Dragging state
         self.dragging_left = False
         self.dragging_right = False
         self.drag_offset = 0  # prevent jump when press handle
 
-        # Enable input
+        # Enable interaction
         self.set_can_target(True)
         self.set_focusable(True)
 
         # Setup gesture controllers
         self.click_gesture = Gtk.GestureClick.new()
-        self.click_gesture.connect('pressed', self.on_pressed)
-        self.click_gesture.connect('released', self.on_released)
+        self.click_gesture.connect('pressed', self.on_handle_pressed)
+        self.click_gesture.connect('released', self.on_handle_released)
         self.add_controller(self.click_gesture)
 
         self.motion_controller = Gtk.EventControllerMotion.new()
         self.motion_controller.connect('motion', self.on_motion)
         self.add_controller(self.motion_controller)
 
-        self.value_changed_callback = None
         self.playhead_visible = False
-        self.playhead_position = 0
+        self.playhead_pos = 1
 
-        # Add hover state tracking
         self.left_handle_hover = False
         self.right_handle_hover = False
 
@@ -101,20 +99,25 @@ class FrameLine(Gtk.Widget):
         menu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
 
         # Create menu items as buttons
-        self.remove_range_btn = Gtk.Button(label="Remove Range")
-        self.remove_range_btn.connect('clicked', self.on_remove_range_clicked)
+        remove_range_btn = Gtk.Button(label="Remove Range")
+        remove_range_btn.connect('clicked', self.on_remove_range_clicked)
+
         remove_frame_btn = Gtk.Button(label="Remove Frame")
         remove_frame_btn.connect('clicked', self.on_remove_frame_clicked)
+        
         insert_frames_btn = Gtk.Button(label="Insert Frames")
+        insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
+
         changespeed_frames_btn = Gtk.Button(label="Change Speed...")
+        changespeed_frames_btn.connect('clicked', self.on_changespeed_frames_clicked)
 
         # Add CSS classes and set alignment
-        self.remove_range_btn.set_halign(Gtk.Align.START)
+        remove_range_btn.set_halign(Gtk.Align.START)
         remove_frame_btn.set_halign(Gtk.Align.START)
         insert_frames_btn.set_halign(Gtk.Align.START)
         changespeed_frames_btn.set_halign(Gtk.Align.START)
 
-        self.remove_range_btn.add_css_class('menu-item')
+        remove_range_btn.add_css_class('menu-item')
         remove_frame_btn.add_css_class('menu-item')
         insert_frames_btn.add_css_class('menu-item')
         changespeed_frames_btn.add_css_class('menu-item')
@@ -123,7 +126,7 @@ class FrameLine(Gtk.Widget):
         range_motion = Gtk.EventControllerMotion.new()
         range_motion.connect('enter', self.on_remove_range_hover_enter)
         range_motion.connect('leave', self.on_menu_item_hover_leave)
-        self.remove_range_btn.add_controller(range_motion)
+        remove_range_btn.add_controller(range_motion)
 
         frame_motion = Gtk.EventControllerMotion.new()
         frame_motion.connect('enter', self.on_remove_frame_hover_enter)
@@ -140,28 +143,21 @@ class FrameLine(Gtk.Widget):
         changespeed_motion.connect('leave', self.on_menu_item_hover_leave)
         changespeed_frames_btn.add_controller(changespeed_motion)
 
-        # Add buttons to menu box
-        menu_box.append(self.remove_range_btn)
+        menu_box.append(remove_range_btn)
         menu_box.append(remove_frame_btn)
         menu_box.append(insert_frames_btn)
         menu_box.append(changespeed_frames_btn)
 
         self.popup_menu.set_child(menu_box)
-
-        # Add popup menu closed handler
         self.popup_menu.connect('closed', self.on_popup_closed)
 
-        # Add after other initializations
-        self.removed_ranges = []  # List of tuples (start, end) for removed ranges
-        self.inserted_ranges = []  # List of tuples (start, end) for inserted frames
-        self.speed_ranges = []  # Add this to track speed-modified ranges
+        # Modified 0-based Ranges (start, end)
+        self.removed_ranges = [] 
+        self.inserted_ranges = []
+        self.speed_ranges = []
 
-        # Inside __init__ method, after creating insert_frames_btn
-        insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
 
-        # Add after the insert_frames_btn connection
-        changespeed_frames_btn.connect('clicked', self.on_changespeed_frames_clicked)
-
+    # Handle Hover
     def on_remove_range_hover_enter(self, controller, x, y):
         self.hover_action = 'range'
         self.queue_draw()
@@ -182,6 +178,8 @@ class FrameLine(Gtk.Widget):
         self.hover_action = None
         self.queue_draw()
 
+
+    # Called internally by Gtk Layout System
     def do_measure(self, orientation, for_size):
         if orientation == Gtk.Orientation.VERTICAL:
             # Fixed height that accommodates the handles
@@ -248,10 +246,10 @@ class FrameLine(Gtk.Widget):
             cr.fill()
 
         # 5. Draw playhead if visible
-        if self.playhead_visible and self.playhead_position >= 0:
-            playhead_x = self.value_to_position(self.playhead_position, width)
+        if self.playhead_visible and self.playhead_pos > 0:
+            playhead_x = self.value_to_position(self.playhead_pos, width)
             
-            color = self.handle_playhead_color(self.playhead_position)
+            color = self.get_playhead_color(self.playhead_pos)
             cr.set_source_rgba(self.playhead_color[0], self.playhead_color[1], self.playhead_color[2], self.playhead_color[3])
             self.draw_handle(cr, playhead_x, height)
         
@@ -268,12 +266,12 @@ class FrameLine(Gtk.Widget):
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for active handle on frame hover
             elif self.hover_action == 'range':
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for both handles on range hover
-            elif self.hover_action == 'changespeed' or self.handle_in_speed_range(handle_x):
+            elif self.hover_action == 'changespeed' or self.handle_within_speed_range(handle_x):
                 cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
             elif (self.hover_action == 'insert' and (
                 (is_left_handle and self.active_handle == 'left') or
                 (not is_left_handle and self.active_handle == 'right')) or
-                self.handle_in_insert_range(handle_x)):
+                self.handle_within_insert_range(handle_x)):
                 cr.set_source_rgb(0x57/255, 0xe3/255, 0x89/255)  # Green for active handle on insert hover
             else:
                 cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
@@ -281,7 +279,7 @@ class FrameLine(Gtk.Widget):
 
             self.draw_handle(cr, handle_x, height)
             
-    def handle_in_insert_range(self, handle_x):
+    def handle_within_insert_range(self, handle_x):
         # Convert handle_x screen position to frame value
         handle_value = self.position_to_value(handle_x, self.get_width())
         for start, end in self.inserted_ranges:
@@ -290,7 +288,7 @@ class FrameLine(Gtk.Widget):
                 return True
         return False
     
-    def handle_in_speed_range(self, handle_x):
+    def handle_within_speed_range(self, handle_x):
         # Convert handle_x screen position to frame value
         handle_value = self.position_to_value(handle_x, self.get_width())
         for start, end, _ in self.speed_ranges:
@@ -299,7 +297,7 @@ class FrameLine(Gtk.Widget):
                 return True
         return False
     
-    def handle_playhead_color(self, position):
+    def get_playhead_color(self, position):
         for range_start, range_end, _ in self.speed_ranges:
             if range_start <= position <= range_end:
                 return (0x62/255, 0xa0/255, 0xea/255)  # Blue
@@ -318,8 +316,8 @@ class FrameLine(Gtk.Widget):
         cr.arc(x + radius, y + height - radius, radius, math.pi / 2, math.pi)
         cr.close_path()
 
-    def on_pressed(self, gesture, n_press, x, y):
-        # Hide popover when clicking anywhere
+    def on_handle_pressed(self, gesture, n_press, x, y):
+        # Hide popover when clicking elsewhere
         if self.popup_menu.get_visible():
             self.popup_menu.popdown()
 
@@ -344,7 +342,7 @@ class FrameLine(Gtk.Widget):
 
         self.queue_draw()
 
-    def on_released(self, gesture, n_press, x, y):
+    def on_handle_released(self, gesture, n_press, x, y):
         self.dragging_left = False
         self.dragging_right = False
         self.drag_offset = 0
@@ -420,12 +418,9 @@ class FrameLine(Gtk.Widget):
         rounded_value = self.round_to_stride(value)
         self.right_value = max(self.min_value, min(rounded_value, self.max_value))
 
-    def set_value_changed_callback(self, callback):
-        self.value_changed_callback = callback
-
-    def set_playhead_position(self, position):
+    def set_playhead_pos(self, position):
         """Set playhead position"""
-        self.playhead_position = position
+        self.playhead_pos = position
         # If position is -1, hide the playhead
         if position == -1:
             self.playhead_visible = False
@@ -445,14 +440,14 @@ class FrameLine(Gtk.Widget):
         """Called when handle drag begins"""
         self.dragging = True
         # Store current playhead state if not playing
-        self.playhead_position_before_drag = self.playhead_position
+        self.playhead_pos_before_drag = self.playhead_pos
 
     def on_handle_drag_end(self):
         """Called when handle drag ends"""
         self.dragging = False
         # Restore playhead position if not playing
         if not self.editor.is_playing:
-            self.set_playhead_position(self.playhead_position_before_drag)
+            self.set_playhead_pos(self.playhead_pos_before_drag)
 
     def on_enter(self, controller, x, y):
         self.check_handle_hover(x, y)
@@ -529,7 +524,7 @@ class FrameLine(Gtk.Widget):
         width = self.get_width()
         left_pos = self.value_to_position(self.left_value, width)
         right_pos = self.value_to_position(self.right_value, width)
-        playhead_pos = self.value_to_position(self.playhead_position, width) if self.playhead_visible else -1
+        playhead_pos = self.value_to_position(self.playhead_pos, width) if self.playhead_visible else -1
         
         # Initialize text variable
         text = ""
@@ -540,7 +535,7 @@ class FrameLine(Gtk.Widget):
         elif abs(handle_x - right_pos) < 1 or (handle_x >= width - self.handle_radius - 1 and right_pos >= width - self.handle_radius - 1):
             text = str(int(self.right_value))
         elif self.playhead_visible and (abs(handle_x - playhead_pos) < 1):
-            text = str(int(self.playhead_position))
+            text = str(int(self.playhead_pos))
         
         if text:  # Only draw text if we have a value to display
             # Set text color to black for contrast
@@ -873,5 +868,5 @@ class FrameLine(Gtk.Widget):
         self.removed_ranges = []
         self.inserted_ranges = []
         self.speed_ranges = []
-        self.playhead_position = 1
+        self.playhead_pos = 1
         self.queue_draw()

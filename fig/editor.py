@@ -62,8 +62,7 @@ class EditorBox(Gtk.Box):
         controls_box.set_vexpand(False)
 
         # Frameline
-        self.frameline = FrameLine(
-            min_value=0, max_value=0, stride=1)  # Initialize with 0 frames
+        self.frameline = FrameLine()  # Initialize with 0 frames
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)
         self.frameline.connect('insert-frames', self.on_insert_frames)
@@ -228,7 +227,7 @@ class EditorBox(Gtk.Box):
                     
             self.display_frame(self.current_frame_index)
             self.show_playhead()
-            self.frameline.set_playhead_position(self.current_frame_index)
+            self.frameline.set_playhead_pos(self.current_frame_index)
             self.play_next_frame()
 
     def play_next_frame(self):
@@ -261,7 +260,7 @@ class EditorBox(Gtk.Box):
         self.display_frame(next_frame)
         self.current_frame_index = next_frame
         self.playhead_frame_index = next_frame
-        self.frameline.set_playhead_position(self.playhead_frame_index)
+        self.frameline.set_playhead_pos(self.playhead_frame_index)
 
         # Schedule next frame
         current_duration = self.frame_durations[next_frame]
