@@ -214,7 +214,7 @@ class FrameLine(Gtk.Widget):
                                     width - 2 * self.handle_radius, self.track_height, self.track_radius)
         cr.fill()
 
-        self.draw_selected_track(cr, self.left_value, self.right_value, width, height)
+        self.draw_selected_track(cr, left_handle_x, right_handle_x, width, height)
         self.draw_inserted_ranges(cr, width, height)
         self.draw_speed_ranges(cr, width, height)
         self.draw_removed_ranges(cr, width, height)
@@ -255,7 +255,7 @@ class FrameLine(Gtk.Widget):
         cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
                              self.handle_color[2], self.handle_color[3])
     
-    def draw_selected_track(self, cr, start, end, width, height):
+    def draw_selected_track(self, cr, left_handle_x, right_handle_x, width, height):
         if self.hover_action == 'range':  # Only highlight track for range removal
             cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
         elif self.hover_action == 'changespeed':
@@ -818,14 +818,20 @@ class FrameLine(Gtk.Widget):
                 return True
         return False
 
-    def add_speed_range(self, start, end, speed_factor):
-        """Internal method to add a speed range"""
-        # Remove any existing speed ranges that overlap with the new range
-        self.speed_ranges = [
-            (s, e, spd) for s, e, spd in self.speed_ranges
-            if not (s <= end and e >= start)
-        ]
-        # Add the new range if speed is not 1.0
-        if speed_factor != 1.0:
-            self.speed_ranges.append((start, end, speed_factor))
-        self.speed_ranges.sort()
+    def show_playhead(self):
+        """Show the playhead"""
+        self.playhead_visible = True
+        self.queue_draw()
+
+    def hide_playhead(self):
+        """Hide the playhead"""
+        self.playhead_visible = False
+        self.queue_draw()
+        
+    def set_playhead_pos(self, position):
+        """Set playhead position"""
+        self.playhead_pos = position
+        # If position is -1, hide the playhead
+        if position == -1:
+            self.playhead_visible = False
+        self.queue_draw()
