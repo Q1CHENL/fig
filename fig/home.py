@@ -117,6 +117,10 @@ def show_about_dialog(window):
         <li>Remove certain frames</li>
         <li>Insert frame(s) at any position</li>
         <li>Speed up/slow down certain frames</li>
+        <li>Light/Dark mode switch</li>
+        <li>New About page</li>
+        <li>New window option</li>
+        <li>Help page</li>
         <li>Bug fixes and improvements</li>
     </ul>
     """)
