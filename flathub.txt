@@ -1,16 +1,27 @@
-Build & Install
+1. Build & Install
 flatpak run org.flatpak.Builder --force-clean --sandbox --user --install --install-deps-from=flathub\
  --ccache --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=repo builddir io.github.Q1CHENL.fig.json
 
-Uninstall:
+2. Uninstall:
 flatpak uninstall --user io.github.Q1CHENL.fig --delete-data
 
-Run:
+3. Run:
 flatpak run io.github.Q1CHENL.fig
 
-Screenshots commit:
+4. Screenshots commit:
 ostree commit --repo=repo --canonical-permissions --branch=screenshots/x86_64 builddir/files/share/app-info/media
 
-Linter:
+5. Linter:
 flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest io.github.Q1CHENL.fig.json
 flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo repo
+
+6. Submit PR against https://github.com/flathub/io.github.Q1CHENL.fig
+
+Submission:
+https://docs.flathub.org/docs/for-app-authors/submission/
+
+Maintenance:
+https://docs.flathub.org/docs/for-app-authors/maintenance/
+
+Update:
+https://docs.flathub.org/docs/for-app-authors/updates/
