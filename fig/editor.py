@@ -1,13 +1,15 @@
 import os
 import io
+
 from PIL import Image
-from fig.utils import load_css, clear_css
-from fig.frameline import FrameLine
-from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf, Adw
 import gi
+gi.require_version('Adw', '1')
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
+from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf, Adw
 
+from fig.utils import load_css, clear_css
+from fig.frameline import FrameLine
 
 class EditorBox(Gtk.Box):
     def __init__(self):
