@@ -297,7 +297,7 @@ class FrameLine(Gtk.Widget):
         for range_start, range_end in self.inserted_ranges:
             if range_start <= position <= range_end:
                 return (0x57/255, 0xe3/255, 0x89/255)  # Green
-        return (1, 1, 1)  # White
+        return self.playhead_color
 
     def draw_rounded_rectangle(self, cr, x, y, width, height, radius):
         if width < 2 * radius:
@@ -331,7 +331,7 @@ class FrameLine(Gtk.Widget):
         # Clear any existing menu state
         self.menu_active = False
         self.active_handle = None
-        self.popup_menu.popdown()  # Hide menu if it's showing
+        self.popup_menu.popdown()
 
         self.queue_draw()
 
@@ -768,13 +768,13 @@ class FrameLine(Gtk.Widget):
             self.handle_color = (1, 1, 1, 1)
             self.text_color = (0, 0, 0, 1)       
             self.playhead_color = (1, 1, 1, 1)
-            self.selected_track_color = (1, 1, 1, 1)  # White selected portion
+            self.selected_track_color = (1, 1, 1, 1)
         else:
             self.track_color = (0, 0, 0, 0.1)  
             self.handle_color = (0.141, 0.141, 0.141, 1)     
             self.text_color = (1, 1, 1, 1)
             self.playhead_color = (0.141, 0.141, 0.141, 1)
-            self.selected_track_color = (0.141, 0.141, 0.141, 1)  # Black selected portion
+            self.selected_track_color = (0.141, 0.141, 0.141, 1)
 
         self.queue_draw()
 
