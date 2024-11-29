@@ -109,22 +109,35 @@ class FigApplication(Adw.Application):
     
     def on_help(self, action, parameter):
         """Show help dialog with tips about handle functionality"""
-        dialog = Adw.MessageDialog.new(None, "Fig - Help", "")
+        window = self.get_active_window()
         
-        label = Gtk.Label(
-            label="Right-click on the timeline handles to discover more features!\n\n" +
-            "Available actions:\n" +
-            "• Remove specific frames\n" +
-            "• Insert frames at any position\n" +
-            "• Change playback speed for selected frames"
+        dialog = Adw.AlertDialog.new(
+            "Fig - Help",
+            None  # We'll set the body text via a custom label
         )
-        label.set_halign(Gtk.Align.END)
+        
+        # Create a right-aligned label
+        label = Gtk.Label(
+            label="Right-click on the timeline handles\n" +
+            "to discover more features!\n\n" +
+            "Available actions:\n" +
+            "• Remove frames or frame ranges\n" +
+            "• Insert frames at any position\n" +
+            "• Change playback speed for \n  selected frames"
+        )
+        label.set_halign(Gtk.Align.END)  # Right alignment
         label.set_justify(Gtk.Justification.LEFT)
         
+        # Set the label as the extra child
         dialog.set_extra_child(label)
+        
+        # Add an OK response
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
-        dialog.present()
+        dialog.set_close_response("ok")
+        
+        # Show the dialog
+        dialog.present(window)
 
     def on_about(self, action, parameter):
         """Show about dialog when About is selected"""
