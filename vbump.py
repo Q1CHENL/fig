@@ -47,6 +47,46 @@ def update_meson_build(new_version):
     path.write_text(updated)
     print(f"Updated meson.build to version {new_version}")
 
+def update_metainfo(new_version):
+    """Update version in metainfo.xml"""
+    path = Path('io.github.Q1CHENL.fig.metainfo.xml')
+    content = path.read_text()
+    
+    # Get current date
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    
+    # Find the releases section
+    releases_match = re.search(r'(<releases>.*?</releases>)', content, re.DOTALL)
+    if releases_match:
+        old_releases = releases_match.group(1)
+        new_release = f'<releases>\n    <release version="{new_version}" date="{today}"/>\n    {old_releases[10:]}'
+        updated = content.replace(old_releases, new_release)
+        path.write_text(updated)
+        print(f"Updated metainfo.xml to version {new_version}")
+    else:
+        print("Could not find releases section in metainfo.xml")
+
+def update_home_py(new_version):
+    """Update version in home.py"""
+    path = Path('fig/home.py')
+    content = path.read_text()
+    
+    # Update version in about dialog
+    updated = re.sub(
+        r'about\.set_version\("[\d.]+"\)',
+        f'about.set_version("{new_version}")',
+        content
+    )
+    
+    # Update version in debug info
+    updated = re.sub(
+        r'about\.set_debug_info\("Version: [\d.]+\\n',
+        f'about.set_debug_info("Version: {new_version}\\n',
+        updated
+    )
+    
+    path.write_text(updated)
+    print(f"Updated home.py to version {new_version}")
 
 def main():
     if len(sys.argv) != 2 or sys.argv[1] not in ['major', 'minor', 'patch']:
@@ -61,7 +101,9 @@ def main():
     
     update_setup_py(new_version)
     update_meson_build(new_version)
-
+    update_metainfo(new_version)
+    update_home_py(new_version)
+    
     print("\nVersion bump complete!")
     print("Don't forget to:")
     print("1. Review the changes")

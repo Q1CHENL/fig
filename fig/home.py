@@ -106,7 +106,7 @@ def show_about_dialog(window):
     
     about.set_application_name("Fig")
     about.set_application_icon("io.github.Q1CHENL.fig")
-    about.set_version("1.0.0")
+    about.set_version("1.0.1")
     about.set_developer_name("Qichen Liu")
     about.set_website("https://github.com/fig")
     about.set_issue_url("https://github.com/fig/issues")
@@ -138,7 +138,7 @@ def show_about_dialog(window):
     about.set_copyright("© 2024 Qichen Liu")
     about.set_license_type(Gtk.License.MIT_X11)
     
-    about.set_debug_info("Version: 1.0.0\nPlatform: Linux\nGTK: 4.0")
+    about.set_debug_info("Version: 1.0.1\nPlatform: Linux\nGTK: 4.0")
     about.set_debug_info_filename("debug-info.txt")
 
     about.present(window)
