@@ -162,3 +162,12 @@
 .frameline-dark .playhead {
     background-color: #ffffff;
 }
+
+.menu-item {
+    background: none;
+    border: none;
+}
+
+.menu-item:hover {
+    background-color: #4e4e4e;
+}
