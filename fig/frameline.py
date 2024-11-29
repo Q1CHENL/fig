@@ -248,12 +248,14 @@ class FrameLine(Gtk.Widget):
         if self.playhead_visible and self.playhead_pos > 0:
             playhead_x = self.value_to_position(self.playhead_pos, width)
             
+            # Get and apply the appropriate color based on frame state
             color = self.get_playhead_color(self.playhead_pos)
-            cr.set_source_rgba(self.playhead_color[0], self.playhead_color[1], self.playhead_color[2], self.playhead_color[3])
+            cr.set_source_rgb(color[0], color[1], color[2])
             self.draw_handle(cr, playhead_x, height)
         
+        # Restore default handle color
         cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
-                             self.handle_color[2], self.handle_color[3])
+                          self.handle_color[2], self.handle_color[3])
     
     def draw_selected_track(self, cr, left_handle_x, right_handle_x, width, height):
         if self.hover_action == 'range':  # Only highlight track for range removal
