@@ -124,45 +124,6 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-.frameline-light {
-    background: none;  
-    color: #ffffff;    
-}
-
-.frameline-light .track {
-    background-color: #ffffff;
-    opacity: 0.1;
-}
-
-.frameline-light .handle {
-    color: #000000;
-    background-color: #ffffff;
-    color: #000000;
-}
-
-.frameline-light .playhead {
-    background-color: #ffffff;
-}
-
-.frameline-dark {
-    background: none;  
-    color: #ffffff;
-}
-
-.frameline-dark .track {
-    background-color: #ffffff;
-    opacity: 0.1;
-}
-
-.frameline-dark .handle {
-    background-color: #ffffff;
-    color: #000000;
-}
-
-.frameline-dark .playhead {
-    background-color: #ffffff;
-}
-
 .menu-item {
     background: none;
     border: none;
