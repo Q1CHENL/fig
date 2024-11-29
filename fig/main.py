@@ -26,29 +26,15 @@ class Fig(Adw.ApplicationWindow):
         self.back_button.set_visible(False)
         self.headerbar.pack_start(self.back_button)
         
-        menu_button = Gtk.MenuButton()
-        menu_button.set_icon_name("open-menu-symbolic")
+        self.menu_button = Gtk.MenuButton()
+        self.menu_button.set_icon_name("open-menu-symbolic")
 
-        menu_model = Gio.Menu()
-        menu_model.append("New Window", "app.new_window")
-        menu_model.append("Option 2", "app.option2")
-        menu_model.append("Option 3", "app.option3")
-        menu_model.append("Option 4", "app.option4")
-        menu_button.set_menu_model(menu_model)
+        self.menu_model = Gio.Menu()
+        self.menu_model.append("New Window", "app.new_window")
+        self.menu_model.append("Help", "app.help")
+        self.menu_button.set_menu_model(self.menu_model)
 
-        action2 = Gio.SimpleAction.new("option2", None)
-        action2.connect("activate", self.on_option_selected, "Option 2")
-        self.add_action(action2)
-
-        action3 = Gio.SimpleAction.new("option3", None)
-        action3.connect("activate", self.on_option_selected, "Option 3")
-        self.add_action(action3)
-
-        action4 = Gio.SimpleAction.new("option4", None)
-        action4.connect("activate", self.on_option_selected, "Option 4")
-        self.add_action(action4)
-
-        self.headerbar.pack_end(menu_button)
+        self.headerbar.pack_end(self.menu_button)
         
         self.headerbar.set_title_widget(Gtk.Label(label="Fig"))
         main_box.append(self.headerbar)
@@ -81,6 +67,7 @@ class Fig(Adw.ApplicationWindow):
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.editor_box)
         self.back_button.set_visible(True)
+        self.menu_model.append("About", "app.about")
 
     def load_home_ui(self):
         if self.content_box.get_first_child():
@@ -88,6 +75,8 @@ class Fig(Adw.ApplicationWindow):
         self.content_box.append(self.home_box)
         self.back_button.set_visible(False)
         self.editor_box.reset()
+        while self.menu_model.get_n_items() > 2:
+            self.menu_model.remove(self.menu_model.get_n_items() - 1)
         
     def on_option_selected(self, action, parameter, option_name):
         print(f"Selected: {option_name}")
@@ -100,6 +89,14 @@ class FigApplication(Adw.Application):
         new_window_action = Gio.SimpleAction.new("new_window", None)
         new_window_action.connect("activate", self.on_new_window)
         self.add_action(new_window_action)
+        
+        help_action = Gio.SimpleAction.new("help", None)
+        help_action.connect("activate", self.on_help)
+        self.add_action(help_action)
+        
+        about_action = Gio.SimpleAction.new("about", None)
+        about_action.connect("activate", self.on_about)
+        self.add_action(about_action)
 
     def do_activate(self):
         win = Fig(self)
@@ -109,6 +106,31 @@ class FigApplication(Adw.Application):
         """Create a new window when New Window is selected"""
         win = Fig(self)
         win.present()
+    
+    def on_help(self, action, parameter):
+        """Show help dialog with tips about handle functionality"""
+        dialog = Adw.MessageDialog.new(None, "Fig - Help", "")
+        
+        label = Gtk.Label(
+            label="Right-click on the timeline handles to discover more features!\n\n" +
+            "Available actions:\n" +
+            "• Remove specific frames\n" +
+            "• Insert frames at any position\n" +
+            "• Change playback speed for selected frames"
+        )
+        label.set_halign(Gtk.Align.END)
+        label.set_justify(Gtk.Justification.LEFT)
+        
+        dialog.set_extra_child(label)
+        dialog.add_response("ok", "OK")
+        dialog.set_default_response("ok")
+        dialog.present()
+
+    def on_about(self, action, parameter):
+        """Show about dialog when About is selected"""
+        window = self.get_active_window()
+        if window:
+            fig.home.show_about_dialog(window)
 
 def main():
     app = FigApplication()
