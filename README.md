@@ -76,6 +76,8 @@
 - ~~New About page~~
 - Better info label UI
 - Loop playback option
+- Light/Dark mode screenshots
+- Preferences: fixed color mode, default save folder etc.
 
 ## Notice
 
