@@ -20,7 +20,7 @@
 - Reverse GIF
 - Remove specific frames
 - Insert GIF/image(s) at any position
-- Speed specific frames up/down
+- Change playback speed for specific frames
 - Play GIF at the original speed
 
 > **Tip: right click on the handles to discover more**
@@ -72,7 +72,7 @@
 - ~~Light mode~~
 - Undo last action
 - Proper default name for edited GIF when saving
-- Menu in headerbar: ~~new window~~, open, help etc.
+- Menu in headerbar: ~~new window~~, open, ~~help~~ etc.
 - ~~New About page~~
 - Better info label UI
 - Loop playback option
