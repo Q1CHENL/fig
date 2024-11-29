@@ -113,10 +113,9 @@ class FigApplication(Adw.Application):
         
         dialog = Adw.AlertDialog.new(
             "Fig - Help",
-            None  # We'll set the body text via a custom label
+            None
         )
         
-        # Create a right-aligned label
         label = Gtk.Label(
             label="Right-click on the timeline handles\n" +
             "to discover more features!\n\n" +
@@ -125,18 +124,15 @@ class FigApplication(Adw.Application):
             "• Insert frames at any position\n" +
             "• Change playback speed for \n  selected frames"
         )
-        label.set_halign(Gtk.Align.END)  # Right alignment
+        label.set_halign(Gtk.Align.END)
         label.set_justify(Gtk.Justification.LEFT)
         
-        # Set the label as the extra child
         dialog.set_extra_child(label)
         
-        # Add an OK response
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
         dialog.set_close_response("ok")
         
-        # Show the dialog
         dialog.present(window)
 
     def on_about(self, action, parameter):

@@ -41,7 +41,6 @@ class FrameLine(Gtk.Widget):
         self.playhead_color = (0, 0, 0, 1)
         self.selected_track_color = (1, 1, 1, 1)
 
-        # Dragging state
         self.dragging_left = False
         self.dragging_right = False
         self.drag_offset = 0  # prevent jump when press handle
@@ -84,7 +83,6 @@ class FrameLine(Gtk.Widget):
         self.right_click_gesture.connect('pressed', self.on_right_click)
         self.add_controller(self.right_click_gesture)
 
-        # Create popup menu with better state management
         self.popup_menu = Gtk.Popover()
         self.popup_menu.set_has_arrow(False)
         self.popup_menu.set_parent(self)
@@ -95,10 +93,8 @@ class FrameLine(Gtk.Widget):
         key_controller.connect('key-pressed', self.on_key_pressed)
         self.popup_menu.add_controller(key_controller)
 
-        # Create menu box
         menu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
 
-        # Create menu items as buttons
         remove_range_btn = Gtk.Button(label="Remove Range")
         remove_range_btn.connect('clicked', self.on_remove_range_clicked)
 
@@ -258,7 +254,7 @@ class FrameLine(Gtk.Widget):
                           self.handle_color[2], self.handle_color[3])
     
     def draw_selected_track(self, cr, left_handle_x, right_handle_x, width, height):
-        if self.hover_action == 'range':  # Only highlight track for range removal
+        if self.hover_action == 'range':
             cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
         elif self.hover_action == 'changespeed':
             cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
@@ -389,7 +385,6 @@ class FrameLine(Gtk.Widget):
         self.right_handle_hover = abs(x - right_handle_x) <= self.handle_radius and not self.dragging_left
 
     def on_right_click(self, gesture, n_press, x, y):
-        # Hide any existing popover
         if self.popup_menu.get_visible():
             self.popup_menu.popdown()
 
@@ -445,10 +440,8 @@ class FrameLine(Gtk.Widget):
         left_pos = self.value_to_position(self.left_value, width)
         right_pos = self.value_to_position(self.right_value, width)
         playhead_pos = self.value_to_position(self.playhead_pos, width) if self.playhead_visible else -1
-        
-        # Initialize text variable
-        text = ""
-        
+
+        text = ""        
         # More robust position comparison that handles edge cases
         if abs(handle_x - left_pos) < 1 or (handle_x <= self.handle_radius + 1 and left_pos <= self.handle_radius + 1):
             text = str(int(self.left_value))
@@ -458,7 +451,6 @@ class FrameLine(Gtk.Widget):
             text = str(int(self.playhead_pos))
         
         if text:  # Only draw text if we have a value to display
-            # Set text color to black for contrast
             cr.set_source_rgba(self.text_color[0], self.text_color[1],
                               self.text_color[2], self.text_color[3])
             
@@ -571,7 +563,7 @@ class FrameLine(Gtk.Widget):
         try:
             # Store the active handle before closing the popover
             insert_at_handle = self.active_handle
-            # Close the popover immediately
+
             self.popup_menu.popdown()
             
             dialog = Gtk.FileDialog.new()
@@ -617,8 +609,8 @@ class FrameLine(Gtk.Widget):
                 # Determine the insert point based on the active handle
                 insert_point = int(self.left_value if insert_at_handle == 'left' else self.right_value)
 
-
-                insert_point += 1  # Add 1 to insert after the current frame
+                # Add 1 to insert after the current frame
+                insert_point += 1
 
                 # Convert files to list of paths
                 file_paths = [files.get_item(i).get_path() 
@@ -756,13 +748,10 @@ class FrameLine(Gtk.Widget):
         """Update theme colors"""
         from fig.utils import clear_css
         
-        # Clear existing theme classes
         clear_css(self)
         
-        # Add appropriate theme class
         self.add_css_class("frameline-dark" if is_dark else "frameline-light")
         
-        # Update colors based on theme
         if is_dark:
             self.track_color = (1, 1, 1, 0.1)    
             self.handle_color = (1, 1, 1, 1)
