@@ -343,6 +343,15 @@ class FrameLine(Gtk.Widget):
             width = self.get_width()
             new_x = x + self.drag_offset
             new_value = self.position_to_value(new_x, width)
+            
+            # Find next valid frame position
+            frame_index = int(round(new_value)) - 1
+            if self.is_frame_removed(frame_index):
+                # Get direction based on drag movement
+                direction = 1 if new_value > (self.left_value if self.dragging_left else self.right_value) else -1
+                next_valid = self.get_next_valid_frame(frame_index, direction)
+                if next_valid != -1:
+                    new_value = next_valid + 1  # Convert back to 1-based value
 
             if self.dragging_left:
                 self.set_left_value(new_value)
