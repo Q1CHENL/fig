@@ -569,6 +569,8 @@ class FrameLine(Gtk.Widget):
     def on_insert_frames_clicked(self, button):
         """Handle insert frames button click"""
         try:
+            # Store the active handle before closing the popover
+            insert_at_handle = self.active_handle
             # Close the popover immediately
             self.popup_menu.popdown()
             
@@ -598,25 +600,23 @@ class FrameLine(Gtk.Widget):
             if os.path.exists(home_dir):
                 dialog.set_initial_folder(Gio.File.new_for_path(home_dir))
 
-            # Use open_multiple for selecting multiple files
+            # Pass the stored handle to the response callback
             dialog.open_multiple(
                 parent=self.get_root(),
-                callback=self._on_insert_dialog_response
+                callback=lambda d, r: self._on_insert_dialog_response(d, r, insert_at_handle)
             )
 
         except Exception as e:
             print(f"Error opening file dialog: {e}")
 
-    def _on_insert_dialog_response(self, dialog, result):
+    def _on_insert_dialog_response(self, dialog, result, insert_at_handle):
         """Handle insert file dialog response"""
         try:
             files = dialog.open_multiple_finish(result)
             if files and files.get_n_items() > 0:
                 # Determine the insert point based on the active handle
-                if self.active_handle == 'left':
-                    insert_point = int(self.left_value)  # Insert after the left handle
-                else:
-                    insert_point = int(self.right_value)  # Insert after the right handle
+                insert_point = int(self.left_value if insert_at_handle == 'left' else self.right_value)
+
 
                 insert_point += 1  # Add 1 to insert after the current frame
 
