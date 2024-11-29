@@ -121,6 +121,7 @@ def show_about_dialog(window):
         <li>New About page</li>
         <li>New window option</li>
         <li>Help page</li>
+        <li>Return to home from editor</li>
         <li>Bug fixes and improvements</li>
     </ul>
     """)
