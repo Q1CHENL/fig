@@ -2,7 +2,7 @@ import os
 import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Gio, GLib, Gdk, Adw
-from fig.utils import load_css
+from fig.utils import load_css, clear_css
 
 
 class HomeBox(Gtk.Box):
@@ -17,14 +17,17 @@ class HomeBox(Gtk.Box):
         self.set_margin_start(20)
         self.set_margin_end(20)
         
-        self.append(self.select_button())
-        self.append(self.about_button())
+        # Create buttons
+        self.select_btn = self.select_button()
+        self.about_btn = self.about_button()
+        
+        self.append(self.select_btn)
+        self.append(self.about_btn)
 
     def select_button(self):
         select_button = Gtk.Button(label="Select GIF")
         select_button.set_size_request(150, 50)
         select_button.set_halign(Gtk.Align.CENTER)
-        load_css(select_button, ["select-gif-button"])
         select_button.connect('clicked', self.select_gif)
         return select_button
 
@@ -32,7 +35,6 @@ class HomeBox(Gtk.Box):
         about_button = Gtk.Button(label="About Fig")
         about_button.set_size_request(150, 50)
         about_button.set_halign(Gtk.Align.CENTER)
-        load_css(about_button, ["about-fig-button"])
         about_button.connect('clicked', self.show_about)
         return about_button
     
@@ -86,13 +88,25 @@ class HomeBox(Gtk.Box):
     def show_about(self, button):
         show_about_dialog(self.get_root())
 
+    def update_theme(self, is_dark):
+        """Update theme for all buttons"""
+        from fig.utils import clear_css
+        
+        # Update Select GIF button
+        clear_css(self.select_btn)
+        self.select_btn.add_css_class("select-gif-button-dark" if is_dark else "select-gif-button-light")
+        
+        # Update About Fig button
+        clear_css(self.about_btn)
+        self.about_btn.add_css_class("about-fig-button-dark" if is_dark else "about-fig-button-light")
+
 
 def show_about_dialog(window):
     about = Adw.AboutDialog.new()
     
     about.set_application_name("Fig")
     about.set_application_icon("io.github.Q1CHENL.fig")
-    about.set_version("1.0.0")
+    about.set_version("1.0.1")
     about.set_developer_name("Qichen Liu")
     about.set_website("https://github.com/fig")
     about.set_issue_url("https://github.com/fig/issues")
@@ -103,6 +117,11 @@ def show_about_dialog(window):
         <li>Remove certain frames</li>
         <li>Insert frame(s) at any position</li>
         <li>Speed up/slow down certain frames</li>
+        <li>Light/Dark mode switch</li>
+        <li>New About page</li>
+        <li>New window option</li>
+        <li>Help page</li>
+        <li>Return to home from editor</li>
         <li>Bug fixes and improvements</li>
     </ul>
     """)
@@ -120,7 +139,7 @@ def show_about_dialog(window):
     about.set_copyright("© 2024 Qichen Liu")
     about.set_license_type(Gtk.License.MIT_X11)
     
-    about.set_debug_info("Version: 1.0.0\nPlatform: Linux\nGTK: 4.0")
+    about.set_debug_info("Version: 1.0.1\nPlatform: Linux\nGTK: 4.0")
     about.set_debug_info_filename("debug-info.txt")
 
     about.present(window)

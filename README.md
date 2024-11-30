@@ -20,8 +20,32 @@
 - Reverse GIF
 - Remove specific frames
 - Insert GIF/image(s) at any position
-- Speed specific frames up/down
+- Change playback speed for specific frames
 - Play GIF at the original speed
+
+> **Tip: right click on the handles to discover more**
+
+## Build and Run
+
+- Run as python module:
+
+  `python -m fig.main`
+
+- Flatpak:
+
+  - Build and install
+
+    `flatpak run org.flatpak.Builder --force-clean --sandbox --user --install --install-deps-from=flathub --ccache --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=repo builddir io.github.Q1CHENL.fig.json`
+
+  - Run
+
+    `flatpak run io.github.Q1CHENL.fig`
+
+## Test
+
+`pip install pytest`
+
+`pytest tests/test_editor.py`
 
 ## Todos
 
@@ -45,17 +69,15 @@
 - Load GIF faster
 - ~~Improve tests and solve warnings~~
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
-- Light mode
+- ~~Light mode~~
 - Undo last action
 - Proper default name for edited GIF when saving
-- Menu in headerbar: new window, open, help etc.
+- Menu in headerbar: ~~new window~~, open, ~~help~~ etc.
 - ~~New About page~~
 - Better info label UI
 - Loop playback option
-
-## Test
-
-`pytest tests/test_editor.py`
+- Light/Dark mode screenshots
+- Preferences: fixed color mode, default save folder etc.
 
 ## Notice
 

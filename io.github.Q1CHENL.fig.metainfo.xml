@@ -7,6 +7,14 @@
     <p>
       Fig is a simple and intuitive GIF editor that lets you edit GIFs with ease.
     </p>
+    <ul>
+      <li>Trim GIF to any frame range</li>
+      <li>Reverse GIF</li>
+      <li>Remove specific frames</li>
+      <li>Insert GIF/image(s) at any position</li>
+      <li>Change playback speed for specific frames</li>
+      <li>Play GIF at the original speed</li>
+    </ul>
   </description>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>

@@ -16,16 +16,16 @@ class FrameLine(Gtk.Widget):
         'speed-changed': (GObject.SignalFlags.RUN_LAST, None, (float, float, float))  # start, end, speed_factor
     }
 
-    def __init__(self, min_value=0, max_value=100, stride=1):
+    def __init__(self, min_value=0, max_value=0):
         super().__init__()
 
+        self.stride = 1
         # Ensure max_value is always greater than min_value
         self.min_value = min_value
         # Ensure at least 1 unit difference
         self.max_value = max(min_value + 1, max_value)
-        self.stride = stride
 
-        # Slider properties
+        # Handle properties
         self.left_value = min_value
         self.right_value = max_value
 
@@ -34,30 +34,34 @@ class FrameLine(Gtk.Widget):
         self.track_height = 4
         self.track_radius = 2
 
-        # Dragging state
+        # Theme colors
+        self.track_color = (0, 0, 0, 0.1)
+        self.handle_color = (0, 0, 0, 1)  
+        self.text_color = (0, 0, 0, 1)
+        self.playhead_color = (0, 0, 0, 1)
+        self.selected_track_color = (1, 1, 1, 1)
+
         self.dragging_left = False
         self.dragging_right = False
         self.drag_offset = 0  # prevent jump when press handle
 
-        # Enable input
+        # Enable interaction
         self.set_can_target(True)
         self.set_focusable(True)
 
         # Setup gesture controllers
         self.click_gesture = Gtk.GestureClick.new()
-        self.click_gesture.connect('pressed', self.on_pressed)
-        self.click_gesture.connect('released', self.on_released)
+        self.click_gesture.connect('pressed', self.on_handle_pressed)
+        self.click_gesture.connect('released', self.on_handle_released)
         self.add_controller(self.click_gesture)
 
         self.motion_controller = Gtk.EventControllerMotion.new()
         self.motion_controller.connect('motion', self.on_motion)
         self.add_controller(self.motion_controller)
 
-        self.value_changed_callback = None
         self.playhead_visible = False
-        self.playhead_position = 0
+        self.playhead_pos = 1
 
-        # Add hover state tracking
         self.left_handle_hover = False
         self.right_handle_hover = False
 
@@ -79,7 +83,6 @@ class FrameLine(Gtk.Widget):
         self.right_click_gesture.connect('pressed', self.on_right_click)
         self.add_controller(self.right_click_gesture)
 
-        # Create popup menu with better state management
         self.popup_menu = Gtk.Popover()
         self.popup_menu.set_has_arrow(False)
         self.popup_menu.set_parent(self)
@@ -90,24 +93,27 @@ class FrameLine(Gtk.Widget):
         key_controller.connect('key-pressed', self.on_key_pressed)
         self.popup_menu.add_controller(key_controller)
 
-        # Create menu box
         menu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
 
-        # Create menu items as buttons
-        self.remove_range_btn = Gtk.Button(label="Remove Range")
-        self.remove_range_btn.connect('clicked', self.on_remove_range_clicked)
+        remove_range_btn = Gtk.Button(label="Remove Range")
+        remove_range_btn.connect('clicked', self.on_remove_range_clicked)
+
         remove_frame_btn = Gtk.Button(label="Remove Frame")
         remove_frame_btn.connect('clicked', self.on_remove_frame_clicked)
+        
         insert_frames_btn = Gtk.Button(label="Insert Frames")
+        insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
+
         changespeed_frames_btn = Gtk.Button(label="Change Speed...")
+        changespeed_frames_btn.connect('clicked', self.on_changespeed_frames_clicked)
 
         # Add CSS classes and set alignment
-        self.remove_range_btn.set_halign(Gtk.Align.START)
+        remove_range_btn.set_halign(Gtk.Align.START)
         remove_frame_btn.set_halign(Gtk.Align.START)
         insert_frames_btn.set_halign(Gtk.Align.START)
         changespeed_frames_btn.set_halign(Gtk.Align.START)
 
-        self.remove_range_btn.add_css_class('menu-item')
+        remove_range_btn.add_css_class('menu-item')
         remove_frame_btn.add_css_class('menu-item')
         insert_frames_btn.add_css_class('menu-item')
         changespeed_frames_btn.add_css_class('menu-item')
@@ -116,7 +122,7 @@ class FrameLine(Gtk.Widget):
         range_motion = Gtk.EventControllerMotion.new()
         range_motion.connect('enter', self.on_remove_range_hover_enter)
         range_motion.connect('leave', self.on_menu_item_hover_leave)
-        self.remove_range_btn.add_controller(range_motion)
+        remove_range_btn.add_controller(range_motion)
 
         frame_motion = Gtk.EventControllerMotion.new()
         frame_motion.connect('enter', self.on_remove_frame_hover_enter)
@@ -133,28 +139,21 @@ class FrameLine(Gtk.Widget):
         changespeed_motion.connect('leave', self.on_menu_item_hover_leave)
         changespeed_frames_btn.add_controller(changespeed_motion)
 
-        # Add buttons to menu box
-        menu_box.append(self.remove_range_btn)
+        menu_box.append(remove_range_btn)
         menu_box.append(remove_frame_btn)
         menu_box.append(insert_frames_btn)
         menu_box.append(changespeed_frames_btn)
 
         self.popup_menu.set_child(menu_box)
-
-        # Add popup menu closed handler
         self.popup_menu.connect('closed', self.on_popup_closed)
 
-        # Add after other initializations
-        self.removed_ranges = []  # List of tuples (start, end) for removed ranges
-        self.inserted_ranges = []  # List of tuples (start, end) for inserted frames
-        self.speed_ranges = []  # Add this to track speed-modified ranges
+        # Modified 0-based Ranges (start, end)
+        self.removed_ranges = [] 
+        self.inserted_ranges = []
+        self.speed_ranges = []
 
-        # Inside __init__ method, after creating insert_frames_btn
-        insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
 
-        # Add after the insert_frames_btn connection
-        changespeed_frames_btn.connect('clicked', self.on_changespeed_frames_clicked)
-
+    # Handle Hover
     def on_remove_range_hover_enter(self, controller, x, y):
         self.hover_action = 'range'
         self.queue_draw()
@@ -175,6 +174,8 @@ class FrameLine(Gtk.Widget):
         self.hover_action = None
         self.queue_draw()
 
+
+    # Called internally by Gtk Layout System
     def do_measure(self, orientation, for_size):
         if orientation == Gtk.Orientation.VERTICAL:
             # Fixed height that accommodates the handles
@@ -203,52 +204,20 @@ class FrameLine(Gtk.Widget):
         )
 
         # 1. Draw base track first
-        cr.set_source_rgb(0, 0, 0)
+        cr.set_source_rgba(self.track_color[0], self.track_color[1], 
+                          self.track_color[2], self.track_color[3])
         self.draw_rounded_rectangle(cr, self.handle_radius, (height - self.track_height) / 2,
                                     width - 2 * self.handle_radius, self.track_height, self.track_radius)
         cr.fill()
 
-        # 2. Draw selected portion
-        if self.hover_action == 'range':  # Only highlight track for range removal
-            cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
-        elif self.hover_action == 'changespeed':
-            cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
-        elif self.left_value <= self.right_value:
-            cr.set_source_rgb(1, 1, 1)  # White
-        else:
-            cr.set_source_rgb(1, 0.4, 0.4)  # Light red
-
-        cr.rectangle(min(left_handle_x, right_handle_x), (height - self.track_height) / 2,
-                    abs(right_handle_x - left_handle_x), self.track_height)
-        cr.fill()
-
-        # 3. Draw inserted ranges in green (moved before removed ranges)
+        self.draw_selected_track(cr, left_handle_x, right_handle_x, width, height)
         self.draw_inserted_ranges(cr, width, height)
-        
-        # 7. Draw speed ranges (blue)
         self.draw_speed_ranges(cr, width, height)
+        self.draw_removed_ranges(cr, width, height)
+        self.draw_playhead(cr, width, height)
+        self.draw_handles(cr, left_handle_x, right_handle_x, height)
 
-        # 4. Draw removed ranges (now on top of inserted ranges)
-        cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
-        for start, end in self.removed_ranges:
-            start_x = self.value_to_position(start + 1, width)
-            end_x = self.value_to_position(end + 1, width)
-            cr.rectangle(start_x, (height - self.track_height) / 2,
-                        end_x - start_x + (width - 2 * self.handle_radius) / (self.max_value - self.min_value),
-                        self.track_height)
-            cr.fill()
-
-        # 5. Draw playhead if visible
-        if self.playhead_visible and self.playhead_position >= 0:
-            playhead_x = self.value_to_position(self.playhead_position, width)
-            
-            color = self.handle_playhead_color(self.playhead_position)
-            cr.set_source_rgb(color[0], color[1], color[2])
-            self.draw_handle(cr, playhead_x, height)
-        
-        cr.set_source_rgb(1, 1, 1)
-
-        # 6. Draw handles with appropriate colors
+    def draw_handles(self, cr, left_handle_x, right_handle_x, height):
         for handle_x, is_left_handle in [(left_handle_x, True), (right_handle_x, False)]:
             # Determine handle color based on hover state and active handle
             if self.hover_action == 'frame' and (
@@ -258,19 +227,48 @@ class FrameLine(Gtk.Widget):
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for active handle on frame hover
             elif self.hover_action == 'range':
                 cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red for both handles on range hover
-            elif self.hover_action == 'changespeed' or self.handle_in_speed_range(handle_x):
+            elif self.hover_action == 'changespeed' or self.handle_within_speed_range(handle_x):
                 cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
             elif (self.hover_action == 'insert' and (
                 (is_left_handle and self.active_handle == 'left') or
                 (not is_left_handle and self.active_handle == 'right')) or
-                self.handle_in_insert_range(handle_x)):
+                self.handle_within_insert_range(handle_x)):
                 cr.set_source_rgb(0x57/255, 0xe3/255, 0x89/255)  # Green for active handle on insert hover
             else:
-                cr.set_source_rgb(1, 1, 1)  # White
+                cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
+                             self.handle_color[2], self.handle_color[3])  # White
 
             self.draw_handle(cr, handle_x, height)
+    
+    def draw_playhead(self, cr, width, height):
+        if self.playhead_visible and self.playhead_pos > 0:
+            playhead_x = self.value_to_position(self.playhead_pos, width)
             
-    def handle_in_insert_range(self, handle_x):
+            # Get and apply the appropriate color based on frame state
+            color = self.get_playhead_color(self.playhead_pos)
+            cr.set_source_rgb(color[0], color[1], color[2])
+            self.draw_handle(cr, playhead_x, height)
+        
+        # Restore default handle color
+        cr.set_source_rgba(self.handle_color[0], self.handle_color[1],
+                          self.handle_color[2], self.handle_color[3])
+    
+    def draw_selected_track(self, cr, left_handle_x, right_handle_x, width, height):
+        if self.hover_action == 'range':
+            cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
+        elif self.hover_action == 'changespeed':
+            cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue
+        elif self.left_value <= self.right_value:
+            cr.set_source_rgba(self.selected_track_color[0], self.selected_track_color[1],
+                             self.selected_track_color[2], self.selected_track_color[3])
+        else:
+            cr.set_source_rgb(1, 0.4, 0.4)  # Light red
+
+        cr.rectangle(min(left_handle_x, right_handle_x), (height - self.track_height) / 2,
+                    abs(right_handle_x - left_handle_x), self.track_height)
+        cr.fill()
+            
+    def handle_within_insert_range(self, handle_x):
         # Convert handle_x screen position to frame value
         handle_value = self.position_to_value(handle_x, self.get_width())
         for start, end in self.inserted_ranges:
@@ -279,7 +277,7 @@ class FrameLine(Gtk.Widget):
                 return True
         return False
     
-    def handle_in_speed_range(self, handle_x):
+    def handle_within_speed_range(self, handle_x):
         # Convert handle_x screen position to frame value
         handle_value = self.position_to_value(handle_x, self.get_width())
         for start, end, _ in self.speed_ranges:
@@ -288,14 +286,14 @@ class FrameLine(Gtk.Widget):
                 return True
         return False
     
-    def handle_playhead_color(self, position):
+    def get_playhead_color(self, position):
         for range_start, range_end, _ in self.speed_ranges:
             if range_start <= position <= range_end:
                 return (0x62/255, 0xa0/255, 0xea/255)  # Blue
         for range_start, range_end in self.inserted_ranges:
             if range_start <= position <= range_end:
                 return (0x57/255, 0xe3/255, 0x89/255)  # Green
-        return (1, 1, 1)  # White
+        return self.playhead_color
 
     def draw_rounded_rectangle(self, cr, x, y, width, height, radius):
         if width < 2 * radius:
@@ -307,8 +305,8 @@ class FrameLine(Gtk.Widget):
         cr.arc(x + radius, y + height - radius, radius, math.pi / 2, math.pi)
         cr.close_path()
 
-    def on_pressed(self, gesture, n_press, x, y):
-        # Hide popover when clicking anywhere
+    def on_handle_pressed(self, gesture, n_press, x, y):
+        # Hide popover when clicking elsewhere
         if self.popup_menu.get_visible():
             self.popup_menu.popdown()
 
@@ -329,11 +327,11 @@ class FrameLine(Gtk.Widget):
         # Clear any existing menu state
         self.menu_active = False
         self.active_handle = None
-        self.popup_menu.popdown()  # Hide menu if it's showing
+        self.popup_menu.popdown()
 
         self.queue_draw()
 
-    def on_released(self, gesture, n_press, x, y):
+    def on_handle_released(self, gesture, n_press, x, y):
         self.dragging_left = False
         self.dragging_right = False
         self.drag_offset = 0
@@ -343,6 +341,15 @@ class FrameLine(Gtk.Widget):
             width = self.get_width()
             new_x = x + self.drag_offset
             new_value = self.position_to_value(new_x, width)
+            
+            # Find next valid frame position
+            frame_index = int(round(new_value)) - 1
+            if self.is_frame_removed(frame_index):
+                # Get direction based on drag movement
+                direction = 1 if new_value > (self.left_value if self.dragging_left else self.right_value) else -1
+                next_valid = self.get_next_valid_frame(frame_index, direction)
+                if next_valid != -1:
+                    new_value = next_valid + 1  # Convert back to 1-based value
 
             if self.dragging_left:
                 self.set_left_value(new_value)
@@ -358,90 +365,6 @@ class FrameLine(Gtk.Widget):
             # Handle hover effects when not dragging
             self.check_handle_hover(x, y)
             self.queue_draw()
-
-    # Helper methods remain the same
-    def value_to_position(self, value, width):
-        """Convert a value to its corresponding position on the widget"""
-        usable_width = width - 2 * self.handle_radius
-
-        # Prevent division by zero
-        if self.max_value == self.min_value:
-            return self.handle_radius
-
-        position = (value - self.min_value) / \
-            (self.max_value - self.min_value) * usable_width
-        return position + self.handle_radius
-
-    def position_to_value(self, x, width):
-        """Convert a position to its corresponding value, skipping removed ranges"""
-        usable_width = width - 2 * self.handle_radius
-        clamped_x = max(self.handle_radius, min(x, width - self.handle_radius))
-        raw_value = self.min_value + (clamped_x - self.handle_radius) / usable_width * (self.max_value - self.min_value)
-        
-        # Find nearest valid frame
-        rounded_value = round(raw_value)
-        if self.is_frame_removed(rounded_value - 1):  # Convert to 0-based for check
-            # Try to find nearest valid frame
-            left = right = rounded_value
-            while left > self.min_value and self.is_frame_removed(left - 1):
-                left -= 1
-            while right < self.max_value and self.is_frame_removed(right - 1):
-                right += 1
-                
-            # Choose the nearest valid frame
-            if left <= self.min_value:
-                rounded_value = right
-            elif right >= self.max_value:
-                rounded_value = left
-            else:
-                rounded_value = left if abs(raw_value - left) < abs(raw_value - right) else right
-                
-        return rounded_value
-
-    def round_to_stride(self, value):
-        return self.min_value + round((value - self.min_value) / self.stride) * self.stride
-
-    def set_left_value(self, value):
-        rounded_value = self.round_to_stride(value)
-        self.left_value = max(self.min_value, min(rounded_value, self.max_value))
-
-    def set_right_value(self, value):
-        rounded_value = self.round_to_stride(value)
-        self.right_value = max(self.min_value, min(rounded_value, self.max_value))
-
-    def set_value_changed_callback(self, callback):
-        self.value_changed_callback = callback
-
-    def set_playhead_position(self, position):
-        """Set playhead position"""
-        self.playhead_position = position
-        # If position is -1, hide the playhead
-        if position == -1:
-            self.playhead_visible = False
-        self.queue_draw()
-
-    def show_playhead(self):
-        """Show the playhead"""
-        self.playhead_visible = True
-        self.queue_draw()
-
-    def hide_playhead(self):
-        """Hide the playhead"""
-        self.playhead_visible = False
-        self.queue_draw()
-
-    def on_handle_drag_begin(self):
-        """Called when handle drag begins"""
-        self.dragging = True
-        # Store current playhead state if not playing
-        self.playhead_position_before_drag = self.playhead_position
-
-    def on_handle_drag_end(self):
-        """Called when handle drag ends"""
-        self.dragging = False
-        # Restore playhead position if not playing
-        if not self.editor.is_playing:
-            self.set_playhead_position(self.playhead_position_before_drag)
 
     def on_enter(self, controller, x, y):
         self.check_handle_hover(x, y)
@@ -462,7 +385,6 @@ class FrameLine(Gtk.Widget):
         self.right_handle_hover = abs(x - right_handle_x) <= self.handle_radius and not self.dragging_left
 
     def on_right_click(self, gesture, n_press, x, y):
-        # First hide any existing popover
         if self.popup_menu.get_visible():
             self.popup_menu.popdown()
 
@@ -490,7 +412,6 @@ class FrameLine(Gtk.Widget):
             self.popup_menu.set_pointing_to(rect)
             self.popup_menu.popup()
         else:
-            # Reset all states when clicking elsewhere
             self.active_handle = None
             self.hover_action = None
             self.popup_menu.popdown()
@@ -518,22 +439,20 @@ class FrameLine(Gtk.Widget):
         width = self.get_width()
         left_pos = self.value_to_position(self.left_value, width)
         right_pos = self.value_to_position(self.right_value, width)
-        playhead_pos = self.value_to_position(self.playhead_position, width) if self.playhead_visible else -1
-        
-        # Initialize text variable
-        text = ""
-        
+        playhead_pos = self.value_to_position(self.playhead_pos, width) if self.playhead_visible else -1
+
+        text = ""        
         # More robust position comparison that handles edge cases
         if abs(handle_x - left_pos) < 1 or (handle_x <= self.handle_radius + 1 and left_pos <= self.handle_radius + 1):
             text = str(int(self.left_value))
         elif abs(handle_x - right_pos) < 1 or (handle_x >= width - self.handle_radius - 1 and right_pos >= width - self.handle_radius - 1):
             text = str(int(self.right_value))
         elif self.playhead_visible and (abs(handle_x - playhead_pos) < 1):
-            text = str(int(self.playhead_position))
+            text = str(int(self.playhead_pos))
         
         if text:  # Only draw text if we have a value to display
-            # Set text color to black for contrast
-            cr.set_source_rgb(0, 0, 0)
+            cr.set_source_rgba(self.text_color[0], self.text_color[1],
+                              self.text_color[2], self.text_color[3])
             
             # Center text in handle
             cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
@@ -550,6 +469,7 @@ class FrameLine(Gtk.Widget):
     def on_popup_closed(self, popover):
         """Reset states when popup menu is closed"""
         self.menu_active = False
+        self.active_handle = None
         self.hover_action = None
         self.queue_draw()
 
@@ -568,11 +488,7 @@ class FrameLine(Gtk.Widget):
         # Get current range values (1-based)
         start = min(self.left_value, self.right_value)
         end = max(self.left_value, self.right_value)
-        
-        # Add the range
         self.add_removed_range(start, end)
-        
-        # Hide popover
         self.popup_menu.popdown()
 
     def on_remove_frame_clicked(self, button):
@@ -582,11 +498,7 @@ class FrameLine(Gtk.Widget):
             frame = int(self.left_value)
         else:
             frame = int(self.right_value)
-        
-        # Add single frame range
         self.add_removed_range(frame, frame)
-        
-        # Hide popover
         self.popup_menu.popdown()
 
     def add_removed_range(self, start, end):
@@ -631,10 +543,8 @@ class FrameLine(Gtk.Widget):
 
     def is_frame_removed(self, frame_index):
         """Check if a frame index is within any removed range"""
-        # Ensure frame_index is an integer
         frame_index = int(frame_index)
         for start, end in self.removed_ranges:
-            # Include both start and end in the range check
             if start <= frame_index <= end:
                 return True
         return False
@@ -647,15 +557,13 @@ class FrameLine(Gtk.Widget):
             next_frame += direction
         return next_frame if 0 <= next_frame < self.max_value else -1
 
-    def clear_removed_ranges(self):
-        """Clear all removed ranges"""
-        self.removed_ranges = []
-        self.queue_draw()
 
     def on_insert_frames_clicked(self, button):
         """Handle insert frames button click"""
         try:
-            # Close the popover immediately
+            # Store the active handle before closing the popover
+            insert_at_handle = self.active_handle
+
             self.popup_menu.popdown()
             
             dialog = Gtk.FileDialog.new()
@@ -684,27 +592,25 @@ class FrameLine(Gtk.Widget):
             if os.path.exists(home_dir):
                 dialog.set_initial_folder(Gio.File.new_for_path(home_dir))
 
-            # Use open_multiple for selecting multiple files
+            # Pass the stored handle to the response callback
             dialog.open_multiple(
                 parent=self.get_root(),
-                callback=self._on_insert_dialog_response
+                callback=lambda d, r: self._on_insert_dialog_response(d, r, insert_at_handle)
             )
 
         except Exception as e:
             print(f"Error opening file dialog: {e}")
 
-    def _on_insert_dialog_response(self, dialog, result):
+    def _on_insert_dialog_response(self, dialog, result, insert_at_handle):
         """Handle insert file dialog response"""
         try:
             files = dialog.open_multiple_finish(result)
             if files and files.get_n_items() > 0:
                 # Determine the insert point based on the active handle
-                if self.active_handle == 'left':
-                    insert_point = int(self.left_value)  # Insert after the left handle
-                else:
-                    insert_point = int(self.right_value)  # Insert after the right handle
+                insert_point = int(self.left_value if insert_at_handle == 'left' else self.right_value)
 
-                insert_point += 1  # Add 1 to insert after the current frame
+                # Add 1 to insert after the current frame
+                insert_point += 1
 
                 # Convert files to list of paths
                 file_paths = [files.get_item(i).get_path() 
@@ -809,6 +715,17 @@ class FrameLine(Gtk.Widget):
         # Redraw to show the speed range
         self.queue_draw()
 
+    def draw_removed_ranges(self, cr, width, height):
+        """Draw removed ranges in red"""
+        cr.set_source_rgb(0xed/255, 0x33/255, 0x3b/255)  # Red
+        for start, end in self.removed_ranges:
+            start_x = self.value_to_position(start + 1, width)
+            end_x = self.value_to_position(end + 1, width)
+            cr.rectangle(start_x, (height - self.track_height) / 2,
+                        end_x - start_x + (width - 2 * self.handle_radius) / (self.max_value - self.min_value),
+                        self.track_height)
+            cr.fill()
+
     def draw_speed_ranges(self, cr, width, height):
         """Draw speed-modified ranges in blue"""
         track_y = (height - self.track_height) / 2
@@ -827,40 +744,94 @@ class FrameLine(Gtk.Widget):
         """Add a speed range"""
         self.speed_ranges.append((start, end, speed))
 
-    def draw(self, cr, width, height):
-        all_ranges = []
-        for start, end in self.inserted_ranges:
-            all_ranges.append(('insert', start, end))
-        for start, end, speed in self.speed_ranges:
-            all_ranges.append(('speed', start, end))
+    def update_theme(self, is_dark):
+        """Update theme colors"""
+        from fig.utils import clear_css
+        
+        clear_css(self)
+        
+        self.add_css_class("frameline-dark" if is_dark else "frameline-light")
+        
+        if is_dark:
+            self.track_color = (1, 1, 1, 0.1)    
+            self.handle_color = (1, 1, 1, 1)
+            self.text_color = (0, 0, 0, 1)       
+            self.playhead_color = (1, 1, 1, 1)
+            self.selected_track_color = (1, 1, 1, 1)
+        else:
+            self.track_color = (0, 0, 0, 0.1)  
+            self.handle_color = (0.141, 0.141, 0.141, 1)     
+            self.text_color = (1, 1, 1, 1)
+            self.playhead_color = (0.141, 0.141, 0.141, 1)
+            self.selected_track_color = (0.141, 0.141, 0.141, 1)
 
-        # Draw ranges in order (newer modifications on top)
-        for range_type, start, end in all_ranges:
-            if range_type == 'speed':
-                # Convert indices for speed tracks (0-based to 1-based)
-                start_x = self.value_to_position(start + 1, width)
-                end_x = self.value_to_position(end + 1, width)
-                
-                # Draw speed track
-                cr.set_source_rgba(0x62/255, 0xa0/255, 0xea/255, 0.3)  # Blue with alpha
-                cr.rectangle(start_x, track_y + track_height, end_x - start_x, track_height)
-                cr.fill()
-            else:  # insert
-                # Fix the off-by-one issue in insert track rendering
-                start_x = self.value_to_position(start, width)  # Removed +1
-                end_x = self.value_to_position(end + 1, width)  # Changed from +2 to +1
-                
-                # Draw insert track
-                cr.set_source_rgba(0x57/255, 0xe3/255, 0x89/255, 0.3)  # Green with alpha
-                cr.rectangle(start_x, track_y, end_x - start_x, track_height)
-                cr.fill()
-                
+        self.queue_draw()
+
     def reset(self):
         """Reset framline state"""
-        self.left_value = self.min_value
-        self.right_value = self.max_value
+        self.left_value = 0
+        self.right_value = 0
         self.removed_ranges = []
         self.inserted_ranges = []
         self.speed_ranges = []
-        self.playhead_position = 1
+        self.playhead_pos = 1
+        self.queue_draw()
+
+    #
+    # Test and Internal Methods
+    #
+    
+    def clear_removed_ranges(self):
+        self.removed_ranges = []
+        self.queue_draw()
+    
+    def set_left_value(self, value):
+        """Internal method to set left handle value"""
+        rounded_value = self.round_to_stride(value)
+        self.left_value = max(self.min_value, min(rounded_value, self.max_value))
+
+    def set_right_value(self, value):
+        """Internal method to set right handle value"""
+        rounded_value = self.round_to_stride(value)
+        self.right_value = max(self.min_value, min(rounded_value, self.max_value))
+
+    def round_to_stride(self, value):
+        """Internal method to round value to nearest stride"""
+        return round(value / self.stride) * self.stride
+
+    def value_to_position(self, value, width):
+        """Internal method to convert value to screen position"""
+        usable_width = width - 2 * self.handle_radius
+        normalized_value = (value - self.min_value) / (self.max_value - self.min_value)
+        return self.handle_radius + normalized_value * usable_width
+
+    def position_to_value(self, position, width):
+        """Internal method to convert screen position to value"""
+        usable_width = width - 2 * self.handle_radius
+        normalized_pos = max(0, min(1, (position - self.handle_radius) / usable_width))
+        return self.min_value + normalized_pos * (self.max_value - self.min_value)
+
+    def is_frame_removed(self, frame_index):
+        """Internal method to check if a frame is in a removed range"""
+        for start, end in self.removed_ranges:
+            if start <= frame_index <= end:
+                return True
+        return False
+
+    def show_playhead(self):
+        """Show the playhead"""
+        self.playhead_visible = True
+        self.queue_draw()
+
+    def hide_playhead(self):
+        """Hide the playhead"""
+        self.playhead_visible = False
+        self.queue_draw()
+        
+    def set_playhead_pos(self, position):
+        """Set playhead position"""
+        self.playhead_pos = position
+        # If position is -1, hide the playhead
+        if position == -1:
+            self.playhead_visible = False
         self.queue_draw()
