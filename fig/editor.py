@@ -10,6 +10,7 @@ from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf, Adw
 
 from fig.utils import load_css, clear_css
 from fig.frameline import FrameLine
+from fig.cropoverlay import CropOverlay
 
 class EditorBox(Gtk.Box):
     def __init__(self):
@@ -34,7 +35,6 @@ class EditorBox(Gtk.Box):
             self.image_display_width, self.image_display_height)
         image_container.set_halign(Gtk.Align.CENTER)
         image_container.set_valign(Gtk.Align.CENTER)
-        # Allow container to expand vertically
         image_container.set_vexpand(True)
 
         # Image display area setup
@@ -45,8 +45,12 @@ class EditorBox(Gtk.Box):
         self.image_display.set_valign(Gtk.Align.CENTER)
         load_css(self.image_display, ["image-display"])
 
-        # Add image display to the container
-        image_container.append(self.image_display)
+        # Create and add the crop overlay
+        self.crop_overlay = CropOverlay()
+        self.crop_overlay.set_child(self.image_display)
+        
+        # Add crop overlay to the container instead of image_display directly
+        image_container.append(self.crop_overlay)
         # Info label
         self.info_label = Gtk.Label()
         self.info_label.set_margin_top(10)
@@ -372,8 +376,18 @@ class EditorBox(Gtk.Box):
         
         if not ref_frame:
             return  # No valid frames to save
+            
+        # Calculate crop box in absolute pixels
+        crop_rect = self.crop_overlay.crop_rect
+        orig_width, orig_height = ref_frame.size
+        left = int(crop_rect[0] * orig_width)
+        top = int(crop_rect[1] * orig_height)
+        right = int((crop_rect[0] + crop_rect[2]) * orig_width)
+        bottom = int((crop_rect[1] + crop_rect[3]) * orig_height)
+        crop_box = (left, top, right, bottom)
         
-        ref_size = ref_frame.size
+        # The new reference size will be the cropped size
+        ref_size = (right - left, bottom - top)
         
         for i in range(start_idx, end_idx + 1):
             # Skip if frame is removed
@@ -388,16 +402,19 @@ class EditorBox(Gtk.Box):
             if not self.frames[i]:
                 continue
             
-            # Check if this frame is part of an inserted range
-            is_inserted = any(start <= i <= end for start, end in self.frameline.inserted_ranges)
-            
             # Get the frame and its duration
             frame = self._pixbuf_to_pil(self.frames[i])
             duration = self.frame_durations[i]
             
-            # Resize inserted frames if needed
-            if is_inserted and frame.size != ref_size:
-                frame = frame.resize(ref_size, Image.Resampling.LANCZOS)
+            # Check if this frame is part of an inserted range
+            is_inserted = any(start <= i <= end for start, end in self.frameline.inserted_ranges)
+            
+            # For inserted frames, resize to match original size before cropping
+            if is_inserted and frame.size != (orig_width, orig_height):
+                frame = frame.resize((orig_width, orig_height), Image.Resampling.LANCZOS)
+            
+            # Apply crop to the frame
+            frame = frame.crop(crop_box)
             
             frames_to_save.append(frame)
             durations.append(duration)
