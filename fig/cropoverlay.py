@@ -35,6 +35,7 @@ class CropOverlay(Gtk.Overlay):
         self.handle_size = 10
         self.active_handle = None
         self.start_crop_rect = None
+        self.dragging_region = False  # New flag for dragging entire region
         
     def get_handle_at_position(self, x, y, display_width, display_height, x_offset, y_offset):
         # Convert crop rect to pixel coordinates
@@ -54,8 +55,24 @@ class CropOverlay(Gtk.Overlay):
         for handle, hx, hy in corners:
             if abs(x - hx) <= self.handle_size and abs(y - hy) <= self.handle_size:
                 return handle
+                
+        # If no handle is found but point is in crop region, return 'region'
+        if self.is_point_in_crop_region(x, y, display_width, display_height, x_offset, y_offset):
+            return 'region'
+            
         return None
         
+    def is_point_in_crop_region(self, x, y, display_width, display_height, x_offset, y_offset):
+        """Check if a point is within the crop region"""
+        # Convert crop rect to pixel coordinates
+        px = x_offset + self.crop_rect[0] * display_width
+        py = y_offset + self.crop_rect[1] * display_height
+        pw = self.crop_rect[2] * display_width
+        ph = self.crop_rect[3] * display_height
+        
+        return (px <= x <= px + pw and 
+                py <= y <= py + ph)
+
     def on_press(self, gesture, n_press, x, y):
         # Get image dimensions and scaling
         child = self.get_child()
@@ -80,15 +97,17 @@ class CropOverlay(Gtk.Overlay):
         x_offset = (width - display_width) // 2
         y_offset = (height - display_height) // 2
         
-        # Check if we clicked on a handle
+        # Check if we clicked on a handle or within the region
         self.active_handle = self.get_handle_at_position(x, y, display_width, display_height, x_offset, y_offset)
         if self.active_handle:
             self.start_crop_rect = self.crop_rect.copy()
-    
+            self.dragging_region = (self.active_handle == 'region')
+
     def on_release(self, gesture, n_press, x, y):
         self.active_handle = None
         self.start_crop_rect = None
-    
+        self.dragging_region = False
+
     def on_drag_begin(self, gesture, start_x, start_y):
         # Already handled in on_press
         pass
@@ -125,7 +144,13 @@ class CropOverlay(Gtk.Overlay):
         # Update crop rectangle based on which handle is being dragged
         new_rect = self.start_crop_rect.copy()
         
-        if self.active_handle == 'top_left':
+        if self.dragging_region:
+            # Move the entire region while keeping size constant
+            new_x = max(0, min(new_rect[0] + dx, 1 - new_rect[2]))
+            new_y = max(0, min(new_rect[1] + dy, 1 - new_rect[3]))
+            new_rect[0] = new_x
+            new_rect[1] = new_y
+        elif self.active_handle == 'top_left':
             new_rect[0] = max(0, min(new_rect[0] + dx, new_rect[0] + new_rect[2] - 0.1))
             new_rect[1] = max(0, min(new_rect[1] + dy, new_rect[1] + new_rect[3] - 0.1))
             new_rect[2] -= (new_rect[0] - self.start_crop_rect[0])
@@ -148,6 +173,7 @@ class CropOverlay(Gtk.Overlay):
     def on_drag_end(self, gesture, offset_x, offset_y):
         self.active_handle = None
         self.start_crop_rect = None
+        self.dragging_region = False
 
     def draw_crop_overlay(self, area, cr, width, height, *args):
         # Get the actual image dimensions from the Picture widget
