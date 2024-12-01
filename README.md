@@ -45,7 +45,7 @@
 
 `pip install pytest`
 
-`pytest tests/test_editor.py`
+`pytest test/test.py`
 
 ## Todos
 
