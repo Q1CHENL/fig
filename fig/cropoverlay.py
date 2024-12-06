@@ -7,15 +7,13 @@ class CropOverlay(Gtk.Overlay):
     def __init__(self):
         super().__init__()
         
-        # Create a drawing area for the crop overlay
         self.drawing_area = Gtk.DrawingArea()
         self.drawing_area.set_draw_func(self.draw_crop_overlay)
-        
-        # Make the drawing area receive events
         self.drawing_area.set_can_target(True)
         self.drawing_area.set_focusable(True)
         
-        # Add event controllers
+        # TODO add 3 lines dividing the the long and short sides
+        
         click_controller = Gtk.GestureClick.new()
         click_controller.connect('pressed', self.on_press)
         click_controller.connect('released', self.on_release)
@@ -27,7 +25,6 @@ class CropOverlay(Gtk.Overlay):
         drag_controller.connect('drag-end', self.on_drag_end)
         self.drawing_area.add_controller(drag_controller)
         
-        # Add the drawing area as an overlay
         self.add_overlay(self.drawing_area)
         
         # Initial crop region is full size
@@ -35,7 +32,7 @@ class CropOverlay(Gtk.Overlay):
         self.handle_size = 10
         self.active_handle = None
         self.start_crop_rect = None
-        self.dragging_region = False  # New flag for dragging entire region
+        self.dragging_region = False
         
     def get_handle_at_position(self, x, y, display_width, display_height, x_offset, y_offset):
         # Convert crop rect to pixel coordinates
