@@ -33,6 +33,7 @@ class CropOverlay(Gtk.Overlay):
         self.active_handle = None
         self.start_crop_rect = None
         self.dragging_region = False
+        self.show_grid_lines = False
         
     def get_handle_at_position(self, x, y, display_width, display_height, x_offset, y_offset):
         # Convert crop rect to pixel coordinates
@@ -99,11 +100,15 @@ class CropOverlay(Gtk.Overlay):
         if self.active_handle:
             self.start_crop_rect = self.crop_rect.copy()
             self.dragging_region = (self.active_handle == 'region')
+            self.show_grid_lines = True
+            self.drawing_area.queue_draw()
 
     def on_release(self, gesture, n_press, x, y):
         self.active_handle = None
         self.start_crop_rect = None
         self.dragging_region = False
+        self.show_grid_lines = False
+        self.drawing_area.queue_draw()
 
     def on_drag_begin(self, gesture, start_x, start_y):
         # Already handled in on_press
@@ -221,6 +226,22 @@ class CropOverlay(Gtk.Overlay):
         cr.set_line_width(4)
         cr.rectangle(x, y, w, h)
         cr.stroke()
+        
+        if self.show_grid_lines:
+            cr.set_line_width(1)
+            cr.set_source_rgba(1, 1, 1, 0.8)
+            
+            for i in range(1, 3):
+                line_x = x + (w * i / 3)
+                cr.move_to(line_x, y)
+                cr.line_to(line_x, y + h)
+                cr.stroke()
+            
+            for i in range(1, 3):
+                line_y = y + (h * i / 3)
+                cr.move_to(x, line_y)
+                cr.line_to(x + w, line_y)
+                cr.stroke()
         
         # Draw corner handles
         corners = [
