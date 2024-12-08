@@ -468,6 +468,7 @@ class EditorBox(Gtk.Box):
         self.play_btn.add_css_class("play-button-dark" if is_dark else "play-button-light")
         
         self.frameline.update_theme(is_dark)
+        self.crop_overlay.update_theme(is_dark)
     
     def on_handle_drag(self, handle_position):
         """Called when either handle is being dragged"""
