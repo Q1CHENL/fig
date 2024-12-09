@@ -27,7 +27,8 @@ class CropOverlay(Gtk.Overlay):
         
         # Initial crop region is full size
         self.crop_rect = [0, 0, 1, 1]  # normalized coordinates
-        self.handle_size = 10
+        self.rect_handle_width = 5
+        self.rect_handle_height = 20
         self.active_handle = None
         self.start_crop_rect = None
         self.dragging_region = False
@@ -40,9 +41,6 @@ class CropOverlay(Gtk.Overlay):
         pw = self.crop_rect[2] * display_width
         ph = self.crop_rect[3] * display_height
         
-        handle_length = 20  # Same as in draw_crop_overlay
-        handle_thickness = 5  # Line width of handles
-        
         corners = [
             ('top_left', px, py, 1, 1),          
             ('top_right', px + pw, py, -1, 1),    
@@ -53,38 +51,34 @@ class CropOverlay(Gtk.Overlay):
         for handle, corner_x, corner_y, dx, dy in corners:
             # Check horizontal line of L
             h_x1 = corner_x
-            h_x2 = corner_x + handle_length * dx
-            h_y = corner_y + 2.5 * dy
+            h_x2 = corner_x + self.rect_handle_height * dx
+            h_y = corner_y + self.rect_handle_width/2 * dy
             
             # Check vertical line of L
-            v_x = corner_x + 2.5 * dx
+            v_x = corner_x + self.rect_handle_width/2 * dx
             v_y1 = corner_y
-            v_y2 = corner_y + handle_length * dy
+            v_y2 = corner_y + self.rect_handle_height * dy
             
             # Check if click is near either line of the L
-            near_horizontal = (abs(y - h_y) <= handle_thickness and 
+            near_horizontal = (abs(y - h_y) <= self.rect_handle_width and 
                              min(h_x1, h_x2) <= x <= max(h_x1, h_x2))
-            near_vertical = (abs(x - v_x) <= handle_thickness and 
+            near_vertical = (abs(x - v_x) <= self.rect_handle_width and 
                            min(v_y1, v_y2) <= y <= max(v_y1, v_y2))
             
             if near_horizontal or near_vertical:
                 return handle
                 
-        # Check for middle handles
-        rect_handle_width = 5
-        rect_handle_height = 20
-        
         # Middle points of each side
         middle_handles = [
-            ('top', px + pw/2 - rect_handle_height/2, py),
-            ('right', px + pw - rect_handle_width/2 - 2.5, py + ph/2 - rect_handle_height/2),
-            ('bottom', px + pw/2 - rect_handle_height/2, py + ph - rect_handle_width),
-            ('left', px - rect_handle_width/2 + 2.5, py + ph/2 - rect_handle_height/2)
+            ('top', px + pw/2 - self.rect_handle_height/2, py),
+            ('right', px + pw - self.rect_handle_width, py + ph/2 - self.rect_handle_height/2),
+            ('bottom', px + pw/2 - self.rect_handle_height/2, py + ph - self.rect_handle_width),
+            ('left', px, py + ph/2 - self.rect_handle_height/2)
         ]
 
         for pos, mx, my in middle_handles:
-            w_rect = 20 if pos == 'top' or pos == 'bottom' else 5
-            h_rect = 5 if pos == 'top' or pos == 'bottom' else 20
+            w_rect = self.rect_handle_height if pos == 'top' or pos == 'bottom' else self.rect_handle_width
+            h_rect = self.rect_handle_width if pos == 'top' or pos == 'bottom' else self.rect_handle_height
             if (mx <= x <= mx + w_rect and my <= y <= my + h_rect):
                 return pos
                 
@@ -93,17 +87,6 @@ class CropOverlay(Gtk.Overlay):
             return 'region'
             
         return None
-        
-    def is_point_in_crop_region(self, x, y, display_width, display_height, x_offset, y_offset):
-        """Check if a point is within the crop region"""
-        # Convert crop rect to pixel coordinates
-        px = x_offset + self.crop_rect[0] * display_width
-        py = y_offset + self.crop_rect[1] * display_height
-        pw = self.crop_rect[2] * display_width
-        ph = self.crop_rect[3] * display_height
-        
-        return (px <= x <= px + pw and 
-                py <= y <= py + ph)
 
     def on_press(self, gesture, n_press, x, y):
         # Get image dimensions and scaling
@@ -286,11 +269,8 @@ class CropOverlay(Gtk.Overlay):
                 cr.line_to(x + w, line_y)
                 cr.stroke()
         
-        # Draw corner handles
-        cr.set_line_width(5)
-        rect_handle_width = 5
-        rect_handle_height = 20
-
+        # Draw dragging handles
+        cr.set_line_width(self.rect_handle_width)
         corners = [
             ('top_left', x, y, 1, 1),          
             ('top_right', x + w, y, -1, 1),    
@@ -300,27 +280,26 @@ class CropOverlay(Gtk.Overlay):
 
         for pos, corner_x, corner_y, dx, dy in corners:
             # Draw horizontal handles
-            cr.move_to(corner_x, corner_y + 2.5 * dy)
-            cr.line_to(corner_x + rect_handle_height * dx, corner_y + 2.5 * dy)
+            cr.move_to(corner_x, corner_y + self.rect_handle_width/2 * dy)
+            cr.line_to(corner_x + self.rect_handle_height * dx, corner_y + self.rect_handle_width/2 * dy)
 
             # Draw vertical handles
-            cr.move_to(corner_x + 2.5 * dx, corner_y)
-            cr.line_to(corner_x + 2.5 * dx, corner_y + rect_handle_height * dy)
+            cr.move_to(corner_x + self.rect_handle_width/2 * dx, corner_y)
+            cr.line_to(corner_x + self.rect_handle_width/2 * dx, corner_y + self.rect_handle_height * dy)
 
             cr.stroke()
         
-        # Middle points of each side
         middle_handles = [
-            ('top', x + w/2 - rect_handle_height/2, y),
-            ('right', x + w - rect_handle_width/2 - 2.5, y + h/2 - rect_handle_height/2),
-            ('bottom', x + w/2 - rect_handle_height/2, y + h - rect_handle_width),
-            ('left', x - rect_handle_width/2 + 2.5, y + h/2 - rect_handle_height/2)
+            ('top', x + w/2 - self.rect_handle_height/2, y),
+            ('right', x + w - self.rect_handle_width, y + h/2 - self.rect_handle_height/2),
+            ('bottom', x + w/2 - self.rect_handle_height/2, y + h - self.rect_handle_width),
+            ('left', x, y + h/2 - self.rect_handle_height/2)
         ]
 
         cr.set_line_width(1)
         for pos, mx, my in middle_handles:
-            w_rect = 20 if pos == 'top' or pos == 'bottom' else 5
-            h_rect = 5 if pos == 'top' or pos == 'bottom' else 20
+            w_rect = self.rect_handle_height if pos == 'top' or pos == 'bottom' else self.rect_handle_width
+            h_rect = self.rect_handle_width if pos == 'top' or pos == 'bottom' else self.rect_handle_height
             cr.rectangle(mx, my, w_rect, h_rect)
             cr.fill()
 
