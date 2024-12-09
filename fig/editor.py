@@ -49,7 +49,6 @@ class EditorBox(Gtk.Box):
         self.info_label.set_margin_top(10)
         self.info_label.set_margin_bottom(10)
         self.info_label.set_halign(Gtk.Align.CENTER)
-        load_css(self.info_label, ["info-label"])
         self.append(self.info_label)
         self.append(image_container)
 
@@ -466,6 +465,9 @@ class EditorBox(Gtk.Box):
         
         clear_css(self.play_btn)
         self.play_btn.add_css_class("play-button-dark" if is_dark else "play-button-light")
+        
+        clear_css(self.info_label)
+        self.info_label.add_css_class("info-label-dark" if is_dark else "info-label-light")
         
         self.frameline.update_theme(is_dark)
         self.crop_overlay.update_theme(is_dark)
