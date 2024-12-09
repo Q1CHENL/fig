@@ -52,7 +52,7 @@
 - ~~Improve UI~~
 - ~~Previews frames~~
 - ~~Preview trimmed gif~~
-- Crop GIF
+- ~~Crop GIF~~
 - ~~Export frame(s)~~
 - Combine frames to GIF
 - ~~Stop icon for the play button~~
@@ -79,9 +79,10 @@
 - ~~Light/Dark mode screenshots~~
 - Preferences: fixed color mode, default save folder etc.
 
-## Notice
+## Credits
 
 - Homepage UI is inspired by [sly](https://github.com/kra-mo/sly)
+- Thanks to Cursor/Windsurf/Copilot :)
 
 ## Contribute
 
