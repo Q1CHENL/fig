@@ -78,6 +78,8 @@
 - Loop playback option
 - ~~Light/Dark mode screenshots~~
 - Preferences: fixed color mode, default save folder etc.
+- Info label changes along with frameline changes
+- Better controls UI
 
 ## Credits
 
