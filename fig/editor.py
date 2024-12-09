@@ -10,34 +10,30 @@ from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf, Adw
 
 from fig.utils import load_css, clear_css
 from fig.frameline import FrameLine
+from fig.cropoverlay import CropOverlay
 
 class EditorBox(Gtk.Box):
     def __init__(self):
         super().__init__()
         self.button_height = 40
 
-        # Main box spacing
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.set_spacing(0)  # Reduced from 10 to 0
+        self.set_spacing(0)
         self.set_margin_top(20)
         self.set_margin_bottom(20)
         self.set_margin_start(80)
         self.set_margin_end(80)
 
-        # Increase image display dimensions
         self.image_display_width = 600
         self.image_display_height = 450
 
-        # Create a fixed-size container for the image
         image_container = Gtk.Box()
         image_container.set_size_request(
             self.image_display_width, self.image_display_height)
         image_container.set_halign(Gtk.Align.CENTER)
         image_container.set_valign(Gtk.Align.CENTER)
-        # Allow container to expand vertically
         image_container.set_vexpand(True)
 
-        # Image display area setup
         self.image_display = Gtk.Picture()
         self.image_display.set_can_shrink(True)
         self.image_display.set_content_fit(Gtk.ContentFit.CONTAIN)
@@ -45,9 +41,10 @@ class EditorBox(Gtk.Box):
         self.image_display.set_valign(Gtk.Align.CENTER)
         load_css(self.image_display, ["image-display"])
 
-        # Add image display to the container
-        image_container.append(self.image_display)
-        # Info label
+        self.crop_overlay = CropOverlay()
+        self.crop_overlay.set_child(self.image_display)
+        image_container.append(self.crop_overlay)
+        
         self.info_label = Gtk.Label()
         self.info_label.set_margin_top(10)
         self.info_label.set_margin_bottom(10)
@@ -63,31 +60,25 @@ class EditorBox(Gtk.Box):
         controls_box.set_margin_end(5)
         controls_box.set_vexpand(False)
 
-        # Frameline
-        self.frameline = FrameLine()  # Initialize with 0 frames
+        self.frameline = FrameLine()
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)
         self.frameline.connect('insert-frames', self.on_insert_frames)
         self.frameline.connect('speed-changed', self.on_speed_changed)
         controls_box.append(self.frameline)
 
-        # Button container
         buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         buttons_box.set_halign(Gtk.Align.END)  # Align buttons to the right
         
-        # Create and store button references
         self.play_btn = self.play_button()
         self.save_btn = self.save_button()
         buttons_box.append(self.play_btn)
         buttons_box.append(self.save_btn)
 
-        # Add buttons to controls
         controls_box.append(buttons_box)
         
-        # Add controls to main box
         self.append(controls_box)
 
-        # GIF handling properties
         self.frames = []
         self.current_frame_index = 0
         self.playhead_frame_index = 0
@@ -103,7 +94,7 @@ class EditorBox(Gtk.Box):
             # Reset state before attempting to load
             self.frames = []
             self.frame_durations = []
-            self.original_frame_durations = []  # Store original durations
+            self.original_frame_durations = []
             self.current_frame_index = 0
             self.playhead_frame_index = 0
             
@@ -111,12 +102,11 @@ class EditorBox(Gtk.Box):
                 frame_count = gif.n_frames
                 total_duration = 0
                 self.frames = []
-                self.frame_durations = []  # Store frame durations
-                self.original_frame_durations = []  # Keep original durations
+                self.frame_durations = []
+                self.original_frame_durations = []
                 
                 context = GLib.MainContext.default()
                 for frame in range(frame_count):
-                    # Update loading label
                     self.info_label.set_text(f"Loading frames {frame + 1}/{frame_count}")
                     # Process pending events
                     while context.pending():
@@ -137,7 +127,6 @@ class EditorBox(Gtk.Box):
                 self.frameline.right_value = frame_count
                 self.frameline.queue_draw()
 
-                # Update info label
                 self.info_label.set_text(
                     f"{frame_count} Frames • {total_duration:.2f} Seconds"
                 )
@@ -146,7 +135,6 @@ class EditorBox(Gtk.Box):
                     self.display_frame(0)
         except Exception as e:
             print(f"Error loading GIF: {e}")
-            # Ensure state is clean on error
             self.frames = []
             self.frame_durations = []
             self.original_frame_durations = []
@@ -272,17 +260,16 @@ class EditorBox(Gtk.Box):
 
 
     def show_playhead(self):
-        """Show playhead and update state"""
         self.frameline.show_playhead()
 
     def hide_playhead(self):
-        """Hide playhead and update state"""
         self.frameline.hide_playhead()
 
     def save_frames(self, button):
         """Save the selected frame range as a new GIF"""
-        start_idx = int(round(self.frameline.left_value)) - 1  # Convert to 0-based index
-        end_idx = int(round(self.frameline.right_value)) - 1  # Convert to 0-based index
+        # Convert to 0-based index
+        start_idx = int(round(self.frameline.left_value)) - 1
+        end_idx = int(round(self.frameline.right_value)) - 1
 
         if 0 <= start_idx < len(self.frames) and 0 <= end_idx < len(self.frames):
             dialog = Gtk.FileDialog()
@@ -354,12 +341,10 @@ class EditorBox(Gtk.Box):
 
     def _save_gif(self, save_path, start_idx, end_idx):
         """Save GIF including inserted frames and excluding removed ranges"""
-        # Determine if we need to reverse the frames
         is_reversed = start_idx > end_idx
         if is_reversed:
             start_idx, end_idx = end_idx, start_idx
 
-        # Get valid frames (excluding removed ranges)
         frames_to_save = []
         durations = []
         
@@ -372,42 +357,49 @@ class EditorBox(Gtk.Box):
         
         if not ref_frame:
             return  # No valid frames to save
+            
+        # Calculate crop box in absolute pixels
+        crop_rect = self.crop_overlay.crop_rect
+        orig_width, orig_height = ref_frame.size
+        left = int(crop_rect[0] * orig_width)
+        top = int(crop_rect[1] * orig_height)
+        right = int((crop_rect[0] + crop_rect[2]) * orig_width)
+        bottom = int((crop_rect[1] + crop_rect[3]) * orig_height)
+        crop_box = (left, top, right, bottom)
         
-        ref_size = ref_frame.size
+        ref_size = (right - left, bottom - top)
         
         for i in range(start_idx, end_idx + 1):
-            # Skip if frame is removed
             if self.frameline.is_frame_removed(i):
                 continue
                 
-            # Skip if index is out of bounds
             if i < 0 or i >= len(self.frames):
                 continue
                 
-            # Skip if frame is None
             if not self.frames[i]:
                 continue
-            
-            # Check if this frame is part of an inserted range
-            is_inserted = any(start <= i <= end for start, end in self.frameline.inserted_ranges)
             
             # Get the frame and its duration
             frame = self._pixbuf_to_pil(self.frames[i])
             duration = self.frame_durations[i]
             
-            # Resize inserted frames if needed
-            if is_inserted and frame.size != ref_size:
-                frame = frame.resize(ref_size, Image.Resampling.LANCZOS)
+            is_inserted = any(start <= i <= end for start, end in self.frameline.inserted_ranges)
+            
+            # TODO do we really want to resize?    
+            # For inserted frames, resize to match original size before cropping
+            if is_inserted and frame.size != (orig_width, orig_height):
+                frame = frame.resize((orig_width, orig_height), Image.Resampling.LANCZOS)
+            
+            frame = frame.crop(crop_box)
             
             frames_to_save.append(frame)
             durations.append(duration)
 
-        # Reverse frames and durations if needed
         if is_reversed:
             frames_to_save.reverse()
             durations.reverse()
 
-        if frames_to_save:  # Only save if we have valid frames
+        if frames_to_save:
             frames_to_save[0].save(
                 save_path,
                 save_all=True,
@@ -432,7 +424,6 @@ class EditorBox(Gtk.Box):
 
         # Update display during dragging if not previously playing
         if (frameline.dragging_left or frameline.dragging_right) and not frameline.playhead_visible:
-            # Always use the handle being dragged for preview
             if frameline.dragging_left:
                 frame_index = int(round(frameline.left_value)) - 1
             else:
@@ -440,7 +431,6 @@ class EditorBox(Gtk.Box):
                 
             frame_index = max(0, min(frame_index, len(self.frames) - 1))
             
-            # Only update display if frame is not removed
             if not frameline.is_frame_removed(frame_index):
                 self.current_frame_index = frame_index
                 self.display_frame(frame_index)
@@ -448,7 +438,7 @@ class EditorBox(Gtk.Box):
     def save_button(self):
         save_button = Gtk.Button(label="Save")
         save_button.set_size_request(80, 40)
-        save_button.set_valign(Gtk.Align.CENTER)  # Center vertically
+        save_button.set_valign(Gtk.Align.CENTER)
         save_button.set_halign(Gtk.Align.CENTER)
         save_button.connect('clicked', self.save_frames)
         return save_button
@@ -456,11 +446,10 @@ class EditorBox(Gtk.Box):
     def play_button(self):
         play_button = Gtk.Button()
         play_button.set_size_request(40, 40)
-        play_button.set_valign(Gtk.Align.CENTER)  # Center vertically
+        play_button.set_valign(Gtk.Align.CENTER)
         play_button.set_halign(Gtk.Align.CENTER)
         play_button.connect('clicked', self.play_edited_frames)
         
-        # Set initial icon
         icon_name = "media-playback-start-symbolic"
         icon = Gio.ThemedIcon(name=icon_name)
         image = Gtk.Image.new_from_gicon(icon)
@@ -472,16 +461,14 @@ class EditorBox(Gtk.Box):
         """Update theme for all buttons"""
         from fig.utils import clear_css
         
-        # Update Save button
         clear_css(self.save_btn)
         self.save_btn.add_css_class("save-button-dark" if is_dark else "save-button-light")
         
-        # Update Play button
         clear_css(self.play_btn)
         self.play_btn.add_css_class("play-button-dark" if is_dark else "play-button-light")
         
-        # Update Frameline
         self.frameline.update_theme(is_dark)
+        self.crop_overlay.update_theme(is_dark)
     
     def on_handle_drag(self, handle_position):
         """Called when either handle is being dragged"""
@@ -504,7 +491,6 @@ class EditorBox(Gtk.Box):
             new_frames = []
             new_durations = []
             
-            # Load each image and get number of new frames
             for path in file_paths:
                 if not os.path.exists(path):
                     raise FileNotFoundError(f"File not found: {path}")
@@ -551,7 +537,6 @@ class EditorBox(Gtk.Box):
                 self.frames[insert_idx:insert_idx] = new_frames
                 self.frame_durations[insert_idx:insert_idx] = new_durations
                 
-                # Update frameline max value
                 new_max = len(self.frames)
                 self.frameline.max_value = new_max
                 
@@ -568,11 +553,9 @@ class EditorBox(Gtk.Box):
                     if r[0] >= insert_idx:
                         self.frameline.removed_ranges[i] = (r[0] + num_new_frames, r[1] + num_new_frames)
                 
-                # Update display
                 self.frameline.queue_draw()
                 self.display_frame(insert_idx)
                 
-                # Update info label
                 total_duration = sum(self.frame_durations) / 1000.0
                 self.info_label.set_text(
                     f"{len(self.frames)} Frames • {total_duration:.2f} Seconds"
@@ -622,7 +605,6 @@ class EditorBox(Gtk.Box):
                     if not (s == start_idx and e == end_idx)
                 ]
             else:
-                # Add to frameline's speed ranges
                 self.frameline.add_speed_range(start_idx, end_idx, speed_factor)
             
             # Sort ranges by start index
