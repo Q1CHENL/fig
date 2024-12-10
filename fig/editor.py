@@ -6,9 +6,9 @@ import gi
 gi.require_version('Adw', '1')
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
-from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf, Adw
+from gi.repository import Gtk, GLib, Gio, GdkPixbuf
 
-from fig.utils import load_css, clear_css
+from fig.utils import load_css
 from fig.frameline import FrameLine
 from fig.cropoverlay import CropOverlay
 
@@ -28,8 +28,7 @@ class EditorBox(Gtk.Box):
         self.image_display_height = 450
 
         image_container = Gtk.Box()
-        image_container.set_size_request(
-            self.image_display_width, self.image_display_height)
+        image_container.set_size_request(self.image_display_width, self.image_display_height)
         image_container.set_halign(Gtk.Align.CENTER)
         image_container.set_valign(Gtk.Align.CENTER)
         image_container.set_vexpand(True)
@@ -39,6 +38,7 @@ class EditorBox(Gtk.Box):
         self.image_display.set_content_fit(Gtk.ContentFit.CONTAIN)
         self.image_display.set_halign(Gtk.Align.CENTER)
         self.image_display.set_valign(Gtk.Align.CENTER)
+        self.image_display.set_hexpand(True)
         load_css(self.image_display, ["image-display"])
 
         self.crop_overlay = CropOverlay()
@@ -133,6 +133,8 @@ class EditorBox(Gtk.Box):
 
                 if self.frames:
                     self.display_frame(0)
+                    self.crop_overlay.drawing_area.queue_resize()
+                    self.crop_overlay.drawing_area.queue_draw()
         except Exception as e:
             print(f"Error loading GIF: {e}")
             self.frames = []

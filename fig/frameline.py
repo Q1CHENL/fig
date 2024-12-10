@@ -9,7 +9,6 @@ gi.require_version('Gtk', '4.0')
 class FrameLine(Gtk.Widget):
     __gtype_name__ = 'FrameLine'
 
-    # Define the custom signal
     __gsignals__ = {
         'frames-changed': (GObject.SignalFlags.RUN_LAST, None, (float, float)),
         'insert-frames': (GObject.SignalFlags.RUN_LAST, None, (int, object)),
