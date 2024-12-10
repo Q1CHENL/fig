@@ -308,3 +308,11 @@ class CropOverlay(Gtk.Overlay):
             self.overlay_bkg = (36/255, 36/255, 36/255, 0.85)
         else:
             self.overlay_bkg = (250/255, 250/255, 250/255, 0.85)
+
+    def reset_crop_rect(self):
+        self.crop_rect = [0, 0, 1, 1]
+        self.active_handle = None
+        self.start_crop_rect = None
+        self.dragging_region = False
+        self.show_grid_lines = False
+        self.drawing_area.queue_draw()

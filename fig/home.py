@@ -81,6 +81,7 @@ class HomeBox(Gtk.Box):
                 file_path = file.get_path()
                 window = self.get_root()
                 window.load_editor_ui()
+                window.editor_box.crop_overlay.reset_crop_rect()
                 window.editor_box.load_gif(file_path)
         except GLib.Error as e:
             print(f"Error selecting file: {e.message}")
