@@ -52,19 +52,20 @@ class EditorBox(Gtk.Box):
         self.append(self.info_label)
         self.append(image_container)
 
-        controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        controls_box.set_margin_top(15)  
-        controls_box.set_margin_bottom(5)
-        controls_box.set_margin_start(5)
-        controls_box.set_margin_end(5)
-        controls_box.set_vexpand(False)
+        self.controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.controls_box.set_margin_top(15)  
+        self.controls_box.set_margin_bottom(5)
+        self.controls_box.set_margin_start(5)
+        self.controls_box.set_margin_end(5)
+        self.controls_box.set_vexpand(False)
+        load_css(self.controls_box, ["controls-box-dark"])  # Initial dark theme
 
         self.frameline = FrameLine()
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)
         self.frameline.connect('insert-frames', self.on_insert_frames)
         self.frameline.connect('speed-changed', self.on_speed_changed)
-        controls_box.append(self.frameline)
+        self.controls_box.append(self.frameline)
 
         buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         buttons_box.set_halign(Gtk.Align.END)  # Align buttons to the right
@@ -74,9 +75,9 @@ class EditorBox(Gtk.Box):
         buttons_box.append(self.play_btn)
         buttons_box.append(self.save_btn)
 
-        controls_box.append(buttons_box)
+        self.controls_box.append(buttons_box)
         
-        self.append(controls_box)
+        self.append(self.controls_box)
 
         self.frames = []
         self.current_frame_index = 0
@@ -468,6 +469,9 @@ class EditorBox(Gtk.Box):
         
         clear_css(self.info_label)
         self.info_label.add_css_class("info-label-dark" if is_dark else "info-label-light")
+        
+        clear_css(self.controls_box)
+        self.controls_box.add_css_class("controls-box-dark" if is_dark else "controls-box-light")
         
         self.frameline.update_theme(is_dark)
         self.crop_overlay.update_theme(is_dark)
