@@ -694,13 +694,17 @@ class EditorBox(Gtk.Box):
     def update_info_label(self):
         """Update info label with current frame count and total duration"""
         try:
+            # Only include frames from left handle to right handle
+            left_value = int(round(self.frameline.left_value)) - 1
+            right_value = int(round(self.frameline.right_value)) - 1
+            
             # Count frames excluding removed ones
-            valid_frame_count = sum(1 for i in range(len(self.frames)) 
+            valid_frame_count = sum(1 for i in range(left_value, right_value + 1) 
                                   if not self.frameline.is_frame_removed(i))
             
             # Calculate total duration from current frame durations
             total_duration = sum(
-                duration for i, duration in enumerate(self.frame_durations)
+                self.frame_durations[i] for i in range(left_value, right_value + 1)
                 if not self.frameline.is_frame_removed(i)
             ) / 1000.0  # Convert to seconds
             

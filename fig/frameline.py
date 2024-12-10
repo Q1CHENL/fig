@@ -361,6 +361,7 @@ class FrameLine(Gtk.Widget):
                 self.emit('frames-changed', self.left_value, self.right_value)
             else:
                 self.emit('frames-changed', self.right_value, self.left_value)
+            self.editor.update_info_label()
         else:
             # Handle hover effects when not dragging
             self.check_handle_hover(x, y)
