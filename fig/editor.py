@@ -434,6 +434,7 @@ class EditorBox(Gtk.Box):
             if not frameline.is_frame_removed(frame_index):
                 self.current_frame_index = frame_index
                 self.display_frame(frame_index)
+        self.update_info_label()
 
     def save_button(self):
         save_button = Gtk.Button(label="Save")
@@ -562,17 +563,13 @@ class EditorBox(Gtk.Box):
                 self.frameline.queue_draw()
                 self.display_frame(insert_idx)
                 
-                total_duration = sum(self.frame_durations) / 1000.0
-                self.info_label.set_text(
-                    f"{len(self.frames)} Frames • {total_duration:.2f} Seconds"
-                )
+                self.update_info_label()
                 
         except Exception as e:
             print(f"Error inserting frames: {e}")
             raise
 
     def on_speed_changed(self, frameline, start, end, speed_factor):
-        """Handle speed change for the selected frame range"""
         try:
             # Convert from 1-based to 0-based indices
             start_idx = int(start) - 1
@@ -625,11 +622,7 @@ class EditorBox(Gtk.Box):
                     merged[-1][1] = max(merged[-1][1], range_end)
             self.frameline.speed_ranges = [tuple(x) for x in merged]
             
-            # Update info label with new total duration
-            total_duration = sum(self.frame_durations) / 1000.0
-            self.info_label.set_text(
-                f"{len(self.frames)} Frames • {total_duration:.2f} Seconds"
-            )
+            self.update_info_label()
             
             # If currently playing, restart playback to apply new speeds immediately
             if self.is_playing:
@@ -697,3 +690,22 @@ class EditorBox(Gtk.Box):
         icon = Gio.ThemedIcon(name=icon_name)
         image = Gtk.Image.new_from_gicon(icon)
         self.play_btn.set_child(image)
+
+    def update_info_label(self):
+        """Update info label with current frame count and total duration"""
+        try:
+            # Count frames excluding removed ones
+            valid_frame_count = sum(1 for i in range(len(self.frames)) 
+                                  if not self.frameline.is_frame_removed(i))
+            
+            # Calculate total duration from current frame durations
+            total_duration = sum(
+                duration for i, duration in enumerate(self.frame_durations)
+                if not self.frameline.is_frame_removed(i)
+            ) / 1000.0  # Convert to seconds
+            
+            self.info_label.set_text(
+                f"{valid_frame_count} Frames • {total_duration:.2f} Seconds"
+            )
+        except Exception as e:
+            print(f"Error updating info label: {e}")
