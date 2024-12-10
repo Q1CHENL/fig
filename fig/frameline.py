@@ -16,18 +16,18 @@ class FrameLine(Gtk.Widget):
         'speed-changed': (GObject.SignalFlags.RUN_LAST, None, (float, float, float))  # start, end, speed_factor
     }
 
-    def __init__(self, min_value=0, max_value=0):
+    def __init__(self, editor=None):
         super().__init__()
+        
+        self.editor = editor
 
         self.stride = 1
-        # Ensure max_value is always greater than min_value
-        self.min_value = min_value
-        # Ensure at least 1 unit difference
-        self.max_value = max(min_value + 1, max_value)
+        self.min_value = 0
+        self.max_value = 1
 
         # Handle properties
-        self.left_value = min_value
-        self.right_value = max_value
+        self.left_value = self.min_value
+        self.right_value = self.max_value - 1
 
         # Visual properties (updated to match button height)
         self.handle_radius = 20  # Diameter will be 40px to match button height
@@ -770,12 +770,23 @@ class FrameLine(Gtk.Widget):
 
     def reset(self):
         """Reset framline state"""
+        self.min_value = 0
+        self.max_value = 1
         self.left_value = 0
         self.right_value = 0
         self.removed_ranges = []
         self.inserted_ranges = []
         self.speed_ranges = []
         self.playhead_pos = 1
+        self.playhead_visible = False
+        self.dragging_left = False
+        self.dragging_right = False
+        self.drag_offset = 0
+        self.left_handle_hover = False
+        self.right_handle_hover = False
+        self.menu_active = False
+        self.active_handle = None
+        self.hover_action = None
         self.queue_draw()
 
     #

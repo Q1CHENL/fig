@@ -60,7 +60,7 @@ class EditorBox(Gtk.Box):
         self.controls_box.set_vexpand(False)
         load_css(self.controls_box, ["controls-box-dark"])  # Initial dark theme
 
-        self.frameline = FrameLine()
+        self.frameline = FrameLine(self)
         self.frameline.set_hexpand(True)
         self.frameline.connect('frames-changed', self.on_frames_changed)
         self.frameline.connect('insert-frames', self.on_insert_frames)
