@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
-import os, sys
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, Gio
 import fig.home, fig.editor
-from fig.utils import load_css, clear_css
+from fig.utils import clear_css
 
 class Fig(Adw.ApplicationWindow):
     def __init__(self, app):

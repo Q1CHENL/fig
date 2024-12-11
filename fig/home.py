@@ -1,8 +1,7 @@
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gio, GLib, Gdk, Adw
-from fig.utils import load_css, clear_css
+from gi.repository import Gtk, Gio, GLib, Adw
 
 
 class HomeBox(Gtk.Box):
