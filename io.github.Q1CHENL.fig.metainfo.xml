@@ -22,16 +22,16 @@
   <url type="homepage">https://github.com/Q1CHENL/fig</url>
   <releases>
     <release version="1.0.2" date="2024-12-11">
-        <release_notes>
-            <ul>
-                <li>Crop GIF</li>
-                <li>Improve editor UI</li>
-                <li>Simpler About page</li>
-                <li>Bug fixes and improvements</li>
-            </ul>
-        </release_notes>
+      <description>
+        <ul>
+          <li>Crop GIF</li>
+          <li>Improve editor UI</li>
+          <li>Simpler About page</li>
+          <li>Bug fixes and improvements</li>
+        </ul>
+      </description>
     </release>
-</releases>
+  </releases>
   <content_rating type="oars-1.1"/>
   <launchable type="desktop-id">io.github.Q1CHENL.fig.desktop</launchable>
   <screenshots>
