@@ -72,14 +72,14 @@
 - ~~Light mode~~
 - Undo last action
 - Proper default name for edited GIF when saving
-- Menu in headerbar: ~~new window~~, open, ~~help~~ etc.
+- Menu in headerbar: ~~new window~~, ~~about~~, open, ~~help~~ etc.
 - ~~New About page~~
-- Better info label UI
+- ~~Better info label UI~~
 - Loop playback option
 - ~~Light/Dark mode screenshots~~
 - Preferences: fixed color mode, default save folder etc.
-- Info label changes along with frameline changes
-- Better controls UI
+- ~~Info label changes along with frameline changes~~
+- ~~Better controls UI~~
 
 ## Credits
 
