@@ -1,0 +1,25 @@
+.about-fig-button-light {
+    border-radius: 25px;
+    background-color: #e0e0e0;
+    color: black;
+    transition: all 0.2s ease-in-out;
+}
+
+.about-fig-button-light:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.about-fig-button-dark {
+    border-radius: 25px;
+    background-color: rgb(64, 64, 64);
+    color: white;
+    transition: all 0.2s ease-in-out;
+}
+
+.about-fig-button-dark:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
