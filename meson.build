@@ -28,10 +28,10 @@ install_data('io.github.Q1CHENL.fig.desktop',
 )
 
 # Install icons
-install_data('assets/io.github.Q1CHENL.fig.svg',
+install_data('assets/icons/io.github.Q1CHENL.fig.svg',
   install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps'
 )
-install_data('assets/io.github.Q1CHENL.fig-symbolic.svg',
+install_data('assets/icons/io.github.Q1CHENL.fig-symbolic.svg',
   install_dir: get_option('datadir') / 'icons/hicolor/symbolic/apps'
 )
 

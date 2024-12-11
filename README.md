@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">
-  <img alt="Fig" src="assets/io.github.Q1CHENL.fig.svg" width="128" height="128"/>
+  <img alt="Fig" src="assets/icons/io.github.Q1CHENL.fig.svg" width="128" height="128"/>
   <br>
   Fig
 </h1>
@@ -11,8 +11,8 @@
   </a>
 </p>
 
-![UI](screenshots/screenshot-home-split.png)
-![UI](screenshots/screenshot-editor-split.png)
+![UI](assets/screenshots/screenshot-home-split.png)
+![UI](assets/screenshots/screenshot-editor-split.png)
 
 ## Features
 
@@ -47,8 +47,6 @@
   - Run
 
     `flatpak run io.github.Q1CHENL.fig`
-
-
 
 ## Test
 
