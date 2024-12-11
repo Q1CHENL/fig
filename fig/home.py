@@ -1,8 +1,7 @@
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gio, GLib, Gdk, Adw
-from fig.utils import load_css, clear_css
+from gi.repository import Gtk, Gio, GLib, Adw
 
 
 class HomeBox(Gtk.Box):
@@ -81,7 +80,14 @@ class HomeBox(Gtk.Box):
                 file_path = file.get_path()
                 window = self.get_root()
                 window.load_editor_ui()
+                window.editor_box.crop_overlay.reset_crop_rect()
                 window.editor_box.load_gif(file_path)
+                original_file_name = os.path.basename(file_path)
+                if original_file_name.endswith('.gif'):
+                    window.editor_box.original_file_name = original_file_name[:-4]
+                else:
+                    window.editor_box.original_file_name = original_file_name
+                
         except GLib.Error as e:
             print(f"Error selecting file: {e.message}")
 
@@ -92,11 +98,9 @@ class HomeBox(Gtk.Box):
         """Update theme for all buttons"""
         from fig.utils import clear_css
         
-        # Update Select GIF button
         clear_css(self.select_btn)
         self.select_btn.add_css_class("select-gif-button-dark" if is_dark else "select-gif-button-light")
         
-        # Update About Fig button
         clear_css(self.about_btn)
         self.about_btn.add_css_class("about-fig-button-dark" if is_dark else "about-fig-button-light")
 
@@ -111,17 +115,11 @@ def show_about_dialog(window):
     about.set_website("https://github.com/fig")
     about.set_issue_url("https://github.com/fig/issues")
 
-    about.set_comments("Sleek GIF editor.")
     about.set_release_notes("""
     <ul>
-        <li>Remove certain frames</li>
-        <li>Insert frame(s) at any position</li>
-        <li>Speed up/slow down certain frames</li>
-        <li>Light/Dark mode switch</li>
-        <li>New About page</li>
-        <li>New window option</li>
-        <li>Help page</li>
-        <li>Return to home from editor</li>
+        <li>Crop GIF</li>
+        <li>Improve editor UI</li>
+        <li>Simpler About page</li>
         <li>Bug fixes and improvements</li>
     </ul>
     """)
@@ -129,7 +127,7 @@ def show_about_dialog(window):
     developers = [
         "Qichen Liu https://github.com/Q1CHENL",
     ]
-    designers = ["Qichen Liu"]
+    designers = ["Qichen Liu", "Homepage UI is inspired by sly"]
     artists = ["Qichen Liu"]
     
     about.set_developers(developers)
@@ -139,7 +137,4 @@ def show_about_dialog(window):
     about.set_copyright("© 2024 Qichen Liu")
     about.set_license_type(Gtk.License.MIT_X11)
     
-    about.set_debug_info("Version: 1.0.1\nPlatform: Linux\nGTK: 4.0")
-    about.set_debug_info_filename("debug-info.txt")
-
     about.present(window)

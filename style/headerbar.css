@@ -1,0 +1,19 @@
+.headerbar-light {
+    background-color: #FAFAFA;
+    color: black;
+    box-shadow: none;
+    border: none;
+    border-radius: 12px 12px 0 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.headerbar-dark {
+    background-color: #242424;
+    color: white;
+    box-shadow: none;
+    border: none;
+    border-radius: 12px 12px 0 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}

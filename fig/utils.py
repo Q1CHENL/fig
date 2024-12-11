@@ -5,37 +5,55 @@ gi.require_version('Gtk', '4.0')
 
 def load_css(widget=None, css_classes=None):
     """
-    Load CSS styles from style.css file
-
+    Load CSS styles from individual CSS files
+    
     Args:
         widget: Optional widget to add CSS classes to
         css_classes: List of CSS classes to add to the widget
     """
-    def try_load_css_file(path):
-        """Try to load CSS from given path"""
-        if os.path.exists(path):
-            with open(path, 'r', encoding='utf-8') as f:
-                return f.read()
-        return None
+    def try_load_css_files(style_dir):
+        """Try to load all CSS files from style directory"""
+        if not os.path.exists(style_dir):
+            return None
+            
+        css_data = []
+        css_files = [
+            'headerbar.css',
+            'select-gif-button.css',
+            'about-fig-button.css',
+            'save-button.css',
+            'play-button.css',
+            'menu-item.css',
+            'info-label.css',
+            'controls-box.css'
+        ]
+        
+        for css_file in css_files:
+            file_path = os.path.join(style_dir, css_file)
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    css_data.append(f.read())
+                    
+        return '\n'.join(css_data) if css_data else None
 
     css_provider = Gtk.CssProvider()
     
     try:
-        # Try possible CSS file locations
+        # Try possible style directory locations
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        css_paths = [
-            os.path.join(current_dir, 'style/style.css'),
-            os.path.join(os.path.dirname(current_dir), 'style/style.css')
+        style_paths = [
+            os.path.join(current_dir, 'style'),
+            os.path.join(os.path.dirname(current_dir), 'style')
         ]
         
         css_data = None
-        for path in css_paths:
-            css_data = try_load_css_file(path)
+        for style_dir in style_paths:
+            css_data = try_load_css_files(style_dir)
             if css_data:
                 break
                 
         if not css_data:
-            raise FileNotFoundError(f"CSS file not found in: {css_paths}")
+            raise FileNotFoundError(f"CSS files not found in: {style_paths}")
             
         css_provider.load_from_bytes(GLib.Bytes.new(css_data.encode('utf-8')))
         Gtk.StyleContext.add_provider_for_display(

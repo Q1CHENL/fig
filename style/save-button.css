@@ -1,0 +1,25 @@
+.save-button-light {
+    border-radius: 20px;
+    background-color: #242424;
+    color: white;
+    transition: all 0.2s ease-in-out;
+}
+
+.save-button-light:hover {
+    background-color: #241f31;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.save-button-dark {
+    border-radius: 20px;
+    background-color: white;
+    color: black;
+    transition: all 0.2s ease-in-out;
+}
+
+.save-button-dark:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
