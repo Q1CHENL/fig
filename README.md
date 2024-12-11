@@ -16,6 +16,7 @@
 
 ## Features
 
+- Crop GIF
 - Trim GIF to any frame range
 - Reverse GIF
 - Remove specific frames
@@ -23,13 +24,19 @@
 - Change playback speed for specific frames
 - Play GIF at the original speed
 
-> **Tip: right click on the handles to discover more**
+> **Tip: right click on the handles/image to discover more**
 
 ## Build and Run
 
 - Run as python module:
 
+  `pip install -r requirements.txt` (Install dependencies)
+
   `python -m fig.main`
+
+  - Install stubs for better code completion (optional)
+
+    `pip install pygobject-stubs`
 
 - Flatpak:
 
@@ -40,6 +47,8 @@
   - Run
 
     `flatpak run io.github.Q1CHENL.fig`
+
+
 
 ## Test
 
