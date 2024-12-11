@@ -305,14 +305,18 @@ class FrameLine(Gtk.Widget):
         cr.close_path()
 
     def on_handle_pressed(self, gesture, n_press, x, y):
-        # Hide popover when clicking elsewhere
-        if self.popup_menu.get_visible():
-            self.popup_menu.popdown()
-
+        """Handle mouse press on the widget"""
+        if not self.editor:
+            return
+        
+        # Hide crop overlay when interacting with frameline
+        self.editor.crop_overlay.handles_visible = False
+        self.editor.crop_overlay.drawing_area.queue_draw()
+        
         width = self.get_width()
         left_handle_x = self.value_to_position(self.left_value, width)
         right_handle_x = self.value_to_position(self.right_value, width)
-
+        
         # Only handle dragging for left click
         if abs(x - left_handle_x) <= self.handle_radius:
             self.dragging_left = True

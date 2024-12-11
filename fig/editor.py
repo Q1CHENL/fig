@@ -97,6 +97,7 @@ class EditorBox(Gtk.Box):
             self.original_frame_durations = []
             self.current_frame_index = 0
             self.playhead_frame_index = 0
+            self.crop_overlay.reset_crop_rect()
             
             with Image.open(file_path) as gif:
                 frame_count = gif.n_frames
