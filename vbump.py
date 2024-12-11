@@ -58,9 +58,9 @@ def update_metainfo(new_version):
     # Find the releases section
     releases_match = re.search(r'(<releases>.*?</releases>)', content, re.DOTALL)
     if releases_match:
-        old_releases = releases_match.group(1)
-        new_release = f'<releases>\n    <release version="{new_version}" date="{today}"/>\n    {old_releases[10:]}'
-        updated = content.replace(old_releases, new_release)
+        # Create new releases section with updated version and date
+        new_release = f'<release version="{new_version}" date="{today}"/>'
+        updated = content.replace(releases_match.group(0), f'<releases>\n    {new_release}\n</releases>')
         path.write_text(updated)
         print(f"Updated metainfo.xml to version {new_version}")
     else:
