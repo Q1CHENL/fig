@@ -35,9 +35,11 @@ class Fig(Adw.ApplicationWindow):
 
         self.headerbar.pack_end(self.menu_button)
         
-        self.headerbar.set_title_widget(Gtk.Label(label="Fig"))
+        label = Gtk.Label()
+        label.set_markup('<b>Fig</b>')
+        self.headerbar.set_title_widget(label)
         main_box.append(self.headerbar)
-
+        
         self.content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         main_box.append(self.content_box)
 
