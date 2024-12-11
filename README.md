@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">
-  <img alt="Fig" src="assets/io.github.Q1CHENL.fig.svg" width="128" height="128"/>
+  <img alt="Fig" src="assets/icons/io.github.Q1CHENL.fig.svg" width="128" height="128"/>
   <br>
   Fig
 </h1>
@@ -11,11 +11,12 @@
   </a>
 </p>
 
-![UI](screenshots/screenshot-home-split.png)
-![UI](screenshots/screenshot-editor-split.png)
+![UI](assets/screenshots/screenshot-home-split.png)
+![UI](assets/screenshots/screenshot-editor-split.png)
 
 ## Features
 
+- Crop GIF
 - Trim GIF to any frame range
 - Reverse GIF
 - Remove specific frames
@@ -23,13 +24,19 @@
 - Change playback speed for specific frames
 - Play GIF at the original speed
 
-> **Tip: right click on the handles to discover more**
+> **Tip: right click on the handles/image to discover more**
 
 ## Build and Run
 
 - Run as python module:
 
+  `pip install -r requirements.txt` (Install dependencies)
+
   `python -m fig.main`
+
+  - Install stubs for better code completion (optional)
+
+    `pip install pygobject-stubs`
 
 - Flatpak:
 
@@ -71,13 +78,15 @@
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
 - ~~Light mode~~
 - Undo last action
-- Proper default name for edited GIF when saving
-- Menu in headerbar: ~~new window~~, open, ~~help~~ etc.
+- ~~Proper default name for edited GIF when saving~~
+- Menu in headerbar: ~~new window~~, ~~about~~, open, ~~help~~ etc.
 - ~~New About page~~
-- Better info label UI
+- ~~Better info label UI~~
 - Loop playback option
 - ~~Light/Dark mode screenshots~~
 - Preferences: fixed color mode, default save folder etc.
+- ~~Info label changes along with frameline changes~~
+- ~~Better controls UI~~
 
 ## Credits
 

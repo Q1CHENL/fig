@@ -33,7 +33,27 @@ class CropOverlay(Gtk.Overlay):
         self.start_crop_rect = None
         self.dragging_region = False
         self.show_grid_lines = False
-        
+        self.handles_visible = False
+
+        # Connect to the realize signal
+        self.connect('realize', self.on_realize)
+
+    def on_realize(self, widget):
+        # Add the click controller to the root window after widget is realized
+        root = self.get_root()
+        if root:
+            # Create a controller for both left and right clicks on root
+            root_click_controller = Gtk.GestureClick.new()
+            root_click_controller.set_button(0)  # 0 means listen to any mouse button
+            root_click_controller.connect('pressed', self.on_click_outside)
+            root.add_controller(root_click_controller)
+            
+            # Add another controller to the drawing area itself
+            drawing_click_controller = Gtk.GestureClick.new()
+            drawing_click_controller.set_button(0)
+            drawing_click_controller.connect('pressed', self.on_click_outside)
+            self.drawing_area.add_controller(drawing_click_controller)
+
     def get_handle_at_position(self, x, y, display_width, display_height, x_offset, y_offset):
         # Convert crop rect to pixel coordinates
         px = x_offset + self.crop_rect[0] * display_width
@@ -92,10 +112,14 @@ class CropOverlay(Gtk.Overlay):
         # Get image dimensions and scaling
         child = self.get_child()
         if not child or not isinstance(child, Gtk.Picture):
+            self.handles_visible = False
+            self.drawing_area.queue_draw()
             return
             
         paintable = child.get_paintable()
         if not paintable:
+            self.handles_visible = False
+            self.drawing_area.queue_draw()
             return
             
         width = self.drawing_area.get_width()
@@ -112,13 +136,25 @@ class CropOverlay(Gtk.Overlay):
         x_offset = (width - display_width) // 2
         y_offset = (height - display_height) // 2
         
-        # Check if we clicked on a handle or within the region
-        self.active_handle = self.get_handle_at_position(x, y, display_width, display_height, x_offset, y_offset)
-        if self.active_handle:
-            self.start_crop_rect = self.crop_rect.copy()
-            self.dragging_region = (self.active_handle == 'region')
-            self.show_grid_lines = True
-            self.drawing_area.queue_draw()
+        # Check if click is within image bounds
+        if (x_offset <= x <= x_offset + display_width and 
+            y_offset <= y <= y_offset + display_height):
+            self.handles_visible = True
+            # Check if we clicked on a handle or within the region
+            self.active_handle = self.get_handle_at_position(x, y, display_width, display_height, x_offset, y_offset)
+            if self.active_handle:
+                self.start_crop_rect = self.crop_rect.copy()
+                self.dragging_region = (self.active_handle == 'region')
+                self.show_grid_lines = True
+        else:
+            # Hide handles when clicking outside the image
+            self.handles_visible = False
+            self.active_handle = None
+            self.start_crop_rect = None
+            self.dragging_region = False
+            self.show_grid_lines = False
+        
+        self.drawing_area.queue_draw()
 
     def on_release(self, gesture, n_press, x, y):
         self.active_handle = None
@@ -246,65 +282,90 @@ class CropOverlay(Gtk.Overlay):
         cr.rectangle(x, y, w, h)
         cr.fill()
         
-        # Draw crop rectangle border
-        cr.set_operator(cairo.OPERATOR_OVER)
-        cr.set_source_rgb(1, 1, 1)
-        cr.set_line_width(1)
-        cr.rectangle(x, y, w, h)
-        cr.stroke()
-        
-        if self.show_grid_lines:
+        if self.handles_visible:
+            cr.set_operator(cairo.OPERATOR_OVER)
+            # Draw crop rectangle border
+            cr.set_source_rgb(1, 1, 1)
             cr.set_line_width(1)
-            cr.set_source_rgba(1, 1, 1, 0.8)
-            
-            for i in range(1, 3):
-                line_x = x + (w * i / 3)
-                cr.move_to(line_x, y)
-                cr.line_to(line_x, y + h)
-                cr.stroke()
-            
-            for i in range(1, 3):
-                line_y = y + (h * i / 3)
-                cr.move_to(x, line_y)
-                cr.line_to(x + w, line_y)
-                cr.stroke()
-        
-        # Draw dragging handles
-        cr.set_line_width(self.rect_handle_width)
-        corners = [
-            ('top_left', x, y, 1, 1),          
-            ('top_right', x + w, y, -1, 1),    
-            ('bottom_left', x, y + h, 1, -1),  
-            ('bottom_right', x + w, y + h, -1, -1)
-        ]
-
-        for pos, corner_x, corner_y, dx, dy in corners:
-            # Draw horizontal handles
-            cr.move_to(corner_x, corner_y + self.rect_handle_width/2 * dy)
-            cr.line_to(corner_x + self.rect_handle_height * dx, corner_y + self.rect_handle_width/2 * dy)
-
-            # Draw vertical handles
-            cr.move_to(corner_x + self.rect_handle_width/2 * dx, corner_y)
-            cr.line_to(corner_x + self.rect_handle_width/2 * dx, corner_y + self.rect_handle_height * dy)
-
+            cr.rectangle(x, y, w, h)
             cr.stroke()
-        
-        middle_handles = [
-            ('top', x + w/2 - self.rect_handle_height/2, y),
-            ('right', x + w - self.rect_handle_width, y + h/2 - self.rect_handle_height/2),
-            ('bottom', x + w/2 - self.rect_handle_height/2, y + h - self.rect_handle_width),
-            ('left', x, y + h/2 - self.rect_handle_height/2)
-        ]
+            
+            if self.show_grid_lines:
+                cr.set_line_width(1)
+                cr.set_source_rgba(1, 1, 1, 0.8)
+                
+                for i in range(1, 3):
+                    line_x = x + (w * i / 3)
+                    cr.move_to(line_x, y)
+                    cr.line_to(line_x, y + h)
+                    cr.stroke()
+                
+                for i in range(1, 3):
+                    line_y = y + (h * i / 3)
+                    cr.move_to(x, line_y)
+                    cr.line_to(x + w, line_y)
+                    cr.stroke()
+            
+            # Draw dragging handles
+            cr.set_line_width(self.rect_handle_width)
+            corners = [
+                ('top_left', x, y, 1, 1),          
+                ('top_right', x + w, y, -1, 1),    
+                ('bottom_left', x, y + h, 1, -1),  
+                ('bottom_right', x + w, y + h, -1, -1)
+            ]
 
-        cr.set_line_width(1)
-        for pos, mx, my in middle_handles:
-            w_rect = self.rect_handle_height if pos == 'top' or pos == 'bottom' else self.rect_handle_width
-            h_rect = self.rect_handle_width if pos == 'top' or pos == 'bottom' else self.rect_handle_height
-            cr.rectangle(mx, my, w_rect, h_rect)
-            cr.fill()
+            for pos, corner_x, corner_y, dx, dy in corners:
+                # Draw horizontal handles
+                cr.move_to(corner_x, corner_y + self.rect_handle_width/2 * dy)
+                cr.line_to(corner_x + self.rect_handle_height * dx, corner_y + self.rect_handle_width/2 * dy)
+
+                # Draw vertical handles
+                cr.move_to(corner_x + self.rect_handle_width/2 * dx, corner_y)
+                cr.line_to(corner_x + self.rect_handle_width/2 * dx, corner_y + self.rect_handle_height * dy)
+
+                cr.stroke()
+            
+            middle_handles = [
+                ('top', x + w/2 - self.rect_handle_height/2, y),
+                ('right', x + w - self.rect_handle_width, y + h/2 - self.rect_handle_height/2),
+                ('bottom', x + w/2 - self.rect_handle_height/2, y + h - self.rect_handle_width),
+                ('left', x, y + h/2 - self.rect_handle_height/2)
+            ]
+
+            cr.set_line_width(1)
+            for pos, mx, my in middle_handles:
+                w_rect = self.rect_handle_height if pos == 'top' or pos == 'bottom' else self.rect_handle_width
+                h_rect = self.rect_handle_width if pos == 'top' or pos == 'bottom' else self.rect_handle_height
+                cr.rectangle(mx, my, w_rect, h_rect)
+                cr.fill()
 
     def update_theme(self, is_dark):
         if is_dark:
             self.overlay_bkg = (36/255, 36/255, 36/255, 0.85)
         else:
             self.overlay_bkg = (250/255, 250/255, 250/255, 0.85)
+
+    def reset_crop_rect(self):
+        self.crop_rect = [0, 0, 1, 1]
+        self.active_handle = None
+        self.start_crop_rect = None
+        self.dragging_region = False
+        self.show_grid_lines = False
+        self.handles_visible = False
+        self.drawing_area.queue_draw()
+
+    def on_click_outside(self, gesture, n_press, x, y):
+        # Check if click is within our widget bounds
+        native = gesture.get_widget().get_native()
+        if native:
+            # Get the bounds of our widget relative to the native window
+            bounds = self.compute_bounds(native)[1]
+            if not (bounds.get_x() <= x <= bounds.get_x() + bounds.get_width() and
+                    bounds.get_y() <= y <= bounds.get_y() + bounds.get_height()):
+                self.handles_visible = False
+                self.active_handle = None
+                self.start_crop_rect = None
+                self.dragging_region = False
+                self.show_grid_lines = False
+                self.drawing_area.queue_draw()

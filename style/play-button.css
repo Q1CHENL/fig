@@ -1,0 +1,27 @@
+.play-button-light:hover {
+    background-color: #241f31;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.play-button-light {
+    border-radius: 20px;
+    color: white;
+    background-color: #242424;
+    border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.play-button-dark {
+    border-radius: 20px;
+    color: white;
+    background-color: #383838;
+    border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.play-button-dark:hover {
+    background-color: #454545;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}

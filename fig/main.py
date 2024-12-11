@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
-import os, sys
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, Gio
 import fig.home, fig.editor
-from fig.utils import load_css, clear_css
+from fig.utils import clear_css
 
 class Fig(Adw.ApplicationWindow):
     def __init__(self, app):
@@ -36,9 +35,11 @@ class Fig(Adw.ApplicationWindow):
 
         self.headerbar.pack_end(self.menu_button)
         
-        self.headerbar.set_title_widget(Gtk.Label(label="Fig"))
+        label = Gtk.Label()
+        label.set_markup('<b>Fig</b>')
+        self.headerbar.set_title_widget(label)
         main_box.append(self.headerbar)
-
+        
         self.content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         main_box.append(self.content_box)
 
@@ -117,12 +118,11 @@ class FigApplication(Adw.Application):
         )
         
         label = Gtk.Label(
-            label="Right-click on the timeline handles\n" +
-            "to discover more features!\n\n" +
-            "Available actions:\n" +
-            "• Remove frames or frame ranges\n" +
-            "• Insert frames at any position\n" +
-            "• Change playback speed for \n  selected frames"
+            label=
+            "• Left-click on the image to activate crop.\n\n" +
+            "• Right-click on the timeline handles to\n"
+            "  discovery more advanced actions.\n"
+            
         )
         label.set_halign(Gtk.Align.END)
         label.set_justify(Gtk.Justification.LEFT)
