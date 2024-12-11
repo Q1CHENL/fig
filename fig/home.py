@@ -119,6 +119,8 @@ def show_about_dialog(window):
     <ul>
         <li>Crop GIF</li>
         <li>Improve editor UI</li>
+        <li>Simpler About page</li>
+        <li>Bug fixes and improvements</li>
     </ul>
     """)
     
