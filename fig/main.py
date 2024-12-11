@@ -116,12 +116,11 @@ class FigApplication(Adw.Application):
         )
         
         label = Gtk.Label(
-            label="Right-click on the timeline handles\n" +
-            "to discover more features!\n\n" +
-            "Available actions:\n" +
-            "• Remove frames or frame ranges\n" +
-            "• Insert frames at any position\n" +
-            "• Change playback speed for \n  selected frames"
+            label=
+            "• Left-click on the image to activate crop.\n\n" +
+            "• Right-click on the timeline handles to\n"
+            "  discovery more advanced actions.\n"
+            
         )
         label.set_halign(Gtk.Align.END)
         label.set_justify(Gtk.Justification.LEFT)
