@@ -98,11 +98,9 @@ class HomeBox(Gtk.Box):
         """Update theme for all buttons"""
         from fig.utils import clear_css
         
-        # Update Select GIF button
         clear_css(self.select_btn)
         self.select_btn.add_css_class("select-gif-button-dark" if is_dark else "select-gif-button-light")
         
-        # Update About Fig button
         clear_css(self.about_btn)
         self.about_btn.add_css_class("about-fig-button-dark" if is_dark else "about-fig-button-light")
 

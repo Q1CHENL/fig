@@ -160,15 +160,9 @@ class EditorBox(Gtk.Box):
                 pixbuf = frame
                 
             if pixbuf:
-                width = pixbuf.get_width()
-                height = pixbuf.get_height()
-                pixels = pixbuf.get_pixels()
-                frame_hash = hash(pixels)
-                
                 scaled_pixbuf = self.scale_pixbuf_to_fit(pixbuf, self.image_display_width, self.image_display_height)
                 if scaled_pixbuf:
                     self.image_display.set_pixbuf(scaled_pixbuf)
-                    # Force display update
                     self.image_display.queue_draw()
 
         except Exception as e:
@@ -211,7 +205,6 @@ class EditorBox(Gtk.Box):
             # Get current frame range
             start = int(round(self.frameline.left_value)) - 1
             end = int(round(self.frameline.right_value)) - 1
-            is_reversed = start > end
 
             # Always start from the left handle when starting new playback
             if not self.frameline.playhead_visible or self.playback_finished:
@@ -277,7 +270,7 @@ class EditorBox(Gtk.Box):
         if 0 <= start_idx < len(self.frames) and 0 <= end_idx < len(self.frames):
             dialog = Gtk.FileDialog()
             dialog.set_title("Save GIF as...")
-            # Add file filter for .gif files
+         
             filter_gif = Gtk.FileFilter()
             filter_gif.set_name("GIF files")
             filter_gif.add_mime_type("image/gif")
@@ -286,9 +279,8 @@ class EditorBox(Gtk.Box):
             dialog.set_filters(filters)
             dialog.set_default_filter(filter_gif)
 
-            # Store the original file name
             original_file_name = self.original_file_name if hasattr(self, 'original_file_name') else "untitled"  # Remove .fig
-            dialog.set_initial_name(f"{original_file_name}-edited.gif")  # Update initial name
+            dialog.set_initial_name(f"{original_file_name}-edited.gif")
 
             def save_callback(dialog, result):
                 try:
@@ -542,10 +534,8 @@ class EditorBox(Gtk.Box):
                         # Keep the part after insertion (shifted by the number of new frames)
                         updated_speed_ranges.append((insert_idx + num_new_frames, end + num_new_frames, speed))
                 
-                # Update speed ranges with adjusted positions
                 self.frameline.speed_ranges = updated_speed_ranges
                 
-                # Insert new frames and durations
                 self.frames[insert_idx:insert_idx] = new_frames
                 self.frame_durations[insert_idx:insert_idx] = new_durations
                 
@@ -557,7 +547,6 @@ class EditorBox(Gtk.Box):
                     new_right = self.frameline.right_value + len(new_frames)
                     self.frameline.right_value = min(new_right, new_max)
                 
-                # Add to inserted ranges
                 self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
                 
                 for i, r in enumerate(self.frameline.removed_ranges):
@@ -704,8 +693,9 @@ class EditorBox(Gtk.Box):
             right_value = int(round(self.frameline.right_value)) - 1
             
             # Count frames excluding removed ones
-            valid_frame_count = sum(1 for i in range(left_value, right_value + 1) 
-                                  if not self.frameline.is_frame_removed(i))
+            valid_frame_count = sum(
+                not self.frameline.is_frame_removed(i) for i in range(left_value, right_value + 1)
+            )
             
             # Calculate total duration from current frame durations
             total_duration = sum(
