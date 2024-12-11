@@ -111,25 +111,17 @@ def show_about_dialog(window):
     about.set_website("https://github.com/fig")
     about.set_issue_url("https://github.com/fig/issues")
 
-    about.set_comments("Sleek GIF editor.")
     about.set_release_notes("""
     <ul>
-        <li>Remove certain frames</li>
-        <li>Insert frame(s) at any position</li>
-        <li>Speed up/slow down certain frames</li>
-        <li>Light/Dark mode switch</li>
-        <li>New About page</li>
-        <li>New window option</li>
-        <li>Help page</li>
-        <li>Return to home from editor</li>
-        <li>Bug fixes and improvements</li>
+        <li>Crop GIF</li>
+        <li>Improve editor UI</li>
     </ul>
     """)
     
     developers = [
         "Qichen Liu https://github.com/Q1CHENL",
     ]
-    designers = ["Qichen Liu"]
+    designers = ["Qichen Liu", "Homepage UI is inspired by sly"]
     artists = ["Qichen Liu"]
     
     about.set_developers(developers)
@@ -139,7 +131,4 @@ def show_about_dialog(window):
     about.set_copyright("© 2024 Qichen Liu")
     about.set_license_type(Gtk.License.MIT_X11)
     
-    about.set_debug_info("Version: 1.0.1\nPlatform: Linux\nGTK: 4.0")
-    about.set_debug_info_filename("debug-info.txt")
-
     about.present(window)
