@@ -277,8 +277,6 @@ class EditorBox(Gtk.Box):
         if 0 <= start_idx < len(self.frames) and 0 <= end_idx < len(self.frames):
             dialog = Gtk.FileDialog()
             dialog.set_title("Save GIF as...")
-            dialog.set_initial_name("untitled.gif")
-
             # Add file filter for .gif files
             filter_gif = Gtk.FileFilter()
             filter_gif.set_name("GIF files")
@@ -287,6 +285,10 @@ class EditorBox(Gtk.Box):
             filters.append(filter_gif)
             dialog.set_filters(filters)
             dialog.set_default_filter(filter_gif)
+
+            # Store the original file name
+            original_file_name = self.original_file_name if hasattr(self, 'original_file_name') else "untitled"  # Remove .fig
+            dialog.set_initial_name(f"{original_file_name}-edited.gif")  # Update initial name
 
             def save_callback(dialog, result):
                 try:

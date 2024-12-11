@@ -82,6 +82,12 @@ class HomeBox(Gtk.Box):
                 window.load_editor_ui()
                 window.editor_box.crop_overlay.reset_crop_rect()
                 window.editor_box.load_gif(file_path)
+                original_file_name = os.path.basename(file_path)
+                if original_file_name.endswith('.gif'):
+                    window.editor_box.original_file_name = original_file_name[:-4]
+                else:
+                    window.editor_box.original_file_name = original_file_name
+                
         except GLib.Error as e:
             print(f"Error selecting file: {e.message}")
 

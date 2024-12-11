@@ -71,7 +71,7 @@
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
 - ~~Light mode~~
 - Undo last action
-- Proper default name for edited GIF when saving
+- ~~Proper default name for edited GIF when saving~~
 - Menu in headerbar: ~~new window~~, ~~about~~, open, ~~help~~ etc.
 - ~~New About page~~
 - ~~Better info label UI~~
