@@ -99,43 +99,54 @@ class EditorBox(Gtk.Box):
             self.playhead_frame_index = 0
             self.crop_overlay.reset_crop_rect()
             
+            # Pre-load frame count and create progress tracking
             with Image.open(file_path) as gif:
                 frame_count = gif.n_frames
-                total_duration = 0
-                self.frames = []
-                self.frame_durations = []
-                self.original_frame_durations = []
                 
-                context = GLib.MainContext.default()
-                for frame in range(frame_count):
-                    self.info_label.set_text(f"Loading frames {frame + 1}/{frame_count}")
-                    # Process pending events
-                    while context.pending():
-                        context.iteration(False)
-                    
-                    gif.seek(frame)
-                    duration = gif.info.get('duration', 100) / 1000.0
-                    total_duration += duration
-                    pixbuf = self._pil_to_pixbuf(gif.convert('RGBA'))
-                    self.frames.append(pixbuf)
-                    # Store duration in milliseconds
-                    self.frame_durations.append(duration * 1000)
-                    self.original_frame_durations.append(duration * 1000)  # Keep original
-                # Update frameline with 1-based frame range
-                self.frameline.min_value = 1
-                self.frameline.max_value = frame_count
-                self.frameline.left_value = 1
-                self.frameline.right_value = frame_count
-                self.frameline.queue_draw()
+            # Create a thread for loading frames
+            def load_frames_thread():
+                frames = []
+                durations = []
+                total_duration = 0
+                update_batch = []
+                
+                with Image.open(file_path) as gif:
+                    for frame in range(frame_count):
+                        gif.seek(frame)
+                        duration = gif.info.get('duration', 100) / 1000.0
+                        total_duration += duration
+                        
+                        # Convert to RGBA only if needed
+                        if gif.mode != 'RGBA':
+                            frame_image = gif.convert('RGBA')
+                        else:
+                            frame_image = gif
+                        
+                        pixbuf = self._pil_to_pixbuf(frame_image)
+                        frames.append(pixbuf)
+                        durations.append(duration * 1000)
+                        
+                        # Batch updates (update every 10 frames or on last frame)
+                        if len(update_batch) < 10 and frame < frame_count - 1:
+                            update_batch.append(frame)
+                        else:
+                            GLib.idle_add(
+                                self.update_loading_progress,
+                                frame + 1,
+                                frame_count,
+                                frames[:],
+                                durations[:],
+                                total_duration if frame == frame_count - 1 else None
+                            )
+                            update_batch = []
 
-                self.info_label.set_text(
-                    f"{frame_count} Frames • {total_duration:.2f} Seconds"
-                )
-
-                if self.frames:
-                    self.display_frame(0)
-                    self.crop_overlay.drawing_area.queue_resize()
-                    self.crop_overlay.drawing_area.queue_draw()
+            # Start loading thread
+            self.info_label.set_text(f"Loading frames 0/{frame_count}")
+            import threading
+            thread = threading.Thread(target=load_frames_thread)
+            thread.daemon = True
+            thread.start()
+            
         except Exception as e:
             print(f"Error loading GIF: {e}")
             self.frames = []
@@ -143,6 +154,34 @@ class EditorBox(Gtk.Box):
             self.original_frame_durations = []
             self.current_frame_index = 0
             self.playhead_frame_index = 0
+
+    def update_loading_progress(self, current_frame, total_frames, frames, durations, total_duration=None):
+        """Update loading progress from background thread"""
+        self.frames = frames
+        self.frame_durations = durations
+        self.original_frame_durations = durations.copy()
+        
+        self.info_label.set_text(f"Loading frames {current_frame}/{total_frames}")
+        
+        # If this is the final update
+        if total_duration is not None:
+            # Update frameline with 1-based frame range
+            self.frameline.min_value = 1
+            self.frameline.max_value = total_frames
+            self.frameline.left_value = 1
+            self.frameline.right_value = total_frames
+            self.frameline.queue_draw()
+
+            self.info_label.set_text(
+                f"{total_frames} Frames • {total_duration:.2f} Seconds"
+            )
+
+            if self.frames:
+                self.display_frame(0)
+                self.crop_overlay.drawing_area.queue_resize()
+                self.crop_overlay.drawing_area.queue_draw()
+            
+        return False  # Required for GLib.idle_add
 
     def display_frame(self, frame_index):
         """Display a specific frame in the image display"""
@@ -656,18 +695,26 @@ class EditorBox(Gtk.Box):
         self.queue_draw()
     
     def _pil_to_pixbuf(self, pil_image):
-        """Convert PIL image to GdkPixbuf"""
-        # Save PIL image to buffer
-        buf = io.BytesIO()
-        pil_image.save(buf, 'png')
-        buf.seek(0)
-
-        # Load from buffer into GdkPixbuf
-        loader = GdkPixbuf.PixbufLoader.new_with_type('png')
-        loader.write(buf.read())
-        loader.close()
-
-        return loader.get_pixbuf()
+        """Convert PIL image to GdkPixbuf more efficiently"""
+        # Get image data
+        width, height = pil_image.size
+        data = pil_image.tobytes()
+        
+        # Create pixbuf directly from data
+        has_alpha = pil_image.mode == 'RGBA'
+        colorspace = GdkPixbuf.Colorspace.RGB
+        bps = 8
+        rowstride = width * (4 if has_alpha else 3)
+        
+        return GdkPixbuf.Pixbuf.new_from_data(
+            data,
+            colorspace,
+            has_alpha,
+            bps,
+            width,
+            height,
+            rowstride
+        )
 
     def _pixbuf_to_pil(self, pixbuf):
         """Convert GdkPixbuf to PIL Image"""
