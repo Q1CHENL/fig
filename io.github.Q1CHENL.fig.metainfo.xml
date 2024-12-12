@@ -8,6 +8,7 @@
       Fig is a simple and intuitive GIF editor that lets you edit GIFs with ease.
     </p>
     <ul>
+      <li>Crop GIF</li>
       <li>Trim GIF to any frame range</li>
       <li>Reverse GIF</li>
       <li>Remove specific frames</li>
