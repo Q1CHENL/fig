@@ -44,12 +44,22 @@ class TestGifEditor(unittest.TestCase):
                           append_images=frames[1:],
                           duration=100,
                           loop=0)
+            print("Created test GIF!")
         except Exception as e:
             self.fail(f"Failed to create test GIF: {e}")
+
 
     def test_gif_loading(self):
         """Test basic GIF loading functionality"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         self.assertEqual(len(self.editor.frames), 5)
         self.assertEqual(len(self.editor.frame_durations), 5)
@@ -59,6 +69,10 @@ class TestGifEditor(unittest.TestCase):
     def test_frame_selection(self):
         """Test frame selection with frameline handles"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # Test setting frame range
         self.editor.frameline.set_left_value(2)
@@ -70,6 +84,10 @@ class TestGifEditor(unittest.TestCase):
     def test_playback(self):
         """Test normal playback functionality"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # Start playback
         self.editor.play_edited_frames(None)
@@ -88,6 +106,10 @@ class TestGifEditor(unittest.TestCase):
     def test_reverse_playback(self):
         """Test reverse playback functionality"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # Set reverse frame range
         self.editor.frameline.set_left_value(5)
@@ -117,6 +139,14 @@ class TestGifEditor(unittest.TestCase):
         """Test saving trimmed GIF"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:  # Wait until all frames are loaded
+            context.iteration(True)  # True means may block
+        
         # Set frame range
         self.editor.frameline.set_left_value(2)
         self.editor.frameline.set_right_value(4)
@@ -131,6 +161,10 @@ class TestGifEditor(unittest.TestCase):
     def test_save_reversed_gif(self):
         """Test saving reversed GIF"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # Set reverse frame range
         self.editor.frameline.set_left_value(5)
@@ -147,6 +181,10 @@ class TestGifEditor(unittest.TestCase):
         """Test playhead visibility and position"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         # Initially playhead should be hidden
         self.assertFalse(self.editor.frameline.playhead_visible)
         
@@ -160,9 +198,19 @@ class TestGifEditor(unittest.TestCase):
 
     def test_frame_duration(self):
         """Test frame duration handling"""
+        # Load the GIF
         self.editor.load_gif('test.gif')
         
-        # Verify all frames have correct duration
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
+        # Let the main loop run to process the background loading
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:  # Wait until all frames are loaded
+            context.iteration(True)  # True means may block
+        
+        # Now verify all frames have correct duration
         expected_duration = 100  # milliseconds
         self.assertEqual(len(self.editor.frame_durations), 5)
         for duration in self.editor.frame_durations:
@@ -171,6 +219,10 @@ class TestGifEditor(unittest.TestCase):
     def test_invalid_frame_range(self):
         """Test handling of invalid frame ranges"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # Test setting invalid ranges
         self.editor.frameline.set_left_value(0)  # Below minimum
@@ -196,6 +248,10 @@ class TestGifEditor(unittest.TestCase):
         """Test frame scaling functionality"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         # Test scaling with different display sizes
         test_sizes = [(200, 200), (50, 50), (100, 200), (200, 100)]
         
@@ -216,6 +272,10 @@ class TestGifEditor(unittest.TestCase):
     def test_playback_bounds(self):
         """Test playback stays within selected bounds"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # Set a specific range
         self.editor.frameline.set_left_value(2)
@@ -244,6 +304,10 @@ class TestGifEditor(unittest.TestCase):
         """Test frame display functionality"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         # Test displaying each frame
         for i in range(5):
             self.editor.display_frame(i)
@@ -263,6 +327,10 @@ class TestGifEditor(unittest.TestCase):
         # Load and unload multiple GIFs
         for _ in range(3):
             self.editor.load_gif('test.gif')
+        
+            context = GLib.MainContext.default()
+            while len(self.editor.frames) < 5:
+                context.iteration(True)
             self.editor.frames.clear()
             self.editor.frame_durations.clear()
         
@@ -273,6 +341,10 @@ class TestGifEditor(unittest.TestCase):
     def test_frame_range_validation(self):
         """Test frame range validation"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # Test various invalid ranges
         test_cases = [
@@ -392,6 +464,10 @@ class TestGifEditor(unittest.TestCase):
     def test_remove_single_frame(self):
         """Test removing a single frame"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_frame_count = len(self.editor.frames)
         
         # Remove frame 3 (1-based index)
@@ -412,6 +488,10 @@ class TestGifEditor(unittest.TestCase):
     def test_remove_frame_range(self):
         """Test removing a range of frames"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_frame_count = len(self.editor.frames)
         
         # Remove frames 2-4 (1-based indices)
@@ -434,6 +514,10 @@ class TestGifEditor(unittest.TestCase):
         """Test removing overlapping ranges"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         # Add overlapping ranges
         self.editor.frameline.add_removed_range(1, 3)
         self.editor.frameline.add_removed_range(2, 4)
@@ -450,6 +534,10 @@ class TestGifEditor(unittest.TestCase):
         """Test removing adjacent ranges"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         # Add adjacent ranges
         self.editor.frameline.add_removed_range(1, 2)
         self.editor.frameline.add_removed_range(3, 4)
@@ -465,6 +553,10 @@ class TestGifEditor(unittest.TestCase):
     def test_remove_edge_frames(self):
         """Test removing frames at the edges"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_frame_count = len(self.editor.frames)
         
         # Remove first and last frames
@@ -488,6 +580,10 @@ class TestGifEditor(unittest.TestCase):
         """Test clearing removed ranges"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         # Add some ranges
         self.editor.frameline.add_removed_range(1, 2)
         self.editor.frameline.add_removed_range(4, 5)
@@ -505,6 +601,10 @@ class TestGifEditor(unittest.TestCase):
     def test_insert_frames(self):
         """Test basic frame insertion functionality"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_frame_count = len(self.editor.frames)
         
         # Create a test image for insertion
@@ -546,6 +646,10 @@ class TestGifEditor(unittest.TestCase):
     def test_insert_multiple_frames(self):
         """Test inserting multiple frames at once"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_frame_count = len(self.editor.frames)
         
         # Create test images
@@ -577,6 +681,10 @@ class TestGifEditor(unittest.TestCase):
     def test_insert_animated_gif(self):
         """Test inserting an animated GIF"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_frame_count = len(self.editor.frames)
         
         # Create a simple animated GIF
@@ -615,6 +723,10 @@ class TestGifEditor(unittest.TestCase):
     def test_insert_edge_cases(self):
         """Test insertion edge cases"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_frame_count = len(self.editor.frames)
         
         test_image = Image.new('RGB', (100, 100), color='red')
@@ -650,6 +762,10 @@ class TestGifEditor(unittest.TestCase):
         """Test interaction between insert and remove operations"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         test_image = Image.new('RGB', (100, 100), color='red')
         test_image.save('test_insert.png')
         
@@ -674,6 +790,10 @@ class TestGifEditor(unittest.TestCase):
     def test_insert_then_remove(self):
         """Test removing frames after insertion"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_frame_count = len(self.editor.frames)
         
         test_image = Image.new('RGB', (100, 100), color='red')
@@ -714,6 +834,10 @@ class TestGifEditor(unittest.TestCase):
     def test_basic_speed_change(self):
         """Test basic speed change functionality"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         initial_duration = sum(self.editor.frame_durations)
         
         # Change speed of frames 2-3 to 2x
@@ -735,6 +859,10 @@ class TestGifEditor(unittest.TestCase):
     def test_overlapping_speed_changes(self):
         """Test applying multiple speed changes to overlapping ranges"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # First change: frames 2-3 to 2x
         self.editor.frameline.left_value = 2
@@ -759,6 +887,10 @@ class TestGifEditor(unittest.TestCase):
         """Test interaction between speed changes and frame removal"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         # First change speed
         self.editor.frameline.left_value = 2
         self.editor.frameline.right_value = 4
@@ -776,6 +908,10 @@ class TestGifEditor(unittest.TestCase):
     def test_speed_change_with_inserted_frames(self):
         """Test interaction between speed changes and frame insertion"""
         self.editor.load_gif('test.gif')
+        
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         
         # Create test image
         test_image = Image.new('RGB', (100, 100), color='red')
@@ -804,6 +940,10 @@ class TestGifEditor(unittest.TestCase):
         """Test applying multiple speed changes to the same range"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
+        
         # Change speed to 2x
         self.editor.frameline.left_value = 2
         self.editor.frameline.right_value = 3
@@ -820,6 +960,9 @@ class TestGifEditor(unittest.TestCase):
         """Test speed changes at edges and with invalid inputs"""
         self.editor.load_gif('test.gif')
         
+        context = GLib.MainContext.default()
+        while len(self.editor.frames) < 5:
+            context.iteration(True)
         # Test first frame
         self.editor.on_speed_changed(self.editor.frameline, 1, 1, 2.0)
         self.assertEqual(self.editor.frame_durations[0], self.editor.original_frame_durations[0] / 2.0)
