@@ -152,25 +152,38 @@ class FigApplication(Adw.Application):
     def on_extract_frames(self, action, parameter):
         """Extract frames from the currently loaded GIF"""
         window = self.get_active_window()
-        if window and hasattr(window.editor_box, 'original_file_name'):
+        if window and hasattr(window.editor_box, 'original_file_path'):
             try:
                 output_dir = window.editor_box.original_file_path[:-4]
                 if not os.path.exists(output_dir):
                     os.makedirs(output_dir)
-                for i, frame in enumerate(window.editor_box.frames):
-                    if isinstance(frame, GdkPixbuf.Pixbuf):
-                        pil_image = window.editor_box._pixbuf_to_pil(frame)
-                        frame_name = f"{window.editor_box.original_file_name}-{str(i+1).zfill(3)}.png"
-                        frame_path = os.path.join(output_dir, frame_name)
-                        pil_image.save(frame_path, 'PNG')
-                
-                dialog = Adw.AlertDialog.new(
-                    "Frames Extracted",
-                    f"{output_dir}"
-                )
-                dialog.add_response("ok", "OK")
-                dialog.present(window)
-                
+
+                frames = window.editor_box.frames
+                total_frames = len(frames)
+                BATCH_SIZE = self.compute_batch_size(total_frames)
+
+                def process_batch(batch_info):
+                    start_idx, end_idx = batch_info
+                    for i in range(start_idx, end_idx):
+                        if isinstance(frames[i], GdkPixbuf.Pixbuf):
+                            pil_image = window.editor_box._pixbuf_to_pil(frames[i])
+                            frame_name = f"{window.editor_box.original_file_name}-{str(i+1).zfill(3)}.png"
+                            frame_path = os.path.join(output_dir, frame_name)
+                            pil_image.save(frame_path, 'PNG')
+                    return end_idx
+
+                batches = [
+                    (i, min(i + BATCH_SIZE, total_frames))
+                    for i in range(0, total_frames, BATCH_SIZE)
+                ]
+
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                    for batch in batches:
+                        executor.submit(process_batch, batch) 
+                    executor.shutdown(wait=False)
+                self.show_extraction_complete_dialog(window, output_dir)
+
             except Exception as e:
                 dialog = Adw.AlertDialog.new(
                     "Error",
@@ -178,7 +191,19 @@ class FigApplication(Adw.Application):
                 )
                 dialog.add_response("ok", "OK")
                 dialog.present(window)
-            
+    
+    def compute_batch_size(self, total_frames):
+        if total_frames < 20:
+            return total_frames
+        return total_frames // 20
+    
+    def show_extraction_complete_dialog(self, window, output_dir):
+        dialog = Adw.AlertDialog.new(
+            "Frames Extracted",
+            f"{output_dir}"
+        )
+        dialog.add_response("ok", "OK")
+        dialog.present(window)
 
 def main():
     app = FigApplication()
