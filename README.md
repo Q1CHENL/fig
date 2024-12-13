@@ -73,7 +73,7 @@
 - ~~Append/Insert/Remove frames in frameline~~
 - ~~Design GTK-Style icon~~
 - ~~Button and handles hover effects~~
-- Load GIF faster
+- ~~Load GIF faster~~
 - ~~Improve tests and solve warnings~~
 - ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
 - ~~Light mode~~
