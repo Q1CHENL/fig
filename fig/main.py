@@ -172,7 +172,6 @@ class FigApplication(Adw.Application):
                 dialog.present(window)
                 
             except Exception as e:
-                # Show error dialog
                 dialog = Adw.AlertDialog.new(
                     "Error",
                     f"Failed to extract frames: {str(e)}"

@@ -16,7 +16,6 @@ class HomeBox(Gtk.Box):
         self.set_margin_start(20)
         self.set_margin_end(20)
         
-        # Create buttons
         self.select_btn = self.select_button()
         self.about_btn = self.about_button()
         
@@ -44,7 +43,6 @@ class HomeBox(Gtk.Box):
             dialog.set_title("Select a GIF")
             dialog.set_modal(True)
 
-            # Set up GIF file filter
             filter_gif = Gtk.FileFilter()
             filter_gif.set_name("GIF files")
             filter_gif.add_mime_type("image/gif")
@@ -59,7 +57,6 @@ class HomeBox(Gtk.Box):
             dialog.set_filters(filters)
             dialog.set_default_filter(filter_gif)
 
-            # Initialize with home directory
             home_dir = GLib.get_home_dir()
             if os.path.exists(home_dir):
                 dialog.set_initial_folder(Gio.File.new_for_path(home_dir))

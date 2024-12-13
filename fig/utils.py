@@ -72,13 +72,8 @@ def load_css(widget=None, css_classes=None):
 def clear_css(widget):
     """
     Remove all CSS classes from a widget
-    
-    Args:
-        widget: The widget to clear CSS classes from
     """
     if widget:
-        # Get all current CSS classes
         css_classes = widget.get_css_classes()
-        # Remove each class
         for css_class in css_classes:
             widget.remove_css_class(css_class)

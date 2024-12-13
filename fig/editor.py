@@ -90,7 +90,6 @@ class EditorBox(Gtk.Box):
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
         try:
-            # Reset state before attempting to load
             self.frames = []
             self.frame_durations = []
             self.original_frame_durations = []
@@ -98,11 +97,9 @@ class EditorBox(Gtk.Box):
             self.playhead_frame_index = 0
             self.crop_overlay.reset_crop_rect()
             
-            # Pre-load frame count and create progress tracking
             with Image.open(file_path) as gif:
                 frame_count = gif.n_frames
                 
-            # Create a thread for loading frames
             def load_frames_thread(batch_size=10):
                 frames = []
                 durations = []
@@ -126,7 +123,6 @@ class EditorBox(Gtk.Box):
                         frames.append(pixbuf)
                         durations.append(duration * 1000)
                         
-                        # Batch updates (update every 10 frames or on last frame)
                         if len(update_batch) < batch_size and frame < frame_count - 1:
                             update_batch.append(frame)
                         else:
@@ -140,7 +136,6 @@ class EditorBox(Gtk.Box):
                             )
                             update_batch = []
 
-            # Start loading thread
             self.info_label.set_text(f"Loading frames 0/{frame_count}")
             import threading
             thread = threading.Thread(target=load_frames_thread, args=(self.compute_batch_size(frame_count),))

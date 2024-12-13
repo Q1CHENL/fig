@@ -87,6 +87,7 @@
 - Preferences: fixed color mode, default save folder etc.
 - ~~Info label changes along with frameline changes~~
 - ~~Better controls UI~~
+- ~~Extract frames~~
 
 ## Credits
 

@@ -25,7 +25,6 @@ class CropOverlay(Gtk.Overlay):
         
         self.add_overlay(self.drawing_area)
         
-        # Initial crop region is full size
         self.crop_rect = [0, 0, 1, 1]  # normalized coordinates
         self.rect_handle_width = 5
         self.rect_handle_height = 20
@@ -35,7 +34,6 @@ class CropOverlay(Gtk.Overlay):
         self.show_grid_lines = False
         self.handles_visible = False
 
-        # Connect to the realize signal
         self.connect('realize', self.on_realize)
 
     def on_realize(self, widget):
@@ -69,12 +67,12 @@ class CropOverlay(Gtk.Overlay):
         ]
         
         for handle, corner_x, corner_y, dx, dy in corners:
-            # Check horizontal line of L
+            # Check horizontal line of L handle
             h_x1 = corner_x
             h_x2 = corner_x + self.rect_handle_height * dx
             h_y = corner_y + self.rect_handle_width/2 * dy
             
-            # Check vertical line of L
+            # Check vertical line of L handle
             v_x = corner_x + self.rect_handle_width/2 * dx
             v_y1 = corner_y
             v_y2 = corner_y + self.rect_handle_height * dy
