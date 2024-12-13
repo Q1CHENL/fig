@@ -23,15 +23,8 @@
   <developer_name>Qichen Liu</developer_name>
   <url type="homepage">https://github.com/Q1CHENL/fig</url>
   <releases>
-    <release version="1.0.2" date="2024-12-11">
-      <description>
-        <ul>
-          <li>Extract frames</li>
-          <li>Faster image loading</li>
-        </ul>
-      </description>
-    </release>
-  </releases>
+    <release version="1.0.3" date="2024-12-13"/>
+</releases>
   <content_rating type="oars-1.1"/>
   <launchable type="desktop-id">io.github.Q1CHENL.fig.desktop</launchable>
   <screenshots>
