@@ -22,6 +22,7 @@
 - Remove specific frames
 - Insert GIF/image(s) at any position
 - Change playback speed for specific frames
+- Extract frames
 - Play GIF at the original speed
 
 > **Tip: right click on the handles/image to discover more**

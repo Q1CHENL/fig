@@ -14,6 +14,7 @@
       <li>Remove specific frames</li>
       <li>Insert GIF/image(s) at any position</li>
       <li>Change playback speed for specific frames</li>
+      <li>Extract frames</li>
       <li>Play GIF at the original speed</li>
     </ul>
   </description>
@@ -25,10 +26,8 @@
     <release version="1.0.2" date="2024-12-11">
       <description>
         <ul>
-          <li>Crop GIF</li>
-          <li>Improve editor UI</li>
-          <li>Simpler About page</li>
-          <li>Bug fixes and improvements</li>
+          <li>Extract frames</li>
+          <li>Faster image loading</li>
         </ul>
       </description>
     </release>
