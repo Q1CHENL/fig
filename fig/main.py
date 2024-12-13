@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+import os
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, Gio
+from gi.repository import Gtk, Adw, Gio, GdkPixbuf
 import fig.home, fig.editor
 from fig.utils import clear_css
 
@@ -68,6 +69,9 @@ class Fig(Adw.ApplicationWindow):
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.editor_box)
         self.back_button.set_visible(True)
+        self.menu_model.remove(1)
+        self.menu_model.append("Extract Frames", "app.extract_frames")
+        self.menu_model.append("Help", "app.help")
         self.menu_model.append("About", "app.about")
 
     def load_home_ui(self):
@@ -98,6 +102,10 @@ class FigApplication(Adw.Application):
         about_action = Gio.SimpleAction.new("about", None)
         about_action.connect("activate", self.on_about)
         self.add_action(about_action)
+        
+        extract_frames_action = Gio.SimpleAction.new("extract_frames", None)
+        extract_frames_action.connect("activate", self.on_extract_frames)
+        self.add_action(extract_frames_action)
 
     def do_activate(self):
         win = Fig(self)
@@ -140,6 +148,38 @@ class FigApplication(Adw.Application):
         window = self.get_active_window()
         if window:
             fig.home.show_about_dialog(window)
+
+    def on_extract_frames(self, action, parameter):
+        """Extract frames from the currently loaded GIF"""
+        window = self.get_active_window()
+        if window and hasattr(window.editor_box, 'original_file_name'):
+            try:
+                output_dir = window.editor_box.original_file_path[:-4]
+                if not os.path.exists(output_dir):
+                    os.makedirs(output_dir)
+                for i, frame in enumerate(window.editor_box.frames):
+                    if isinstance(frame, GdkPixbuf.Pixbuf):
+                        pil_image = window.editor_box._pixbuf_to_pil(frame)
+                        frame_name = f"{window.editor_box.original_file_name}-{str(i+1).zfill(3)}.png"
+                        frame_path = os.path.join(output_dir, frame_name)
+                        pil_image.save(frame_path, 'PNG')
+                
+                dialog = Adw.AlertDialog.new(
+                    "Frames Extracted",
+                    f"{output_dir}"
+                )
+                dialog.add_response("ok", "OK")
+                dialog.present(window)
+                
+            except Exception as e:
+                # Show error dialog
+                dialog = Adw.AlertDialog.new(
+                    "Error",
+                    f"Failed to extract frames: {str(e)}"
+                )
+                dialog.add_response("ok", "OK")
+                dialog.present(window)
+            
 
 def main():
     app = FigApplication()

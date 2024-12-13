@@ -110,6 +110,7 @@ class EditorBox(Gtk.Box):
                 update_batch = []
                 
                 with Image.open(file_path) as gif:
+                    self.original_file_path = file_path
                     for frame in range(frame_count):
                         gif.seek(frame)
                         duration = gif.info.get('duration', 100) / 1000.0
