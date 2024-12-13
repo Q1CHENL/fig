@@ -1,5 +1,4 @@
 import os
-import io
 
 from PIL import Image
 import gi
@@ -104,7 +103,7 @@ class EditorBox(Gtk.Box):
                 frame_count = gif.n_frames
                 
             # Create a thread for loading frames
-            def load_frames_thread():
+            def load_frames_thread(batch_size=10):
                 frames = []
                 durations = []
                 total_duration = 0
@@ -127,7 +126,7 @@ class EditorBox(Gtk.Box):
                         durations.append(duration * 1000)
                         
                         # Batch updates (update every 10 frames or on last frame)
-                        if len(update_batch) < 10 and frame < frame_count - 1:
+                        if len(update_batch) < batch_size and frame < frame_count - 1:
                             update_batch.append(frame)
                         else:
                             GLib.idle_add(
@@ -143,7 +142,7 @@ class EditorBox(Gtk.Box):
             # Start loading thread
             self.info_label.set_text(f"Loading frames 0/{frame_count}")
             import threading
-            thread = threading.Thread(target=load_frames_thread)
+            thread = threading.Thread(target=load_frames_thread, args=(self.compute_batch_size(frame_count),))
             thread.daemon = True
             thread.start()
             
@@ -154,6 +153,9 @@ class EditorBox(Gtk.Box):
             self.original_frame_durations = []
             self.current_frame_index = 0
             self.playhead_frame_index = 0
+            
+    def compute_batch_size(self, frame_count):
+        return frame_count // 4
 
     def update_loading_progress(self, current_frame, total_frames, frames, durations, total_duration=None):
         """Update loading progress from background thread"""
@@ -402,9 +404,7 @@ class EditorBox(Gtk.Box):
         right = int((crop_rect[0] + crop_rect[2]) * orig_width)
         bottom = int((crop_rect[1] + crop_rect[3]) * orig_height)
         crop_box = (left, top, right, bottom)
-        
-        ref_size = (right - left, bottom - top)
-        
+                
         for i in range(start_idx, end_idx + 1):
             if self.frameline.is_frame_removed(i):
                 continue
