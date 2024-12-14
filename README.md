@@ -94,6 +94,7 @@
 - Rotate gif
 - Text embedding
 - Drag and drop file
+- Flip image
 
 ## Credits
 
