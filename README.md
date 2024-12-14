@@ -89,6 +89,10 @@
 - ~~Info label changes along with frameline changes~~
 - ~~Better controls UI~~
 - ~~Extract frames~~
+- Export to video
+- Pixelize single/all frames
+- Rotate gif
+- Text embedding
 
 ## Credits
 
