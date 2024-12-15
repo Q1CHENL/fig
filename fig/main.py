@@ -4,15 +4,22 @@ import os
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, Gio, GdkPixbuf
+from gi.repository import Gtk, Adw, Gio, GdkPixbuf, Gdk
 import fig.home, fig.editor
-from fig.utils import clear_css
+from fig.utils import clear_css, load_css
 
 class Fig(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app)
         self.set_default_size(750, 650)
         self.set_resizable(False)
+        
+        drop_target = Gtk.DropTarget.new(Gio.File, Gdk.DragAction.COPY)
+        drop_target.connect('drop', self.on_drop)
+        drop_target.connect('enter', self.on_drag_enter)
+        drop_target.connect('leave', self.on_drag_leave)
+        drop_target.connect('motion', self.on_drag_motion)
+        self.add_controller(drop_target)
         
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.headerbar = Adw.HeaderBar()
@@ -86,6 +93,33 @@ class Fig(Adw.ApplicationWindow):
     def on_option_selected(self, action, parameter, option_name):
         print(f"Selected: {option_name}")
 
+    def on_drop(self, drop_target, value, x, y):
+        self.remove_css_class('drag-and-drop')
+        if isinstance(value, Gio.File):
+            file_path = value.get_path()
+            if file_path.lower().endswith('.gif'):
+                self.load_editor_ui()
+                self.editor_box.crop_overlay.reset_crop_rect()
+                self.editor_box.load_gif(file_path)
+                original_file_name = os.path.basename(file_path)
+                if original_file_name.endswith('.gif'):
+                    self.editor_box.original_file_name = original_file_name[:-4]
+                else:
+                    self.editor_box.original_file_name = original_file_name
+                return True
+            
+        return False
+
+    def on_drag_enter(self, drop_target, x, y):
+        load_css(self.get_display(), [])
+        self.add_css_class('drag-and-drop')
+        return Gdk.DragAction.COPY
+
+    def on_drag_leave(self, drop_target):
+        self.remove_css_class('drag-and-drop')
+
+    def on_drag_motion(self, drop_target, x, y):
+        return Gdk.DragAction.COPY
 
 class FigApplication(Adw.Application):
     def __init__(self):

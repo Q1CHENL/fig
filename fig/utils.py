@@ -3,12 +3,12 @@ from gi.repository import Gtk, Gdk, GLib
 import gi
 gi.require_version('Gtk', '4.0')
 
-def load_css(widget=None, css_classes=None):
+def load_css(target, css_classes=None):
     """
     Load CSS styles from individual CSS files
     
     Args:
-        widget: Optional widget to add CSS classes to
+        target: Widget to add CSS classes to, or Display to load CSS provider for
         css_classes: List of CSS classes to add to the widget
     """
     def try_load_css_files(style_dir):
@@ -58,15 +58,24 @@ def load_css(widget=None, css_classes=None):
             raise FileNotFoundError(f"CSS files not found in: {style_paths}")
             
         css_provider.load_from_bytes(GLib.Bytes.new(css_data.encode('utf-8')))
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(),
-            css_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
 
-        if widget and css_classes:
-            for css_class in css_classes:
-                widget.add_css_class(css_class)
+        # If target is a Display, add provider to display
+        if isinstance(target, Gdk.Display):
+            Gtk.StyleContext.add_provider_for_display(
+                target,
+                css_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+        # If target is a widget, add provider to default display and add CSS classes
+        elif isinstance(target, Gtk.Widget):
+            Gtk.StyleContext.add_provider_for_display(
+                Gdk.Display.get_default(),
+                css_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+            if css_classes:
+                for css_class in css_classes:
+                    target.add_css_class(css_class)
 
     except Exception as e:
         print(f"Error loading CSS: {e}")
