@@ -25,7 +25,9 @@ def load_css(widget=None, css_classes=None):
             'play-button.css',
             'menu-item.css',
             'info-label.css',
-            'controls-box.css'
+            'controls-box.css',
+            'drag-and-drop.css',
+            'action-button.css'
         ]
         
         for css_file in css_files:

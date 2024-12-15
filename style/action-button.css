@@ -1,0 +1,23 @@
+.action-button-light {
+    border: none;
+    background: none;
+    border-radius: 20px;
+}
+
+.action-button-dark {
+    border: none;
+    background: none;
+    border-radius: 20px;
+}
+
+.action-button-dark:hover {
+    background-color: #454545;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.action-button-light:hover {
+    background-color: #d6d6d6;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
