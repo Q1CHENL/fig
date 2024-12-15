@@ -25,7 +25,7 @@
 - Extract frames
 - Play GIF at the original speed
 
-> **Tip: right click on the handles/image to discover more**
+> **Tip: View the Help page for more advanced actions**
 
 ## Build and Run
 
