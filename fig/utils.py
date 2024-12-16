@@ -17,18 +17,7 @@ def load_css(widget=None, css_classes=None):
             return None
             
         css_data = []
-        css_files = [
-            'headerbar.css',
-            'select-gif-button.css',
-            'about-fig-button.css',
-            'save-button.css',
-            'play-button.css',
-            'menu-item.css',
-            'info-label.css',
-            'controls-box.css',
-            'drag-and-drop.css',
-            'action-button.css'
-        ]
+        css_files = [f for f in os.listdir(style_dir) if f.endswith('.css')]
         
         for css_file in css_files:
             file_path = os.path.join(style_dir, css_file)
