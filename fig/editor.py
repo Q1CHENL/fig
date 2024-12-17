@@ -58,6 +58,7 @@ class EditorBox(Gtk.Box):
         
         self.rotate_button = Gtk.Button(icon_name="object-rotate-right-symbolic")
         self.rotate_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.rotate_button.connect('clicked', self.on_rotate_clicked)
         
         self.text_button = Gtk.Button(icon_name="format-text-rich-symbolic")
         self.text_button.set_size_request(action_button_size[0], action_button_size[1])
@@ -507,6 +508,30 @@ class EditorBox(Gtk.Box):
             print(f"Error flipping frames: {e}")
             error_dialog = Gtk.AlertDialog()
             error_dialog.set_message("Error flipping frames")
+            error_dialog.set_detail(str(e))
+            error_dialog.show(self.get_root())
+    
+    def on_rotate_clicked(self, button):
+        """Rotate all frames 90 degrees clockwise"""
+        if not self.frames:
+            return
+        
+        try:
+            for i, frame in enumerate(self.frames):
+                if frame:
+                    pil_image = self._pixbuf_to_pil(frame)
+                    # By default rotation is counterclockwise
+                    rotated = pil_image.transpose(Image.ROTATE_270)
+                    self.frames[i] = self._pil_to_pixbuf(rotated)
+            
+            self.display_frame(self.current_frame_index)
+            self.crop_overlay.drawing_area.queue_resize()
+            self.crop_overlay.drawing_area.queue_draw()
+            
+        except Exception as e:
+            print(f"Error rotating frames: {e}")
+            error_dialog = Gtk.AlertDialog()
+            error_dialog.set_message("Error rotating frames")
             error_dialog.set_detail(str(e))
             error_dialog.show(self.get_root())
 
