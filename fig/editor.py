@@ -61,14 +61,18 @@ class EditorBox(Gtk.Box):
         self.text_button = Gtk.Button(icon_name="format-text-rich-symbolic")
         self.text_button.set_size_request(action_button_size[0], action_button_size[1])
         
+        self.draw_button = Gtk.Button(icon_name="document-edit-symbolic")
+        self.draw_button.set_size_request(action_button_size[0], action_button_size[1])
+        
         self.action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.action_box.append(self.text_button)
         self.action_box.append(self.flip_button)
         self.action_box.append(self.rotate_button)
+        self.action_box.append(self.draw_button)
         self.action_box.set_halign(Gtk.Align.CENTER)
         self.action_box.set_margin_bottom(10)
-        self.append(self.action_box)
         
+        self.append(self.action_box)
         self.append(image_container)
 
         self.controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -527,7 +531,7 @@ class EditorBox(Gtk.Box):
         self.controls_box.add_css_class("controls-box-dark" if is_dark else "controls-box-light")
         
         clear_css(self.action_box)
-        self.action_box.add_css_class("info-label-dark" if is_dark else "info-label-light")
+        self.action_box.add_css_class("action-bar-dark" if is_dark else "action-bar-light")
         
         clear_css(self.flip_button)
         self.flip_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
@@ -537,6 +541,9 @@ class EditorBox(Gtk.Box):
         
         clear_css(self.text_button)
         self.text_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+        
+        clear_css(self.draw_button)
+        self.draw_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
         self.frameline.update_theme(is_dark)
         self.crop_overlay.update_theme(is_dark)
