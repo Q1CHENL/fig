@@ -1,26 +1,29 @@
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gio, GLib, Adw
+from gi.repository import Gtk, Gio, GLib, Adw, Gdk
 
 
 class HomeBox(Gtk.Box):
     def __init__(self):
         super().__init__()
         
-        self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.set_spacing(10)
+        self.button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.button_box.set_spacing(10)
+        self.button_box.set_margin_top(220)
+        self.button_box.set_margin_bottom(220)
+        self.button_box.set_margin_start(20)
+        self.button_box.set_margin_end(20)
         
-        self.set_margin_top(220)
-        self.set_margin_bottom(20)
-        self.set_margin_start(20)
-        self.set_margin_end(20)
+        self.set_orientation(Gtk.Orientation.VERTICAL)
         
         self.select_btn = self.select_button()
         self.about_btn = self.about_button()
         
-        self.append(self.select_btn)
-        self.append(self.about_btn)
+        self.button_box.append(self.select_btn)
+        self.button_box.append(self.about_btn)
+        
+        self.append(self.button_box)
 
     def select_button(self):
         select_button = Gtk.Button(label="Select GIF")

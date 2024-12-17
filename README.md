@@ -93,7 +93,7 @@
 - Pixelize single/all frames
 - Rotate gif
 - Text embedding
-- Drag and drop file
+- ~~Drag and drop file~~
 - Flip image
 
 ## Credits
