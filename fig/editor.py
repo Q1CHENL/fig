@@ -54,6 +54,7 @@ class EditorBox(Gtk.Box):
         
         self.flip_button = Gtk.Button(icon_name="view-mirror-symbolic")
         self.flip_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.flip_button.connect('clicked', self.on_flip_clicked)
         
         self.rotate_button = Gtk.Button(icon_name="object-rotate-right-symbolic")
         self.rotate_button.set_size_request(action_button_size[0], action_button_size[1])
@@ -487,6 +488,27 @@ class EditorBox(Gtk.Box):
                 self.current_frame_index = frame_index
                 self.display_frame(frame_index)
         self.update_info_label()
+    
+    def on_flip_clicked(self, button):
+        """Flip/mirror all frames horizontally"""
+        if not self.frames:
+            return
+        
+        try:
+            for i, frame in enumerate(self.frames):
+                if frame:
+                    pil_image = self._pixbuf_to_pil(frame)
+                    flipped = pil_image.transpose(Image.FLIP_LEFT_RIGHT)
+                    self.frames[i] = self._pil_to_pixbuf(flipped)
+            
+            self.display_frame(self.current_frame_index)
+            
+        except Exception as e:
+            print(f"Error flipping frames: {e}")
+            error_dialog = Gtk.AlertDialog()
+            error_dialog.set_message("Error flipping frames")
+            error_dialog.set_detail(str(e))
+            error_dialog.show(self.get_root())
 
     def save_button(self):
         save_button = Gtk.Button(label="Save")
