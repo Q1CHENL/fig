@@ -58,6 +58,8 @@ class Fig(Adw.ApplicationWindow):
         self.set_content(main_box)
         
         self.update_theme(self.style.get_dark())
+        
+        self.on_editor = False
     
     def update_theme(self, is_dark):
         """Update theme for all components"""
@@ -72,6 +74,9 @@ class Fig(Adw.ApplicationWindow):
         self.update_theme(style_manager.get_dark())
 
     def load_editor_ui(self):
+        if self.on_editor:
+            return
+        self.on_editor = True
         if self.content_box.get_first_child():
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.editor_box)
@@ -82,6 +87,7 @@ class Fig(Adw.ApplicationWindow):
         self.menu_model.append("About", "app.about")
 
     def load_home_ui(self):
+        self.on_editor = False
         if self.content_box.get_first_child():
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.home_box)
