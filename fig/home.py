@@ -110,15 +110,15 @@ def show_about_dialog(window):
     
     about.set_application_name("Fig")
     about.set_application_icon("io.github.Q1CHENL.fig")
-    about.set_version("1.0.3")
+    about.set_version("1.0.4")
     about.set_developer_name("Qichen Liu")
     about.set_website("https://github.com/fig")
     about.set_issue_url("https://github.com/fig/issues")
 
     about.set_release_notes("""
     <ul>
-        <li>Extract frames</li>
-        <li>Faster image loading</li>
+        <li>Extract GIF as video</li>
+        <li>Drag and drop to open image</li>
     </ul>
     """)
     

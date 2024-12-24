@@ -15,6 +15,7 @@
       <li>Insert GIF/image(s) at any position</li>
       <li>Change playback speed for specific frames</li>
       <li>Extract frames</li>
+      <li>Export GIF as video<li>
       <li>Play GIF at the original speed</li>
     </ul>
   </description>
@@ -23,7 +24,13 @@
   <developer_name>Qichen Liu</developer_name>
   <url type="homepage">https://github.com/Q1CHENL/fig</url>
   <releases>
-    <release version="1.0.3" date="2024-12-13"/>
+    <release version="1.0.4" date="2024-12-24"/>
+      <description>
+        <ul>
+          <li>Export GIF as video</li>
+          <li>Drag and drop to open image</li>
+        </ul>
+      </description>
 </releases>
   <content_rating type="oars-1.1"/>
   <launchable type="desktop-id">io.github.Q1CHENL.fig.desktop</launchable>
