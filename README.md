@@ -26,7 +26,8 @@
 - Export GIF as video
 - Play GIF at the original speed
 
-> **Tip: right click on the handles/image to discover more**
+> [!TIP]
+> View the Help page for more advanced actions
 
 ## Build and Run
 
