@@ -1,2 +1,3 @@
 PyGObject>=3.42.0
 Pillow>=8.0.0
+MoviePy>=2.1.1

@@ -22,9 +22,12 @@
 - Remove specific frames
 - Insert GIF/image(s) at any position
 - Change playback speed for specific frames
+- Extract frames
+- Export GIF as video
 - Play GIF at the original speed
 
-> **Tip: right click on the handles/image to discover more**
+> [!TIP]
+> View the Help page for more advanced actions
 
 ## Build and Run
 
@@ -88,6 +91,12 @@
 - ~~Info label changes along with frameline changes~~
 - ~~Better controls UI~~
 - ~~Extract frames~~
+- ~~Export to video~~
+- Pixelize single/all frames
+- Rotate gif
+- Text embedding
+- ~~Drag and drop file~~
+- Flip image
 
 ## Credits
 
