@@ -81,7 +81,8 @@ class Fig(Adw.ApplicationWindow):
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.editor_box)
         self.back_button.set_visible(True)
-        self.menu_model.remove(1)
+        self.clear_menu()
+        self.menu_model.append("New Window", "app.new_window")
         self.menu_model.append("Extract Frames", "app.extract_frames")
         self.menu_model.append("Export to Video", "app.export_to_video")
         self.menu_model.append("Help", "app.help")
@@ -94,7 +95,12 @@ class Fig(Adw.ApplicationWindow):
         self.content_box.append(self.home_box)
         self.back_button.set_visible(False)
         self.editor_box.reset()
-        while self.menu_model.get_n_items() > 2:
+        self.clear_menu()
+        self.menu_model.append("New Window", "app.new_window")
+        self.menu_model.append("Help", "app.help")
+        
+    def clear_menu(self):
+        while self.menu_model.get_n_items() > 0:
             self.menu_model.remove(self.menu_model.get_n_items() - 1)
         
     def on_option_selected(self, action, parameter, option_name):
