@@ -94,54 +94,54 @@ class FrameLine(Gtk.Widget):
 
         menu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
 
-        remove_range_btn = Gtk.Button(label="Remove Range")
-        remove_range_btn.connect('clicked', self.on_remove_range_clicked)
+        self.remove_range_btn = Gtk.Button(label="Remove Range")
+        self.remove_range_btn.connect('clicked', self.on_remove_range_clicked)
 
-        remove_frame_btn = Gtk.Button(label="Remove Frame")
-        remove_frame_btn.connect('clicked', self.on_remove_frame_clicked)
+        self.remove_frame_btn = Gtk.Button(label="Remove Frame")
+        self.remove_frame_btn.connect('clicked', self.on_remove_frame_clicked)
         
-        insert_frames_btn = Gtk.Button(label="Insert Frames")
-        insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
+        self.insert_frames_btn = Gtk.Button(label="Insert Frames")
+        self.insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
 
-        changespeed_frames_btn = Gtk.Button(label="Change Speed...")
-        changespeed_frames_btn.connect('clicked', self.on_changespeed_frames_clicked)
+        self.changespeed_frames_btn = Gtk.Button(label="Change Speed...")
+        self.changespeed_frames_btn.connect('clicked', self.on_changespeed_frames_clicked)
 
         # Add CSS classes and set alignment
-        remove_range_btn.set_halign(Gtk.Align.START)
-        remove_frame_btn.set_halign(Gtk.Align.START)
-        insert_frames_btn.set_halign(Gtk.Align.START)
-        changespeed_frames_btn.set_halign(Gtk.Align.START)
+        self.remove_range_btn.set_halign(Gtk.Align.START)
+        self.remove_frame_btn.set_halign(Gtk.Align.START)
+        self.insert_frames_btn.set_halign(Gtk.Align.START)
+        self.changespeed_frames_btn.set_halign(Gtk.Align.START)
 
-        remove_range_btn.add_css_class('menu-item')
-        remove_frame_btn.add_css_class('menu-item')
-        insert_frames_btn.add_css_class('menu-item')
-        changespeed_frames_btn.add_css_class('menu-item')
+        self.remove_range_btn.add_css_class('menu-item-dark')
+        self.remove_frame_btn.add_css_class('menu-item-dark')
+        self.insert_frames_btn.add_css_class('menu-item-dark')
+        self.changespeed_frames_btn.add_css_class('menu-item-dark')
 
         # Add hover controllers
         range_motion = Gtk.EventControllerMotion.new()
         range_motion.connect('enter', self.on_remove_range_hover_enter)
         range_motion.connect('leave', self.on_menu_item_hover_leave)
-        remove_range_btn.add_controller(range_motion)
+        self.remove_range_btn.add_controller(range_motion)
 
         frame_motion = Gtk.EventControllerMotion.new()
         frame_motion.connect('enter', self.on_remove_frame_hover_enter)
         frame_motion.connect('leave', self.on_menu_item_hover_leave)
-        remove_frame_btn.add_controller(frame_motion)
+        self.remove_frame_btn.add_controller(frame_motion)
 
         insert_motion = Gtk.EventControllerMotion.new()
         insert_motion.connect('enter', self.on_insert_frames_hover_enter)
         insert_motion.connect('leave', self.on_menu_item_hover_leave)
-        insert_frames_btn.add_controller(insert_motion)
+        self.insert_frames_btn.add_controller(insert_motion)
 
         changespeed_motion = Gtk.EventControllerMotion.new()
         changespeed_motion.connect('enter', self.on_changespeed_frames_hover_enter)
         changespeed_motion.connect('leave', self.on_menu_item_hover_leave)
-        changespeed_frames_btn.add_controller(changespeed_motion)
+        self.changespeed_frames_btn.add_controller(changespeed_motion)
 
-        menu_box.append(remove_range_btn)
-        menu_box.append(remove_frame_btn)
-        menu_box.append(insert_frames_btn)
-        menu_box.append(changespeed_frames_btn)
+        menu_box.append(self.remove_range_btn)
+        menu_box.append(self.remove_frame_btn)
+        menu_box.append(self.insert_frames_btn)
+        menu_box.append(self.changespeed_frames_btn)
 
         self.popup_menu.set_child(menu_box)
         self.popup_menu.connect('closed', self.on_popup_closed)
@@ -150,6 +150,8 @@ class FrameLine(Gtk.Widget):
         self.removed_ranges = [] 
         self.inserted_ranges = []
         self.speed_ranges = []
+        
+        self.is_dark = False
 
 
     # Handle Hover
@@ -755,14 +757,25 @@ class FrameLine(Gtk.Widget):
         clear_css(self)
         
         self.add_css_class("frameline-dark" if is_dark else "frameline-light")
-        
+        clear_css(self.remove_frame_btn)
+        clear_css(self.remove_range_btn)
+        clear_css(self.insert_frames_btn)
+        clear_css(self.changespeed_frames_btn)
         if is_dark:
+            self.remove_frame_btn.add_css_class('menu-item-dark')
+            self.remove_range_btn.add_css_class('menu-item-dark')
+            self.insert_frames_btn.add_css_class('menu-item-dark')
+            self.changespeed_frames_btn.add_css_class('menu-item-dark')
             self.track_color = (1, 1, 1, 0.1)    
             self.handle_color = (1, 1, 1, 1)
             self.text_color = (0, 0, 0, 1)       
             self.playhead_color = (1, 1, 1, 1)
             self.selected_track_color = (1, 1, 1, 1)
         else:
+            self.remove_frame_btn.add_css_class('menu-item-light')
+            self.remove_range_btn.add_css_class('menu-item-light')
+            self.insert_frames_btn.add_css_class('menu-item-light')
+            self.changespeed_frames_btn.add_css_class('menu-item-light')
             self.track_color = (0, 0, 0, 0.1)  
             self.handle_color = (0.141, 0.141, 0.141, 1)     
             self.text_color = (1, 1, 1, 1)
