@@ -667,7 +667,7 @@ class FrameLine(Gtk.Widget):
         
         for label, speed in speeds:
             speed_btn = Gtk.Button(label=label)
-            speed_btn.add_css_class('menu-item')
+            speed_btn.add_css_class('menu-item-dark' if self.is_dark else 'menu-item-light')
             speed_btn.set_halign(Gtk.Align.START)
             speed_btn.connect('clicked', self.on_speed_selected, speed)
             speed_box.append(speed_btn)
@@ -752,15 +752,18 @@ class FrameLine(Gtk.Widget):
 
     def update_theme(self, is_dark):
         """Update theme colors"""
+        
+        self.is_dark = is_dark
+        
         from fig.utils import clear_css
         
         clear_css(self)
-        
         self.add_css_class("frameline-dark" if is_dark else "frameline-light")
         clear_css(self.remove_frame_btn)
         clear_css(self.remove_range_btn)
         clear_css(self.insert_frames_btn)
         clear_css(self.changespeed_frames_btn)
+        
         if is_dark:
             self.remove_frame_btn.add_css_class('menu-item-dark')
             self.remove_range_btn.add_css_class('menu-item-dark')
