@@ -4,7 +4,7 @@ import os
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, Gio, GdkPixbuf, Gdk
+from gi.repository import Gtk, Adw, Gio, GdkPixbuf, Gdk, GLib
 import fig.home, fig.editor
 from fig.utils import clear_css, load_css
 
@@ -58,6 +58,8 @@ class Fig(Adw.ApplicationWindow):
         self.set_content(main_box)
         
         self.update_theme(self.style.get_dark())
+        
+        self.on_editor = False
     
     def update_theme(self, is_dark):
         """Update theme for all components"""
@@ -72,16 +74,21 @@ class Fig(Adw.ApplicationWindow):
         self.update_theme(style_manager.get_dark())
 
     def load_editor_ui(self):
+        if self.on_editor:
+            return
+        self.on_editor = True
         if self.content_box.get_first_child():
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.editor_box)
         self.back_button.set_visible(True)
         self.menu_model.remove(1)
         self.menu_model.append("Extract Frames", "app.extract_frames")
+        self.menu_model.append("Export to Video", "app.export_to_video")
         self.menu_model.append("Help", "app.help")
         self.menu_model.append("About", "app.about")
 
     def load_home_ui(self):
+        self.on_editor = False
         if self.content_box.get_first_child():
             self.content_box.remove(self.content_box.get_first_child())
         self.content_box.append(self.home_box)
@@ -140,6 +147,10 @@ class FigApplication(Adw.Application):
         extract_frames_action = Gio.SimpleAction.new("extract_frames", None)
         extract_frames_action.connect("activate", self.on_extract_frames)
         self.add_action(extract_frames_action)
+        
+        export_to_video_action = Gio.SimpleAction.new("export_to_video", None)
+        export_to_video_action.connect("activate", self.on_export_to_video)
+        self.add_action(export_to_video_action)
 
     def do_activate(self):
         win = Fig(self)
@@ -161,6 +172,7 @@ class FigApplication(Adw.Application):
         
         label = Gtk.Label(
             label=
+            "• You can drag and drop a GIF file to start editing.\n\n" + 
             "• Left-click on the image to activate crop.\n\n" +
             "• Right-click on the timeline handles to\n"
             "  discovery more advanced actions.\n"
@@ -225,6 +237,84 @@ class FigApplication(Adw.Application):
                 )
                 dialog.add_response("ok", "OK")
                 dialog.present(window)
+                
+    def on_export_to_video(self, action, parameter):
+        """Export the current GIF frames to a video file"""
+        window = self.get_active_window()
+        if window and hasattr(window.editor_box, 'original_file_path'):
+            try:
+                dialog = Gtk.FileDialog.new()
+                dialog.set_title("Export to Video")
+                
+                if hasattr(window.editor_box, 'original_file_name'):
+                    dialog.set_initial_name(f"{window.editor_box.original_file_name}.mp4")
+                else:
+                    dialog.set_initial_name("output.mp4")
+                
+                filter_mp4 = Gtk.FileFilter()
+                filter_mp4.set_name("MP4 files")
+                filter_mp4.add_pattern("*.mp4")
+                filters = Gio.ListStore.new(Gtk.FileFilter)
+                filters.append(filter_mp4)
+                dialog.set_filters(filters)
+                
+                def save_callback(dialog, result):
+                    try:
+                        file = dialog.save_finish(result)
+                        if file:
+                            output_path = file.get_path()
+                            self._export_video(window, window.editor_box, output_path)
+                    except GLib.Error as e:
+                        print(f"Error in save dialog: {e}")
+                
+                dialog.save(window, None, save_callback)
+                
+            except Exception as e:
+                error_dialog = Adw.AlertDialog.new(
+                    "Error",
+                    f"Failed to export video: {str(e)}"
+                )
+                error_dialog.add_response("ok", "OK")
+                error_dialog.present(window)
+
+    def _export_video(self, window, editor_box, output_path):
+        """Handle the actual video export process"""
+        try:
+            from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+            import tempfile
+            
+            durations = [d/1000.0 for d in editor_box.frame_durations]  # Convert ms to seconds
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                frame_paths = []
+                
+                for i, frame in enumerate(editor_box.frames):
+                    if not editor_box.frameline.is_frame_removed(i):
+                        frame_path = os.path.join(temp_dir, f"frame_{i}.png")
+                        pil_image = editor_box._pixbuf_to_pil(frame)
+                        pil_image.save(frame_path, 'PNG')
+                        frame_paths.append(frame_path)
+                
+                clip = ImageSequenceClip(frame_paths, durations=durations)
+                clip.write_videofile(output_path, 
+                                   fps=30,
+                                   codec='libx264',
+                                   audio=False)
+                
+                success_dialog = Adw.AlertDialog.new(
+                    "Video Exported\n",
+                    f"{output_path}"
+                )
+                success_dialog.add_response("ok", "OK")
+                success_dialog.present(window)
+                
+        except Exception as e:
+            error_dialog = Adw.AlertDialog.new(
+                "Error",
+                f"Failed to export video: {str(e)}"
+            )
+            error_dialog.add_response("ok", "OK")
+            error_dialog.present(window)
     
     def compute_batch_size(self, total_frames):
         if total_frames < 20:

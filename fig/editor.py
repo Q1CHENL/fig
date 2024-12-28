@@ -9,7 +9,7 @@ from gi.repository import Gtk, GLib, Gio, GdkPixbuf
 
 from fig.utils import clear_css, load_css
 from fig.frameline import FrameLine
-from fig.cropoverlay import CropOverlay
+from fig.crop import CropOverlay
 
 class EditorBox(Gtk.Box):
     def __init__(self):
