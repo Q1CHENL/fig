@@ -238,7 +238,12 @@ class CropOverlay(Gtk.Overlay):
         self.start_crop_rect = None
         self.dragging_region = False
 
-    def draw_crop_overlay(self, area, cr, width, height, *args):
+    def draw_crop_overlay(self, area, cr, da_width, da_height, *args):
+        """
+        Draw the crop overlay with proper scaling for both normal and rotated images
+        da_width: width of the drawing area
+        da_height: height of the drawing area
+        """
         # Get the actual image dimensions from the Picture widget
         child = self.get_child()
         if not child or not isinstance(child, Gtk.Picture):
@@ -252,8 +257,8 @@ class CropOverlay(Gtk.Overlay):
         img_height = paintable.get_intrinsic_height()
         
         # Calculate the scaling to fit in the display area
-        scale_width = width / img_width
-        scale_height = height / img_height
+        scale_width = da_width / img_width
+        scale_height = da_height / img_height
         scale = min(scale_width, scale_height)
         
         # Calculate the actual displayed image size
@@ -261,12 +266,12 @@ class CropOverlay(Gtk.Overlay):
         display_height = int(img_height * scale)
         
         # Calculate the position to center the image
-        x_offset = (width - display_width) // 2
-        y_offset = (height - display_height) // 2
+        x_offset = (da_width - display_width) // 2
+        y_offset = (da_height - display_height) // 2
         
         # Set up semi-transparent overlay for the whole area
         cr.set_source_rgba(self.overlay_bkg[0], self.overlay_bkg[1], self.overlay_bkg[2], self.overlay_bkg[3])
-        cr.rectangle(0, 0, width, height)
+        cr.rectangle(0, 0, da_width, da_height)
         cr.fill()
         
         # Calculate crop rectangle in pixels, relative to the actual image display area

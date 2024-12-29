@@ -23,14 +23,10 @@ class EditorBox(Gtk.Box):
         self.set_margin_start(80)
         self.set_margin_end(80)
 
-        self.image_display_width = 600
-        self.image_display_height = 450
-
-        image_container = Gtk.Box()
-        image_container.set_size_request(self.image_display_width, self.image_display_height)
-        image_container.set_halign(Gtk.Align.CENTER)
-        image_container.set_valign(Gtk.Align.CENTER)
-        image_container.set_vexpand(True)
+        self.image_container = Gtk.Box()
+        self.image_container.set_halign(Gtk.Align.CENTER)
+        self.image_container.set_valign(Gtk.Align.CENTER)
+        self.image_container.set_vexpand(True)
 
         self.image_display = Gtk.Picture()
         self.image_display.set_can_shrink(True)
@@ -42,7 +38,7 @@ class EditorBox(Gtk.Box):
 
         self.crop_overlay = CropOverlay()
         self.crop_overlay.set_child(self.image_display)
-        image_container.append(self.crop_overlay)
+        self.image_container.append(self.crop_overlay)
         
         self.info_label = Gtk.Label()
         self.info_label.set_margin_top(10)
@@ -75,7 +71,7 @@ class EditorBox(Gtk.Box):
         self.action_bar.set_margin_bottom(10)
         
         self.append(self.action_bar)
-        self.append(image_container)
+        self.append(self.image_container)
 
         self.controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.controls_box.set_margin_top(15)  
@@ -123,9 +119,16 @@ class EditorBox(Gtk.Box):
             self.playhead_frame_index = 0
             self.crop_overlay.reset_crop_rect()
             
+            # Get dimensions from the first frame
             with Image.open(file_path) as gif:
+                # change size for image +/-
+                self.image_display_width, self.image_display_height = gif.size
+                self.calculate_image_scale(self.image_display_width, self.image_display_height)
+                self.image_container.set_size_request(
+                    self.image_display_width * self.IMAGE_SCALE, 
+                    self.image_display_height * self.IMAGE_SCALE)
                 frame_count = gif.n_frames
-                
+            
             def load_frames_thread(batch_size=10):
                 frames = []
                 durations = []
@@ -175,7 +178,13 @@ class EditorBox(Gtk.Box):
             self.original_frame_durations = []
             self.current_frame_index = 0
             self.playhead_frame_index = 0
-            
+
+    def calculate_image_scale(self, image_width, image_height):
+        long = max(image_width, image_height)
+        short = min(image_width, image_height)
+        max_width = 400 if abs(short / long) > 0.8 else 550
+        self.IMAGE_SCALE = max_width / long
+                    
     def compute_batch_size(self, frame_count):
         return frame_count // 4
 
@@ -223,14 +232,14 @@ class EditorBox(Gtk.Box):
                 pixbuf = frame
                 
             if pixbuf:
-                scaled_pixbuf = self.scale_pixbuf_to_fit(pixbuf, self.image_display_width, self.image_display_height)
+                scaled_pixbuf = self.scale_pixbuf_to_fit(pixbuf, self.image_display_width * self.IMAGE_SCALE, self.image_display_height * self.IMAGE_SCALE)
                 if scaled_pixbuf:
                     self.image_display.set_pixbuf(scaled_pixbuf)
                     self.image_display.queue_draw()
 
         except Exception as e:
             print(f"Error displaying frame: {e}")
-
+        
     def scale_pixbuf_to_fit(self, pixbuf, max_width, max_height):
         """Scale pixbuf to fit within the given dimensions while maintaining aspect ratio"""
         width = pixbuf.get_width()
@@ -521,13 +530,16 @@ class EditorBox(Gtk.Box):
             return
         
         try:
+            # Recalculate scale for new dimensions
+            self.image_display_width, self.image_display_height = self.image_display_height, self.image_display_width
+            self.calculate_image_scale(self.image_display_width, self.image_display_height)
+
             for i, frame in enumerate(self.frames):
                 if frame:
                     pil_image = self._pixbuf_to_pil(frame)
-                    # By default rotation is counterclockwise
                     rotated = pil_image.transpose(Image.ROTATE_270)
                     self.frames[i] = self._pil_to_pixbuf(rotated)
-            
+
             self.display_frame(self.current_frame_index)
             self.crop_overlay.drawing_area.queue_resize()
             self.crop_overlay.drawing_area.queue_draw()
