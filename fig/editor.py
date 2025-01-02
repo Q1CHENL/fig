@@ -36,7 +36,7 @@ class EditorBox(Gtk.Box):
         self.image_display.set_hexpand(True)
         load_css(self.image_display, ["image-display"])
 
-        self.crop_overlay = CropOverlay()
+        self.crop_overlay = CropOverlay(self)
         self.crop_overlay.set_child(self.image_display)
         self.image_container.append(self.crop_overlay)
         
@@ -62,8 +62,13 @@ class EditorBox(Gtk.Box):
         self.draw_button = Gtk.Button(icon_name="document-edit-symbolic")
         self.draw_button.set_size_request(action_button_size[0], action_button_size[1])
         
+        self.crop_button = Gtk.Button(icon_name="edit-select-all-symbolic")
+        self.crop_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.crop_button.connect('clicked', self.on_crop_clicked)
+        
         self.action_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.action_bar.append(self.text_button)
+        self.action_bar.append(self.crop_button)
         self.action_bar.append(self.flip_button)
         self.action_bar.append(self.rotate_button)
         self.action_bar.append(self.draw_button)
@@ -108,6 +113,8 @@ class EditorBox(Gtk.Box):
         self.playback_finished = False
 
         self.update_theme(True)  # Set initial theme to dark
+        
+        self.crop_mode = False
 
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
@@ -595,6 +602,9 @@ class EditorBox(Gtk.Box):
         clear_css(self.flip_button)
         self.flip_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
+        clear_css(self.crop_button)
+        self.crop_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+        
         clear_css(self.rotate_button)
         self.rotate_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
@@ -849,3 +859,12 @@ class EditorBox(Gtk.Box):
             )
         except Exception as e:
             print(f"Error updating info label: {e}")
+
+    def on_crop_clicked(self, button):
+        if self.crop_mode:
+            self.crop_mode = False
+            self.crop_overlay.reset_crop_rect()
+        else:
+            self.crop_mode = True
+            self.crop_overlay.handles_visible = True    
+        self.crop_overlay.drawing_area.queue_draw()

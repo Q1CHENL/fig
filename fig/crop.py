@@ -4,8 +4,9 @@ from gi.repository import Gtk
 import cairo
 
 class CropOverlay(Gtk.Overlay):
-    def __init__(self):
+    def __init__(self, editor):
         super().__init__()
+        self.editor = editor
         
         self.drawing_area = Gtk.DrawingArea()
         self.drawing_area.set_draw_func(self.draw_crop_overlay)
@@ -34,23 +35,6 @@ class CropOverlay(Gtk.Overlay):
         self.show_grid_lines = False
         self.handles_visible = False
 
-        self.connect('realize', self.on_realize)
-
-    def on_realize(self, widget):
-        # Add the click controller to the root window after widget is realized
-        root = self.get_root()
-        if root:
-            # Create a controller for both left and right clicks on root
-            root_click_controller = Gtk.GestureClick.new()
-            root_click_controller.set_button(0)  # 0 means listen to any mouse button
-            root_click_controller.connect('pressed', self.on_click_outside)
-            root.add_controller(root_click_controller)
-            
-            # Add another controller to the drawing area itself
-            drawing_click_controller = Gtk.GestureClick.new()
-            drawing_click_controller.set_button(0)
-            drawing_click_controller.connect('pressed', self.on_click_outside)
-            self.drawing_area.add_controller(drawing_click_controller)
 
     def get_handle_at_position(self, x, y, display_width, display_height, x_offset, y_offset):
         # Convert crop rect to pixel coordinates
@@ -134,9 +118,7 @@ class CropOverlay(Gtk.Overlay):
         x_offset = (width - display_width) // 2
         y_offset = (height - display_height) // 2
         
-        # Check if click is within image bounds
-        if (x_offset <= x <= x_offset + display_width and 
-            y_offset <= y <= y_offset + display_height):
+        if self.editor.crop_mode:
             self.handles_visible = True
             # Check if we clicked on a handle or within the region
             self.active_handle = self.get_handle_at_position(x, y, display_width, display_height, x_offset, y_offset)
@@ -358,17 +340,3 @@ class CropOverlay(Gtk.Overlay):
         self.handles_visible = False
         self.drawing_area.queue_draw()
 
-    def on_click_outside(self, gesture, n_press, x, y):
-        # Check if click is within our widget bounds
-        native = gesture.get_widget().get_native()
-        if native:
-            # Get the bounds of our widget relative to the native window
-            bounds = self.compute_bounds(native)[1]
-            if not (bounds.get_x() <= x <= bounds.get_x() + bounds.get_width() and
-                    bounds.get_y() <= y <= bounds.get_y() + bounds.get_height()):
-                self.handles_visible = False
-                self.active_handle = None
-                self.start_crop_rect = None
-                self.dragging_region = False
-                self.show_grid_lines = False
-                self.drawing_area.queue_draw()
