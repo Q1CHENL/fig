@@ -49,21 +49,27 @@ class EditorBox(Gtk.Box):
         action_button_size = (30, 30)
         
         self.flip_button = Gtk.Button(icon_name="view-mirror-symbolic")
+        self.flip_button.set_tooltip_text("Flip")
         self.flip_button.set_size_request(action_button_size[0], action_button_size[1])
         self.flip_button.connect('clicked', self.on_flip_clicked)
         
         self.rotate_button = Gtk.Button(icon_name="object-rotate-right-symbolic")
+        self.rotate_button.set_tooltip_text("Rotate")
         self.rotate_button.set_size_request(action_button_size[0], action_button_size[1])
         self.rotate_button.connect('clicked', self.on_rotate_clicked)
         
         self.text_button = Gtk.Button(icon_name="format-text-rich-symbolic")
         self.text_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.text_button.set_tooltip_text("Add Text")
         self.text_button.connect('clicked', self.on_text_clicked)
         
         self.draw_button = Gtk.Button(icon_name="document-edit-symbolic")
+        self.draw_button.set_tooltip_text("Draw")
         self.draw_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.draw_button.connect('clicked', self.on_draw_clicked)
         
         self.crop_button = Gtk.Button(icon_name="edit-select-all-symbolic")
+        self.crop_button.set_tooltip_text("Crop")
         self.crop_button.set_size_request(action_button_size[0], action_button_size[1])
         self.crop_button.connect('clicked', self.on_crop_clicked)
         
