@@ -1,12 +1,15 @@
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 import cairo
 
-class CropOverlay(Gtk.Overlay):
+class CropTextOverlay(Gtk.Overlay):
     def __init__(self, editor):
         super().__init__()
         self.editor = editor
+        self.text_mode = False
+        self.text_entries = []  # Initialize empty list for text entries
+        self.current_entry = None  # Track current entry
         
         self.drawing_area = Gtk.DrawingArea()
         self.drawing_area.set_draw_func(self.draw_crop_overlay)
@@ -91,6 +94,10 @@ class CropOverlay(Gtk.Overlay):
         return None
 
     def on_press(self, gesture, n_press, x, y):
+        if self.text_mode:
+            self._show_text_entry(x, y)
+            return
+            
         # Get image dimensions and scaling
         child = self.get_child()
         if not child or not isinstance(child, Gtk.Picture):
@@ -338,5 +345,78 @@ class CropOverlay(Gtk.Overlay):
         self.dragging_region = False
         self.show_grid_lines = False
         self.handles_visible = False
+        self.remove_all_text_entries()
         self.drawing_area.queue_draw()
+
+    def _show_text_entry(self, x, y):
+        """Show text entry at mouse click position"""
+        if self.current_entry:
+            # If there's an existing entry, save it first
+            text = self.current_entry.get_text()
+            if text:
+                self.text_entries.append({
+                    'text': text,
+                    'x': self.current_entry.get_margin_start(),
+                    'y': self.current_entry.get_margin_top()
+                })
+            self.remove_overlay(self.current_entry)
+
+        entry = Gtk.Entry()
+        entry.set_has_frame(False)
+        
+        # Prevent expansion
+        entry.set_hexpand(False)
+        entry.set_vexpand(False)
+        entry.set_halign(Gtk.Align.START)
+        entry.set_valign(Gtk.Align.START)
+        
+        entry.add_css_class('text-entry')
+        
+        # Position the entry at click coordinates
+        entry.set_margin_start(int(x))
+        entry.set_margin_top(int(y))
+
+        # Connect to the "activate" signal (triggered by Enter key)
+        entry.connect('activate', self._on_entry_activated)
+        
+        # Handle key events (for Escape)
+        key_controller = Gtk.EventControllerKey()
+        key_controller.connect('key-pressed', self._on_text_key_pressed, entry)
+        entry.add_controller(key_controller)
+        
+        self.add_overlay(entry)
+        entry.grab_focus()
+        self.current_entry = entry
+
+    def _on_entry_activated(self, entry: Gtk.Entry):
+        """Handle Enter key press"""
+        text = entry.get_text()
+        if text:
+            # Remove focus
+            entry.remove_css_class('focused') 
+            entry.grab_focus_without_selecting()
+            self.get_root().set_focus(None)
+            
+            text_entry = {
+                'entry': entry,
+                'x': entry.get_margin_start(),
+                'y': entry.get_margin_top()
+            }
+            self.text_entries.append(text_entry)
+        self.current_entry = None
+
+
+    def _on_text_key_pressed(self, controller, keyval, keycode, state, entry):
+        """Handle only Escape key now"""
+        if keyval == Gdk.KEY_Escape:
+            self.remove_overlay(entry)
+            self.current_entry = None
+            return Gdk.EVENT_STOP
+        return Gdk.EVENT_PROPAGATE
+    
+    def remove_all_text_entries(self):
+        for entry in self.text_entries:
+            self.remove_overlay(entry['entry'])
+        self.text_entries = []
+        self.current_entry = None
 

@@ -1,6 +1,6 @@
 import os
 
-from PIL import Image
+from PIL import Image, ImageDraw
 import gi
 gi.require_version('Adw', '1')
 gi.require_version('Gtk', '4.0')
@@ -9,7 +9,7 @@ from gi.repository import Gtk, GLib, Gio, GdkPixbuf
 
 from fig.utils import clear_css, load_css
 from fig.frameline import FrameLine
-from fig.crop import CropOverlay
+from fig.overlay import CropTextOverlay
 
 class EditorBox(Gtk.Box):
     def __init__(self):
@@ -36,9 +36,9 @@ class EditorBox(Gtk.Box):
         self.image_display.set_hexpand(True)
         load_css(self.image_display, ["image-display"])
 
-        self.crop_overlay = CropOverlay(self)
-        self.crop_overlay.set_child(self.image_display)
+        self.crop_overlay = CropTextOverlay(self)
         self.image_container.append(self.crop_overlay)
+        self.crop_overlay.set_child(self.image_display)
         
         self.info_label = Gtk.Label()
         self.info_label.set_margin_top(10)
@@ -58,6 +58,7 @@ class EditorBox(Gtk.Box):
         
         self.text_button = Gtk.Button(icon_name="format-text-rich-symbolic")
         self.text_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.text_button.connect('clicked', self.on_text_clicked)
         
         self.draw_button = Gtk.Button(icon_name="document-edit-symbolic")
         self.draw_button.set_size_request(action_button_size[0], action_button_size[1])
@@ -115,6 +116,8 @@ class EditorBox(Gtk.Box):
         self.update_theme(True)  # Set initial theme to dark
         
         self.crop_mode = False
+        # Initialize text mode
+        self.text_mode = False
 
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
@@ -433,7 +436,7 @@ class EditorBox(Gtk.Box):
         
         if not ref_frame:
             return  # No valid frames to save
-            
+        
         # Calculate crop box in absolute pixels
         crop_rect = self.crop_overlay.crop_rect
         orig_width, orig_height = ref_frame.size
@@ -459,13 +462,18 @@ class EditorBox(Gtk.Box):
             
             is_inserted = any(start <= i <= end for start, end in self.frameline.inserted_ranges)
             
-            # TODO do we really want to resize?    
             # For inserted frames, resize to match original size before cropping
             if is_inserted and frame.size != (orig_width, orig_height):
                 frame = frame.resize((orig_width, orig_height), Image.Resampling.LANCZOS)
             
-            frame = frame.crop(crop_box)
+            draw = ImageDraw.Draw(frame)
+            for text_entry in self.crop_overlay.text_entries:
+                # todo: fix text position
+                x = int(text_entry['x'])
+                y = int(text_entry['y'])
+                draw.text((x/self.IMAGE_SCALE, y/self.IMAGE_SCALE), text_entry['entry'].get_text(), fill='white', font=None)
             
+            frame = frame.crop(crop_box)
             frames_to_save.append(frame)
             durations.append(duration)
 
@@ -843,7 +851,6 @@ class EditorBox(Gtk.Box):
             left_value = int(round(self.frameline.left_value)) - 1
             right_value = int(round(self.frameline.right_value)) - 1
             
-            # Count frames excluding removed ones
             valid_frame_count = sum(
                 not self.frameline.is_frame_removed(i) for i in range(left_value, right_value + 1)
             )
@@ -868,3 +875,19 @@ class EditorBox(Gtk.Box):
             self.crop_mode = True
             self.crop_overlay.handles_visible = True    
         self.crop_overlay.drawing_area.queue_draw()
+
+    def on_text_clicked(self, button):
+        """Toggle text editing mode"""
+        self.text_mode = not self.text_mode
+        
+        if self.text_mode:
+            self.crop_mode = False
+            self.crop_overlay.handles_visible = False
+            self.crop_overlay.text_mode = True
+            self.crop_overlay.drawing_area.queue_draw()
+            self.text_button.add_css_class('active')
+        else:
+            self.crop_overlay.handles_visible = False
+            self.crop_overlay.text_mode = False
+            self.crop_overlay.drawing_area.queue_draw()
+            self.text_button.remove_css_class('active')
