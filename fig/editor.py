@@ -14,7 +14,7 @@ from fig.overlay import CropTextOverlay
 class EditorBox(Gtk.Box):
     def __init__(self):
         super().__init__()
-        self.button_height = 40
+        self.BUTTON_HEIGHT = 40
 
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.set_spacing(0)
@@ -122,8 +122,12 @@ class EditorBox(Gtk.Box):
         self.update_theme(True)  # Set initial theme to dark
         
         self.crop_mode = False
-        # Initialize text mode
         self.text_mode = False
+        self.draw_mode = False
+        self.drawing = False
+        self.last_point = None
+        self.drawings = []
+        self.apply_to_all_frames = True
 
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
@@ -425,7 +429,7 @@ class EditorBox(Gtk.Box):
         dialog.destroy()
 
     def _save_gif(self, save_path, start_idx, end_idx):
-        """Save GIF including inserted frames and excluding removed ranges"""
+        """Save GIF including inserted frames, drawings, and excluding removed ranges"""
         is_reversed = start_idx > end_idx
         if is_reversed:
             start_idx, end_idx = end_idx, start_idx
@@ -473,11 +477,29 @@ class EditorBox(Gtk.Box):
                 frame = frame.resize((orig_width, orig_height), Image.Resampling.LANCZOS)
             
             draw = ImageDraw.Draw(frame)
+            
+            if self.drawings and self.drawings[0]:
+                for line in self.drawings[0]:
+                    if len(line) > 1:
+                        # Convert coordinates to image space
+                        scaled_points = []
+                        for point in line:
+                            if isinstance(point, (list, tuple)) and len(point) >= 2:
+                                x, y = point[0], point[1]
+                                scaled_x = (x/self.IMAGE_SCALE)
+                                scaled_y = (y/self.IMAGE_SCALE)
+                                scaled_points.append((scaled_x, scaled_y))
+                        
+                        for i in range(len(scaled_points) - 1):
+                            draw.line([scaled_points[i], scaled_points[i + 1]], 
+                                    fill='white', width=2)
+            
             for text_entry in self.crop_overlay.text_entries:
-                # todo: fix text position
                 x = int(text_entry['x'])
                 y = int(text_entry['y'])
-                draw.text((x/self.IMAGE_SCALE, y/self.IMAGE_SCALE), text_entry['entry'].get_text(), fill='white', font=None)
+                draw.text((x/self.IMAGE_SCALE, y/self.IMAGE_SCALE), 
+                         text_entry['entry'].get_text(), 
+                         fill='white', font=None)
             
             frame = frame.crop(crop_box)
             frames_to_save.append(frame)
@@ -574,7 +596,7 @@ class EditorBox(Gtk.Box):
 
     def save_button(self):
         save_button = Gtk.Button(label="Save")
-        save_button.set_size_request(80, 40)
+        save_button.set_size_request(80, self.BUTTON_HEIGHT)
         save_button.set_valign(Gtk.Align.CENTER)
         save_button.set_halign(Gtk.Align.CENTER)
         save_button.connect('clicked', self.save_frames)
@@ -582,7 +604,7 @@ class EditorBox(Gtk.Box):
 
     def play_button(self):
         play_button = Gtk.Button()
-        play_button.set_size_request(40, 40)
+        play_button.set_size_request(40, self.BUTTON_HEIGHT)
         play_button.set_valign(Gtk.Align.CENTER)
         play_button.set_halign(Gtk.Align.CENTER)
         play_button.connect('clicked', self.play_edited_frames)
@@ -897,3 +919,22 @@ class EditorBox(Gtk.Box):
             self.crop_overlay.text_mode = False
             self.crop_overlay.drawing_area.queue_draw()
             self.text_button.remove_css_class('active')
+
+    def on_draw_clicked(self, button):
+        """Toggle drawing mode"""
+        self.draw_mode = not self.draw_mode
+        
+        if self.draw_mode:
+            self.crop_mode = False
+            self.text_mode = False
+            self.crop_overlay.draw_mode = True
+            self.crop_overlay.handles_visible = False
+            self.draw_button.add_css_class('active')
+            
+            if not hasattr(self, 'drawings'):
+                self.drawings = [[]]  # Start with empty list for first frame
+        else:
+            self.crop_overlay.draw_mode = False
+            self.draw_button.remove_css_class('active')
+            
+        self.crop_overlay.drawing_area.queue_draw()

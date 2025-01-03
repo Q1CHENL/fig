@@ -12,10 +12,14 @@ class CropTextOverlay(Gtk.Overlay):
         self.current_entry = None  # Track current entry
         
         self.drawing_area = Gtk.DrawingArea()
-        self.drawing_area.set_draw_func(self.draw_crop_overlay)
+        self.drawing_area.set_draw_func(self.draw_overlay)
         self.drawing_area.set_can_target(True)
         self.drawing_area.set_focusable(True)
 
+        motion_controller = Gtk.EventControllerMotion.new()
+        motion_controller.connect('motion', self.on_motion)
+        self.drawing_area.add_controller(motion_controller)
+        
         click_controller = Gtk.GestureClick.new()
         click_controller.connect('pressed', self.on_press)
         click_controller.connect('released', self.on_release)
@@ -38,6 +42,12 @@ class CropTextOverlay(Gtk.Overlay):
         self.show_grid_lines = False
         self.handles_visible = False
 
+        self.draw_mode = False
+        self.editor.drawing = False
+        self.editor.last_point = None
+        self.editor.drawings = []  # Remove initial empty list - we'll initialize it properly when loading frames
+        self.editor.apply_to_all_frames = True
+        self.overlay_bkg = (36/255, 36/255, 36/255, 0.85)
 
     def get_handle_at_position(self, x, y, display_width, display_height, x_offset, y_offset):
         # Convert crop rect to pixel coordinates
@@ -94,6 +104,19 @@ class CropTextOverlay(Gtk.Overlay):
         return None
 
     def on_press(self, gesture, n_press, x, y):
+        if self.draw_mode:
+            self.editor.drawing = True
+            point = (x, y)
+            self.editor.last_point = point
+            
+            current_frame = self.editor.current_frame_index
+            if current_frame >= len(self.editor.drawings):
+                self.editor.drawings.extend([[] for _ in range(current_frame - len(self.editor.drawings) + 1)])
+            
+            self.editor.drawings[current_frame].append([point])
+            self.drawing_area.queue_draw()
+            return True
+            
         if self.text_mode:
             self._show_text_entry(x, y)
             return
@@ -144,6 +167,12 @@ class CropTextOverlay(Gtk.Overlay):
         self.drawing_area.queue_draw()
 
     def on_release(self, gesture, n_press, x, y):
+        if self.draw_mode:
+            self.editor.drawing = False
+            self.editor.last_point = None
+            self.drawing_area.queue_draw()
+            return True
+            
         self.active_handle = None
         self.start_crop_rect = None
         self.dragging_region = False
@@ -227,12 +256,7 @@ class CropTextOverlay(Gtk.Overlay):
         self.start_crop_rect = None
         self.dragging_region = False
 
-    def draw_crop_overlay(self, area, cr, da_width, da_height, *args):
-        """
-        Draw the crop overlay with proper scaling for both normal and rotated images
-        da_width: width of the drawing area
-        da_height: height of the drawing area
-        """
+    def draw_overlay(self, area, cr, da_width, da_height, *args):
         # Get the actual image dimensions from the Picture widget
         child = self.get_child()
         if not child or not isinstance(child, Gtk.Picture):
@@ -257,8 +281,9 @@ class CropTextOverlay(Gtk.Overlay):
         # Calculate the position to center the image
         x_offset = (da_width - display_width) // 2
         y_offset = (da_height - display_height) // 2
-        
-        # Set up semi-transparent overlay for the whole area
+
+        # Draw crop overlay
+        cr.set_operator(cairo.OPERATOR_OVER)
         cr.set_source_rgba(self.overlay_bkg[0], self.overlay_bkg[1], self.overlay_bkg[2], self.overlay_bkg[3])
         cr.rectangle(0, 0, da_width, da_height)
         cr.fill()
@@ -274,6 +299,19 @@ class CropTextOverlay(Gtk.Overlay):
         cr.rectangle(x, y, w, h)
         cr.fill()
         
+        # Draw stored drawings first
+        cr.set_operator(cairo.OPERATOR_OVER)
+        current_frame = self.editor.current_frame_index
+        if current_frame < len(self.editor.drawings):
+            cr.set_source_rgb(1, 1, 1)  # White color
+            cr.set_line_width(2)
+            for line in self.editor.drawings[current_frame]:
+                if len(line) > 1:
+                    cr.move_to(line[0][0], line[0][1])
+                    for point in line[1:]:
+                        cr.line_to(point[0], point[1])
+                    cr.stroke()
+
         if self.handles_visible:
             cr.set_operator(cairo.OPERATOR_OVER)
             # Draw crop rectangle border
@@ -420,3 +458,36 @@ class CropTextOverlay(Gtk.Overlay):
         self.text_entries = []
         self.current_entry = None
 
+    def on_button_press(self, widget, event):
+        if self.draw_mode and event.button == 1:  # Left mouse button
+            self.editor.drawing = True
+            self.editor.last_point = (event.x, event.y)
+            
+            # Initialize new line for current frame
+            current_frame = self.editor.current_frame_index
+            if current_frame >= len(self.editor.drawings):
+                self.editor.drawings.extend([[] for _ in range(current_frame - len(self.editor.drawings) + 1)])
+            self.editor.drawings[current_frame].append([self.editor.last_point])
+            
+            return True
+        return False
+
+    def on_button_release(self, widget, event):
+        if self.draw_mode:
+            self.editor.drawing = False
+            self.editor.last_point = None
+            return True
+        return False
+
+    def on_motion(self, controller, x, y):
+        if self.draw_mode and self.editor.drawing:
+            current_frame = self.editor.current_frame_index
+            if current_frame < len(self.editor.drawings):
+                current_line = self.editor.drawings[current_frame][-1]  # Get the last line from current frame
+                point = (x, y)
+                if not current_line or current_line[-1] != point:
+                    current_line.append(point)
+                    self.editor.last_point = point
+                    self.drawing_area.queue_draw()
+            return True
+        return False
