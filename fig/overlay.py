@@ -8,8 +8,8 @@ class CropTextOverlay(Gtk.Overlay):
         super().__init__()
         self.editor = editor
         self.text_mode = False
-        self.text_entries = []  # Initialize empty list for text entries
-        self.current_entry = None  # Track current entry
+        self.text_entries = []
+        self.current_entry = None
         
         self.drawing_area = Gtk.DrawingArea()
         self.drawing_area.set_draw_func(self.draw_overlay)

@@ -4,9 +4,19 @@
     border-radius: 20px;
 }
 
+.action-button-light-active {
+    background-color: #d6d6d6;
+    border-radius: 20px;
+}
+
 .action-button-dark {
     border: none;
     background: none;
+    border-radius: 20px;
+}
+
+.action-button-dark-active {
+    background-color: #454545;
     border-radius: 20px;
 }
 

@@ -63,6 +63,7 @@ class EditorBox(Gtk.Box):
         self.text_button.set_tooltip_text("Add Text")
         self.text_button.connect('clicked', self.on_text_clicked)
         
+        # todo colors
         self.draw_button = Gtk.Button(icon_name="document-edit-symbolic")
         self.draw_button.set_tooltip_text("Draw")
         self.draw_button.set_size_request(action_button_size[0], action_button_size[1])
@@ -119,8 +120,6 @@ class EditorBox(Gtk.Box):
         self.play_timeout_id = None
         self.playback_finished = False
 
-        self.update_theme(True)  # Set initial theme to dark
-        
         self.crop_mode = False
         self.text_mode = False
         self.draw_mode = False
@@ -128,7 +127,13 @@ class EditorBox(Gtk.Box):
         self.last_point = None
         self.drawings = []
         self.apply_to_all_frames = True
-
+        
+        self.flipped = False
+        self.is_dark = True
+        self.rotated = False
+        
+        self.update_theme(True)  # Set initial theme to dark
+        
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
         try:
@@ -545,12 +550,24 @@ class EditorBox(Gtk.Box):
                 self.current_frame_index = frame_index
                 self.display_frame(frame_index)
         self.update_info_label()
+        
+    
+    def update_action_bar_button(self, set, button):
+        """Update CSS class for action bar button"""
+        from fig.utils import clear_css
+        clear_css(button)
+        if set:
+            button.add_css_class("action-button-dark-active" if self.is_dark else "action-button-light-active")
+        else:
+            button.add_css_class("action-button-dark" if self.is_dark else "action-button-light")
     
     def on_flip_clicked(self, button):
-        """Flip/mirror all frames horizontally"""
+        """Flip all frames horizontally"""
+        self.flipped = not self.flipped
+        self.update_action_bar_button(self.flipped, button)
+
         if not self.frames:
             return
-        
         try:
             for i, frame in enumerate(self.frames):
                 if frame:
@@ -569,6 +586,8 @@ class EditorBox(Gtk.Box):
     
     def on_rotate_clicked(self, button):
         """Rotate all frames 90 degrees clockwise"""
+        self.rotated = not self.rotated
+        self.update_action_bar_button(self.rotated, button)
         if not self.frames:
             return
         
@@ -618,6 +637,7 @@ class EditorBox(Gtk.Box):
 
     def update_theme(self, is_dark):
         """Update theme for all buttons"""
+        self.is_dark = is_dark
         from fig.utils import clear_css
         
         clear_css(self.save_btn)
@@ -636,19 +656,34 @@ class EditorBox(Gtk.Box):
         self.action_bar.add_css_class("action-bar-dark" if is_dark else "action-bar-light")
         
         clear_css(self.flip_button)
-        self.flip_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+        if self.flipped:
+            self.flip_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+        else:
+            self.flip_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
         clear_css(self.crop_button)
-        self.crop_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+        if self.crop_mode:
+            self.crop_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+        else:
+            self.crop_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
         clear_css(self.rotate_button)
-        self.rotate_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+        if self.rotated:
+            self.rotate_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+        else:
+            self.rotate_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
         clear_css(self.text_button)
-        self.text_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+        if self.text_mode:
+            self.text_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+        else:
+            self.text_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
         clear_css(self.draw_button)
-        self.draw_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+        if self.draw_mode:
+            self.draw_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+        else:
+            self.draw_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
         self.frameline.update_theme(is_dark)
         self.crop_overlay.update_theme(is_dark)
@@ -902,11 +937,13 @@ class EditorBox(Gtk.Box):
         else:
             self.crop_mode = True
             self.crop_overlay.handles_visible = True    
+        self.update_action_bar_button(self.crop_mode, button)
         self.crop_overlay.drawing_area.queue_draw()
 
     def on_text_clicked(self, button):
         """Toggle text editing mode"""
         self.text_mode = not self.text_mode
+        self.update_action_bar_button(self.text_mode, button)
         
         if self.text_mode:
             self.crop_mode = False
@@ -923,7 +960,7 @@ class EditorBox(Gtk.Box):
     def on_draw_clicked(self, button):
         """Toggle drawing mode"""
         self.draw_mode = not self.draw_mode
-        
+        self.update_action_bar_button(self.draw_mode, button)
         if self.draw_mode:
             self.crop_mode = False
             self.text_mode = False
