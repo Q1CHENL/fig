@@ -20,18 +20,16 @@ class FrameLine(Gtk.Widget):
         
         self.editor = editor
 
-        self.stride = 1
+        self.STRIDE = 1
         self.min_value = 0
         self.max_value = 1
 
-        # Handle properties
         self.left_value = self.min_value
         self.right_value = self.max_value - 1
 
-        # Visual properties (updated to match button height)
-        self.handle_radius = 20  # Diameter will be 40px to match button height
-        self.track_height = 4
-        self.track_radius = 2
+        self.HANDLE_RADIUS = 20  # Diameter will be 40px to match button height
+        self.TRACK_HEIGHT = 4
+        self.TRACK_RADIUS = 2
 
         # Theme colors
         self.track_color = (0, 0, 0, 0.1)
@@ -191,12 +189,12 @@ class FrameLine(Gtk.Widget):
 
         # Calculate padding needed for scaled handles
         scale_factor = 1.05
-        padding = self.handle_radius * (scale_factor - 1)
+        padding = self.HANDLE_RADIUS * (scale_factor - 1)
 
         # Adjust positions to account for padding
-        left_handle_x = max(self.handle_radius + padding,
+        left_handle_x = max(self.HANDLE_RADIUS + padding,
                             self.value_to_position(self.left_value, width))
-        right_handle_x = min(width - self.handle_radius - padding,
+        right_handle_x = min(width - self.HANDLE_RADIUS - padding,
                              self.value_to_position(self.right_value, width))
 
         cr = snapshot.append_cairo(
@@ -207,8 +205,8 @@ class FrameLine(Gtk.Widget):
         # 1. Draw base track first
         cr.set_source_rgba(self.track_color[0], self.track_color[1], 
                           self.track_color[2], self.track_color[3])
-        self.draw_rounded_rectangle(cr, self.handle_radius, (height - self.track_height) / 2,
-                                    width - 2 * self.handle_radius, self.track_height, self.track_radius)
+        self.draw_rounded_rectangle(cr, self.HANDLE_RADIUS, (height - self.TRACK_HEIGHT) / 2,
+                                    width - 2 * self.HANDLE_RADIUS, self.TRACK_HEIGHT, self.TRACK_RADIUS)
         cr.fill()
 
         self.draw_selected_track(cr, left_handle_x, right_handle_x, width, height)
@@ -265,8 +263,8 @@ class FrameLine(Gtk.Widget):
         else:
             cr.set_source_rgb(1, 0.4, 0.4)  # Light red
 
-        cr.rectangle(min(left_handle_x, right_handle_x), (height - self.track_height) / 2,
-                    abs(right_handle_x - left_handle_x), self.track_height)
+        cr.rectangle(min(left_handle_x, right_handle_x), (height - self.TRACK_HEIGHT) / 2,
+                    abs(right_handle_x - left_handle_x), self.TRACK_HEIGHT)
         cr.fill()
             
     def handle_within_insert_range(self, handle_x):
@@ -320,11 +318,11 @@ class FrameLine(Gtk.Widget):
         right_handle_x = self.value_to_position(self.right_value, width)
         
         # Only handle dragging for left click
-        if abs(x - left_handle_x) <= self.handle_radius:
+        if abs(x - left_handle_x) <= self.HANDLE_RADIUS:
             self.dragging_left = True
             self.drag_offset = left_handle_x - x
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        elif abs(x - right_handle_x) <= self.handle_radius:
+        elif abs(x - right_handle_x) <= self.HANDLE_RADIUS:
             self.dragging_right = True
             self.drag_offset = right_handle_x - x
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
@@ -387,8 +385,8 @@ class FrameLine(Gtk.Widget):
         right_handle_x = self.value_to_position(self.right_value, width)
 
         # Check if mouse is over either handle
-        self.left_handle_hover = abs(x - left_handle_x) <= self.handle_radius and not self.dragging_right
-        self.right_handle_hover = abs(x - right_handle_x) <= self.handle_radius and not self.dragging_left
+        self.left_handle_hover = abs(x - left_handle_x) <= self.HANDLE_RADIUS and not self.dragging_right
+        self.right_handle_hover = abs(x - right_handle_x) <= self.HANDLE_RADIUS and not self.dragging_left
 
     def on_right_click(self, gesture, n_press, x, y):
         if self.popup_menu.get_visible():
@@ -399,7 +397,7 @@ class FrameLine(Gtk.Widget):
         right_handle_x = self.value_to_position(self.right_value, width)
 
         # Check if click is on handles
-        if abs(x - left_handle_x) <= self.handle_radius:
+        if abs(x - left_handle_x) <= self.HANDLE_RADIUS:
             self.active_handle = 'left'
             rect = Gdk.Rectangle()
             rect.x = int(x)
@@ -408,7 +406,7 @@ class FrameLine(Gtk.Widget):
             rect.height = 1
             self.popup_menu.set_pointing_to(rect)
             self.popup_menu.popup()
-        elif abs(x - right_handle_x) <= self.handle_radius:
+        elif abs(x - right_handle_x) <= self.HANDLE_RADIUS:
             self.active_handle = 'right'
             rect = Gdk.Rectangle()
             rect.x = int(x)
@@ -435,10 +433,10 @@ class FrameLine(Gtk.Widget):
             cr.translate(handle_x, height / 2)
             cr.scale(1.05, 1.05)
             cr.translate(-handle_x, -height / 2)
-            cr.arc(handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
+            cr.arc(handle_x, height / 2, self.HANDLE_RADIUS, 0, 2 * math.pi)
             cr.restore()
         else:
-            cr.arc(handle_x, height / 2, self.handle_radius, 0, 2 * math.pi)
+            cr.arc(handle_x, height / 2, self.HANDLE_RADIUS, 0, 2 * math.pi)
         cr.fill()
 
         # Draw frame number text
@@ -449,9 +447,9 @@ class FrameLine(Gtk.Widget):
 
         text = ""        
         # More robust position comparison that handles edge cases
-        if abs(handle_x - left_pos) < 1 or (handle_x <= self.handle_radius + 1 and left_pos <= self.handle_radius + 1):
+        if abs(handle_x - left_pos) < 1 or (handle_x <= self.HANDLE_RADIUS + 1 and left_pos <= self.HANDLE_RADIUS + 1):
             text = str(int(self.left_value))
-        elif abs(handle_x - right_pos) < 1 or (handle_x >= width - self.handle_radius - 1 and right_pos >= width - self.handle_radius - 1):
+        elif abs(handle_x - right_pos) < 1 or (handle_x >= width - self.HANDLE_RADIUS - 1 and right_pos >= width - self.HANDLE_RADIUS - 1):
             text = str(int(self.right_value))
         elif self.playhead_visible and (abs(handle_x - playhead_pos) < 1):
             text = str(int(self.playhead_pos))
@@ -630,7 +628,7 @@ class FrameLine(Gtk.Widget):
 
     def draw_inserted_ranges(self, cr, width, height):
         """Draw inserted ranges in green"""
-        track_y = (height - self.track_height) / 2
+        track_y = (height - self.TRACK_HEIGHT) / 2
         
         for start_idx, end_idx in self.inserted_ranges:
             # Convert indices to positions (fix the off-by-one issue)
@@ -639,7 +637,7 @@ class FrameLine(Gtk.Widget):
             
             # Draw green highlight
             cr.set_source_rgb(0x2d/255, 0xc6/255, 0x53/255)  # Green color
-            cr.rectangle(start_pos, track_y, end_pos - start_pos, self.track_height)
+            cr.rectangle(start_pos, track_y, end_pos - start_pos, self.TRACK_HEIGHT)
             cr.fill()
 
     def on_changespeed_frames_clicked(self, button):
@@ -727,14 +725,14 @@ class FrameLine(Gtk.Widget):
         for start, end in self.removed_ranges:
             start_x = self.value_to_position(start + 1, width)
             end_x = self.value_to_position(end + 1, width)
-            cr.rectangle(start_x, (height - self.track_height) / 2,
-                        end_x - start_x + (width - 2 * self.handle_radius) / (self.max_value - self.min_value),
-                        self.track_height)
+            cr.rectangle(start_x, (height - self.TRACK_HEIGHT) / 2,
+                        end_x - start_x + (width - 2 * self.HANDLE_RADIUS) / (self.max_value - self.min_value),
+                        self.TRACK_HEIGHT)
             cr.fill()
 
     def draw_speed_ranges(self, cr, width, height):
         """Draw speed-modified ranges in blue"""
-        track_y = (height - self.track_height) / 2
+        track_y = (height - self.TRACK_HEIGHT) / 2
         
         for start_idx, end_idx, _ in self.speed_ranges:
             # Convert indices to positions (use same logic as inserted_ranges)
@@ -743,7 +741,7 @@ class FrameLine(Gtk.Widget):
             
             # Draw blue highlight
             cr.set_source_rgb(0x62/255, 0xa0/255, 0xea/255)  # Blue color
-            cr.rectangle(start_pos, track_y, end_pos - start_pos, self.track_height)
+            cr.rectangle(start_pos, track_y, end_pos - start_pos, self.TRACK_HEIGHT)
             cr.fill()
 
     def add_speed_range(self, start, end, speed):
@@ -828,18 +826,18 @@ class FrameLine(Gtk.Widget):
 
     def round_to_stride(self, value):
         """Internal method to round value to nearest stride"""
-        return round(value / self.stride) * self.stride
+        return round(value / self.STRIDE) * self.STRIDE
 
     def value_to_position(self, value, width):
         """Internal method to convert value to screen position"""
-        usable_width = width - 2 * self.handle_radius
+        usable_width = width - 2 * self.HANDLE_RADIUS
         normalized_value = (value - self.min_value) / (self.max_value - self.min_value)
-        return self.handle_radius + normalized_value * usable_width
+        return self.HANDLE_RADIUS + normalized_value * usable_width
 
     def position_to_value(self, position, width):
         """Internal method to convert screen position to value"""
-        usable_width = width - 2 * self.handle_radius
-        normalized_pos = max(0, min(1, (position - self.handle_radius) / usable_width))
+        usable_width = width - 2 * self.HANDLE_RADIUS
+        normalized_pos = max(0, min(1, (position - self.HANDLE_RADIUS) / usable_width))
         return self.min_value + normalized_pos * (self.max_value - self.min_value)
 
     def is_frame_removed(self, frame_index):
