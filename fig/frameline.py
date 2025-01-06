@@ -429,8 +429,8 @@ class FrameLine(Gtk.Widget):
         cr.new_path()
         
         # Draw handle circle with scaling if hovered
-        if (self.left_handle_hover and handle_x == self.value_to_position(self.left_value, self.get_width())) or \
-           (self.right_handle_hover and handle_x == self.value_to_position(self.right_value, self.get_width())):
+        if (self.left_handle_hover and abs(handle_x - self.value_to_position(self.left_value, self.get_width())) <= 2) or \
+           (self.right_handle_hover and abs(handle_x - self.value_to_position(self.right_value, self.get_width())) <= 2):
             cr.save()
             cr.translate(handle_x, height / 2)
             cr.scale(1.05, 1.05)
