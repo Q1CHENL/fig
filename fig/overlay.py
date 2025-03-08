@@ -113,7 +113,11 @@ class CropTextOverlay(Gtk.Overlay):
             if current_frame >= len(self.editor.drawings):
                 self.editor.drawings.extend([[] for _ in range(current_frame - len(self.editor.drawings) + 1)])
             
-            self.editor.drawings[current_frame].append([point])
+            # Store the line with its color
+            self.editor.drawings[current_frame].append({
+                'points': [point],
+                'color': self.editor.current_draw_color
+            })
             self.drawing_area.queue_draw()
             return True
             
@@ -256,7 +260,18 @@ class CropTextOverlay(Gtk.Overlay):
         self.start_crop_rect = None
         self.dragging_region = False
 
-    def draw_overlay(self, area, cr, da_width, da_height, *args):
+    def draw_overlay(self, drawing_area, cr, width, height):
+        # Get actual displayed image dimensions
+        image_width = self.editor.image_display_width
+        image_height = self.editor.image_display_height
+        x_offset = (width - image_width) // 2
+        y_offset = (height - image_height) // 2
+        
+        # print(f"Drawing Area: {width}x{height}")
+        # print(f"Displayed Image: {image_width}x{image_height}")
+        # print(f"Image Offset: ({x_offset}, {y_offset})")
+        # print(f"Scale: {self.editor.IMAGE_SCALE}")
+        
         # Get the actual image dimensions from the Picture widget
         child = self.get_child()
         if not child or not isinstance(child, Gtk.Picture):
@@ -270,8 +285,8 @@ class CropTextOverlay(Gtk.Overlay):
         img_height = paintable.get_intrinsic_height()
         
         # Calculate the scaling to fit in the display area
-        scale_width = da_width / img_width
-        scale_height = da_height / img_height
+        scale_width = width / img_width
+        scale_height = height / img_height
         scale = min(scale_width, scale_height)
         
         # Calculate the actual displayed image size
@@ -279,13 +294,13 @@ class CropTextOverlay(Gtk.Overlay):
         display_height = int(img_height * scale)
         
         # Calculate the position to center the image
-        x_offset = (da_width - display_width) // 2
-        y_offset = (da_height - display_height) // 2
+        x_offset = (width - display_width) // 2
+        y_offset = (height - display_height) // 2
 
         # Draw crop overlay
         cr.set_operator(cairo.OPERATOR_OVER)
         cr.set_source_rgba(self.overlay_bkg[0], self.overlay_bkg[1], self.overlay_bkg[2], self.overlay_bkg[3])
-        cr.rectangle(0, 0, da_width, da_height)
+        cr.rectangle(0, 0, width, height)
         cr.fill()
         
         # Calculate crop rectangle in pixels, relative to the actual image display area
@@ -303,12 +318,21 @@ class CropTextOverlay(Gtk.Overlay):
         cr.set_operator(cairo.OPERATOR_OVER)
         current_frame = self.editor.current_frame_index
         if current_frame < len(self.editor.drawings):
-            cr.set_source_rgb(1, 1, 1)  # White color
             cr.set_line_width(2)
             for line in self.editor.drawings[current_frame]:
-                if len(line) > 1:
-                    cr.move_to(line[0][0], line[0][1])
-                    for point in line[1:]:
+                if 'color' in line:
+                    color = line['color'].lstrip('#')
+                    r = int(color[0:2], 16) / 255.0
+                    g = int(color[2:4], 16) / 255.0
+                    b = int(color[4:6], 16) / 255.0
+                    cr.set_source_rgb(r, g, b)
+                else:
+                    cr.set_source_rgb(1, 1, 1)
+                
+                points = line['points']
+                if len(points) > 1:
+                    cr.move_to(points[0][0], points[0][1])
+                    for point in points[1:]:
                         cr.line_to(point[0], point[1])
                     cr.stroke()
 
@@ -318,6 +342,8 @@ class CropTextOverlay(Gtk.Overlay):
             cr.set_source_rgb(1, 1, 1)
             cr.set_line_width(1)
             cr.rectangle(x, y, w, h)
+            # print crop rect
+            # print(f"Drawing Crop Rect: ({w}, {h})")
             cr.stroke()
             
             if self.show_grid_lines:
@@ -483,10 +509,10 @@ class CropTextOverlay(Gtk.Overlay):
         if self.draw_mode and self.editor.drawing:
             current_frame = self.editor.current_frame_index
             if current_frame < len(self.editor.drawings):
-                current_line = self.editor.drawings[current_frame][-1]  # Get the last line from current frame
+                current_line = self.editor.drawings[current_frame][-1]  # Get the last line
                 point = (x, y)
-                if not current_line or current_line[-1] != point:
-                    current_line.append(point)
+                if not current_line['points'] or current_line['points'][-1] != point:
+                    current_line['points'].append(point)
                     self.editor.last_point = point
                     self.drawing_area.queue_draw()
             return True
