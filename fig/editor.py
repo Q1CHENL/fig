@@ -142,8 +142,8 @@ class EditorBox(Gtk.Box):
             self.original_frame_durations = []
             self.current_frame_index = 0
             self.playhead_frame_index = 0
-            self.crop_overlay.reset_crop_rect()
-            
+            self.overlay.reset_crop_rect()
+
             # Get dimensions from the first frame
             with Image.open(file_path) as gif:
                 # change size for image +/-
@@ -236,9 +236,9 @@ class EditorBox(Gtk.Box):
 
             if self.frames:
                 self.display_frame(0)
-                self.crop_overlay.drawing_area.queue_resize()
-                self.crop_overlay.drawing_area.queue_draw()
-            
+                self.overlay.drawing_area.queue_resize()
+                self.overlay.drawing_area.queue_draw()
+
         return False  # Required for GLib.idle_add
 
     def display_frame(self, frame_index):
@@ -603,8 +603,8 @@ class EditorBox(Gtk.Box):
                     self.frames[i] = self._pil_to_pixbuf(rotated)
 
             self.display_frame(self.current_frame_index)
-            self.crop_overlay.drawing_area.queue_resize()
-            self.crop_overlay.drawing_area.queue_draw()
+            self.overlay.drawing_area.queue_resize()
+            self.overlay.drawing_area.queue_draw()
             
         except Exception as e:
             print(f"Error rotating frames: {e}")
@@ -686,8 +686,8 @@ class EditorBox(Gtk.Box):
             self.draw_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
         
         self.frameline.update_theme(is_dark)
-        self.crop_overlay.update_theme(is_dark)
-    
+        self.overlay.update_theme(is_dark)
+
     def on_handle_drag(self, handle_position):
         """Called when either handle is being dragged"""
         # Update displayed frame to match handle position
@@ -933,12 +933,12 @@ class EditorBox(Gtk.Box):
     def on_crop_clicked(self, button):
         if self.crop_mode:
             self.crop_mode = False
-            self.crop_overlay.reset_crop_rect()
+            self.overlay.reset_crop_rect()
         else:
             self.crop_mode = True
-            self.crop_overlay.handles_visible = True    
+            self.overlay.handles_visible = True
         self.update_action_bar_button(self.crop_mode, button)
-        self.crop_overlay.drawing_area.queue_draw()
+        self.overlay.drawing_area.queue_draw()
 
     def on_text_clicked(self, button):
         """Toggle text editing mode"""
@@ -947,14 +947,14 @@ class EditorBox(Gtk.Box):
         
         if self.text_mode:
             self.crop_mode = False
-            self.crop_overlay.handles_visible = False
-            self.crop_overlay.text_mode = True
-            self.crop_overlay.drawing_area.queue_draw()
+            self.overlay.handles_visible = False
+            self.overlay.text_mode = True
+            self.overlay.drawing_area.queue_draw()
             self.text_button.add_css_class('active')
         else:
-            self.crop_overlay.handles_visible = False
-            self.crop_overlay.text_mode = False
-            self.crop_overlay.drawing_area.queue_draw()
+            self.overlay.handles_visible = False
+            self.overlay.text_mode = False
+            self.overlay.drawing_area.queue_draw()
             self.text_button.remove_css_class('active')
 
     def on_draw_clicked(self, button):
@@ -964,14 +964,14 @@ class EditorBox(Gtk.Box):
         if self.draw_mode:
             self.crop_mode = False
             self.text_mode = False
-            self.crop_overlay.draw_mode = True
-            self.crop_overlay.handles_visible = False
+            self.overlay.draw_mode = True
+            self.overlay.handles_visible = False
             self.draw_button.add_css_class('active')
             
             if not hasattr(self, 'drawings'):
                 self.drawings = [[]]  # Start with empty list for first frame
         else:
-            self.crop_overlay.draw_mode = False
+            self.overlay.draw_mode = False
             self.draw_button.remove_css_class('active')
             
         self.crop_overlay.drawing_area.queue_draw()
