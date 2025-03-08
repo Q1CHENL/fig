@@ -435,6 +435,9 @@ class EditorBox(Gtk.Box):
 
     def _save_gif(self, save_path, start_idx, end_idx):
         """Save GIF including inserted frames, drawings, and excluding removed ranges"""
+        import traceback
+        from PIL import Image, ImageDraw, ImageFont  # Move imports to the top of the method
+        
         is_reversed = start_idx > end_idx
         if is_reversed:
             start_idx, end_idx = end_idx, start_idx
@@ -485,27 +488,68 @@ class EditorBox(Gtk.Box):
             
             if self.drawings and self.drawings[0]:
                 for line in self.drawings[0]:
-                    if len(line) > 1:
+                    if len(line['points']) > 1:
                         # Convert coordinates to image space
                         scaled_points = []
-                        for point in line:
+                        for point in line['points']:
                             if isinstance(point, (list, tuple)) and len(point) >= 2:
                                 x, y = point[0], point[1]
                                 scaled_x = (x/self.IMAGE_SCALE)
                                 scaled_y = (y/self.IMAGE_SCALE)
                                 scaled_points.append((scaled_x, scaled_y))
+
+                        color = line.get('color', '#FFFFFF')
+                        for j in range(len(scaled_points) - 1):  # Changed i to j to avoid variable shadowing
+                            draw.line([scaled_points[j], scaled_points[j + 1]],
+                                    fill=color, width=2)
+
+            # Handle text with rotation
+            for text_entry in self.overlay.text_entries:
+                try:
+                    x = int(text_entry['x']) / self.IMAGE_SCALE
+                    y = int(text_entry['y']) / self.IMAGE_SCALE
+                    text = text_entry['entry'].get_text()
+                    
+                    # Check if we need to apply rotation
+                    if hasattr(self, 'text_rotation') and self.text_rotation != 0:
+                        # Estimate text size - you might want to use a font that supports size measurement
+                        # This is an approximation
+                        font_size = 12  # Default font size, adjust based on your app
+                        text_width = len(text) * font_size
+                        text_height = font_size * 1.5
                         
-                        for i in range(len(scaled_points) - 1):
-                            draw.line([scaled_points[i], scaled_points[i + 1]], 
-                                    fill='white', width=2)
-            
-            for text_entry in self.crop_overlay.text_entries:
-                x = int(text_entry['x'])
-                y = int(text_entry['y'])
-                draw.text((x/self.IMAGE_SCALE, y/self.IMAGE_SCALE), 
-                         text_entry['entry'].get_text(), 
-                         fill='white', font=None)
-            
+                        # Create transparent image large enough for the rotated text
+                        text_img = Image.new('RGBA', 
+                                            (int(max(text_width, text_height) * 2), 
+                                             int(max(text_width, text_height) * 2)), 
+                                            (0, 0, 0, 0))
+                        
+                        # Draw text at the center of this new image
+                        text_draw = ImageDraw.Draw(text_img)
+                        text_draw.text((text_img.width//2, text_img.height//2), 
+                                       text, 
+                                       fill='white',
+                                       anchor='mm')  # Center alignment
+                        
+                        # Rotate the text image
+                        rotated_text = text_img.rotate(-self.text_rotation, 
+                                                      resample=Image.BICUBIC, 
+                                                      expand=True)
+                        
+                        # Paste the rotated text onto the main image
+                        # Adjust position to account for the rotation and text size
+                        paste_x = int(x) - rotated_text.width//2
+                        paste_y = int(y) - rotated_text.height//2
+                        
+                        # Paste using the alpha channel as mask
+                        frame.paste(rotated_text, (paste_x, paste_y), rotated_text)
+                    else:
+                        # No rotation - draw text directly
+                        draw.text((x, y), text, fill='white')
+                except Exception as e:
+                    print(f"Error drawing text: {e}")
+                    traceback.print_exc()
+
             frame = frame.crop(crop_box)
             frames_to_save.append(frame)
             durations.append(duration)
@@ -630,6 +674,61 @@ class EditorBox(Gtk.Box):
                             final_x = prev_display_height - y
                             rotated_points.append((final_x, final_y))
                         line['points'] = rotated_points
+            
+            # Update rotation angle for text entries
+            if not hasattr(self, 'text_rotation'):
+                self.text_rotation = 0
+            
+            # Increase rotation by 90 degrees for each clockwise rotation
+            self.text_rotation = (self.text_rotation + 90) % 360
+            
+            # Rotate all text entries using the same logic for position
+            if hasattr(self.overlay, 'text_entries'):
+                for text_entry in self.overlay.text_entries:
+                    # Get current coordinates
+                    x = text_entry['x']
+                    y = text_entry['y']
+                    
+                    # Apply the same rotation transformation for position
+                    final_y = x
+                    final_x = prev_display_height - y
+                    
+                    # Update the text entry coordinates
+                    text_entry['x'] = final_x
+                    text_entry['y'] = final_y
+                    
+                    # Update the actual widget position if it exists
+                    if 'entry' in text_entry and text_entry['entry']:
+                        entry_widget = text_entry['entry']
+                        entry_widget.set_margin_start(int(final_x))
+                        entry_widget.set_margin_top(int(final_y))
+                        
+                        # Apply rotation transform via CSS - GTK4 compatible approach
+                        css_provider = Gtk.CssProvider()
+                        css_data = f"""
+                            entry {{
+                                transform: rotate({self.text_rotation}deg);
+                                transform-origin: 0 0;
+                            }}
+                        """
+                        css_provider.load_from_data(css_data.encode('utf-8'))
+                        
+                        # Get the style context and add our provider
+                        style_context = entry_widget.get_style_context()
+                        
+                        # Store the provider and rotation info with the widget
+                        if hasattr(entry_widget, 'rotation_provider'):
+                            # If we already had a provider, remove it first
+                            style_context.remove_provider(entry_widget.rotation_provider)
+                        
+                        # Add the new provider and store it on the widget
+                        style_context.add_provider(
+                            css_provider,
+                            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                        )
+                        # Store the provider on the widget for future updates
+                        entry_widget.rotation_provider = css_provider
+                        entry_widget.rotation_angle = self.text_rotation
 
             self.display_frame(self.current_frame_index)
             self.overlay.drawing_area.queue_resize()
@@ -987,7 +1086,11 @@ class EditorBox(Gtk.Box):
             self.text_button.remove_css_class('active')
 
     def on_draw_clicked(self, button):
-        """Toggle drawing mode"""
+        """Toggle drawing mode and show color popover"""
+        if not self.draw_mode:
+            # Show color popover when enabling draw mode
+            self.color_popover.popup()
+
         self.draw_mode = not self.draw_mode
         self.update_action_bar_button(self.draw_mode, button)
         if self.draw_mode:
@@ -1002,5 +1105,10 @@ class EditorBox(Gtk.Box):
         else:
             self.overlay.draw_mode = False
             self.draw_button.remove_css_class('active')
-            
-        self.crop_overlay.drawing_area.queue_draw()
+
+        self.overlay.drawing_area.queue_draw()
+
+    def on_color_selected(self, button, color):
+        """Handle color selection"""
+        self.current_draw_color = color[0]
+        self.color_popover.popdown()
