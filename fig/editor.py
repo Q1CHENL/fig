@@ -590,22 +590,51 @@ class EditorBox(Gtk.Box):
         self.update_action_bar_button(self.rotated, button)
         if not self.frames:
             return
-        
-        try:
-            # Recalculate scale for new dimensions
-            self.image_display_width, self.image_display_height = self.image_display_height, self.image_display_width
-            self.calculate_image_scale(self.image_display_width, self.image_display_height)
 
+        try:
+            # Store the current scale - we'll use the same scale after rotation
+            original_scale = self.IMAGE_SCALE
+            # Swap dimensions but don't recalculate the scale
+            self.image_display_width, self.image_display_height = self.image_display_height, self.image_display_width
+            prev_display_height = self.image_display_width * original_scale  # Width is now height
+                    
+            # Rotate the actual frames
             for i, frame in enumerate(self.frames):
                 if frame:
                     pil_image = self._pixbuf_to_pil(frame)
                     rotated = pil_image.transpose(Image.ROTATE_270)
                     self.frames[i] = self._pil_to_pixbuf(rotated)
+            
+            # Keep the original scale - don't recalculate
+            self.IMAGE_SCALE = original_scale
+            
+            # Set the container size with the original scale
+            self.image_container.set_size_request(
+                self.image_display_width * original_scale,
+                self.image_display_height * original_scale)
+            self.overlay.drawing_area.set_size_request(
+                self.image_display_width * original_scale,
+                self.image_display_height * original_scale)
+            self.overlay.set_size_request(
+                self.image_display_width * original_scale,
+                self.image_display_height * original_scale)
+            
+            # Rotate all drawings if they exist
+            if hasattr(self, 'drawings'):
+                for frame_drawings in self.drawings:
+                    for line in frame_drawings:
+                        rotated_points = []
+                        for point in line['points']:
+                            x, y = point
+                            final_y = x
+                            final_x = prev_display_height - y
+                            rotated_points.append((final_x, final_y))
+                        line['points'] = rotated_points
 
             self.display_frame(self.current_frame_index)
             self.overlay.drawing_area.queue_resize()
             self.overlay.drawing_area.queue_draw()
-            
+
         except Exception as e:
             print(f"Error rotating frames: {e}")
             error_dialog = Gtk.AlertDialog()
