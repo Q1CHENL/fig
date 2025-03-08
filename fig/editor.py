@@ -36,10 +36,10 @@ class EditorBox(Gtk.Box):
         self.image_display.set_hexpand(True)
         load_css(self.image_display, ["image-display"])
 
-        self.crop_overlay = CropTextOverlay(self)
-        self.image_container.append(self.crop_overlay)
-        self.crop_overlay.set_child(self.image_display)
-        
+        self.overlay = CropTextOverlay(self)
+        self.image_container.append(self.overlay)
+        self.overlay.set_child(self.image_display)
+
         self.info_label = Gtk.Label()
         self.info_label.set_margin_top(10)
         self.info_label.set_margin_bottom(10)
@@ -131,9 +131,50 @@ class EditorBox(Gtk.Box):
         self.flipped = False
         self.is_dark = True
         self.rotated = False
-        
-        self.update_theme(True)  # Set initial theme to dark
-        
+
+        self.update_theme(is_dark=True)
+
+        self.color_popover = Gtk.Popover()
+        self.color_popover.set_parent(self.draw_button)
+
+        color_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        color_box.set_margin_top(5)
+        color_box.set_margin_bottom(5)
+        color_box.set_margin_start(5)
+        color_box.set_margin_end(5)
+
+        colors = [
+            ('#FFFFFF', 'White'),
+            ('#000000', 'Black'),
+            ('#FF0000', 'Red'),
+            ('#57e389', 'Green'),
+            ('#3584e4', 'Blue'),
+            ('#FFFF00', 'Yellow'),
+            # ('#FF00FF', 'Magenta'),
+            # ('#00FFFF', 'Cyan'),
+        ]
+
+        self.current_draw_color = colors[0][0]
+        for color_hex in colors:
+            color_button = Gtk.Button()
+            color_button.set_size_request(30, 30)
+            color_button.add_css_class("color-button")
+
+            css_provider = Gtk.CssProvider()
+            css_data = f"""
+                .color-button {{
+                    background: {color_hex[0]};
+                }}
+            """
+            css_provider.load_from_data(css_data.encode('utf-8'))
+            color_button.get_style_context().add_provider(
+                css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+            color_button.connect('clicked', self.on_color_selected, color_hex)
+            color_box.append(color_button)
+
+        self.color_popover.set_child(color_box)
+
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
         try:
@@ -456,7 +497,7 @@ class EditorBox(Gtk.Box):
             return  # No valid frames to save
         
         # Calculate crop box in absolute pixels
-        crop_rect = self.crop_overlay.crop_rect
+        crop_rect = self.overlay.crop_rect
         orig_width, orig_height = ref_frame.size
         left = int(crop_rect[0] * orig_width)
         top = int(crop_rect[1] * orig_height)
