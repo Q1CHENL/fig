@@ -1,17 +1,25 @@
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 import cairo
 
-class CropOverlay(Gtk.Overlay):
-    def __init__(self):
+class CropTextOverlay(Gtk.Overlay):
+    def __init__(self, editor):
         super().__init__()
+        self.editor = editor
+        self.text_mode = False
+        self.text_entries = []
+        self.current_entry = None
         
         self.drawing_area = Gtk.DrawingArea()
-        self.drawing_area.set_draw_func(self.draw_crop_overlay)
+        self.drawing_area.set_draw_func(self.draw_overlay)
         self.drawing_area.set_can_target(True)
         self.drawing_area.set_focusable(True)
 
+        motion_controller = Gtk.EventControllerMotion.new()
+        motion_controller.connect('motion', self.on_motion)
+        self.drawing_area.add_controller(motion_controller)
+        
         click_controller = Gtk.GestureClick.new()
         click_controller.connect('pressed', self.on_press)
         click_controller.connect('released', self.on_release)
@@ -34,23 +42,12 @@ class CropOverlay(Gtk.Overlay):
         self.show_grid_lines = False
         self.handles_visible = False
 
-        self.connect('realize', self.on_realize)
-
-    def on_realize(self, widget):
-        # Add the click controller to the root window after widget is realized
-        root = self.get_root()
-        if root:
-            # Create a controller for both left and right clicks on root
-            root_click_controller = Gtk.GestureClick.new()
-            root_click_controller.set_button(0)  # 0 means listen to any mouse button
-            root_click_controller.connect('pressed', self.on_click_outside)
-            root.add_controller(root_click_controller)
-            
-            # Add another controller to the drawing area itself
-            drawing_click_controller = Gtk.GestureClick.new()
-            drawing_click_controller.set_button(0)
-            drawing_click_controller.connect('pressed', self.on_click_outside)
-            self.drawing_area.add_controller(drawing_click_controller)
+        self.draw_mode = False
+        self.editor.drawing = False
+        self.editor.last_point = None
+        self.editor.drawings = []  # Remove initial empty list - we'll initialize it properly when loading frames
+        self.editor.apply_to_all_frames = True
+        self.overlay_bkg = (36/255, 36/255, 36/255, 0.85)
 
     def get_handle_at_position(self, x, y, display_width, display_height, x_offset, y_offset):
         # Convert crop rect to pixel coordinates
@@ -107,6 +104,27 @@ class CropOverlay(Gtk.Overlay):
         return None
 
     def on_press(self, gesture, n_press, x, y):
+        if self.draw_mode:
+            self.editor.drawing = True
+            point = (x, y)
+            self.editor.last_point = point
+            
+            current_frame = self.editor.current_frame_index
+            if current_frame >= len(self.editor.drawings):
+                self.editor.drawings.extend([[] for _ in range(current_frame - len(self.editor.drawings) + 1)])
+            
+            # Store the line with its color
+            self.editor.drawings[current_frame].append({
+                'points': [point],
+                'color': self.editor.current_draw_color
+            })
+            self.drawing_area.queue_draw()
+            return True
+            
+        if self.text_mode:
+            self._show_text_entry(x, y)
+            return
+            
         # Get image dimensions and scaling
         child = self.get_child()
         if not child or not isinstance(child, Gtk.Picture):
@@ -134,9 +152,7 @@ class CropOverlay(Gtk.Overlay):
         x_offset = (width - display_width) // 2
         y_offset = (height - display_height) // 2
         
-        # Check if click is within image bounds
-        if (x_offset <= x <= x_offset + display_width and 
-            y_offset <= y <= y_offset + display_height):
+        if self.editor.crop_mode:
             self.handles_visible = True
             # Check if we clicked on a handle or within the region
             self.active_handle = self.get_handle_at_position(x, y, display_width, display_height, x_offset, y_offset)
@@ -155,6 +171,12 @@ class CropOverlay(Gtk.Overlay):
         self.drawing_area.queue_draw()
 
     def on_release(self, gesture, n_press, x, y):
+        if self.draw_mode:
+            self.editor.drawing = False
+            self.editor.last_point = None
+            self.drawing_area.queue_draw()
+            return True
+            
         self.active_handle = None
         self.start_crop_rect = None
         self.dragging_region = False
@@ -238,7 +260,18 @@ class CropOverlay(Gtk.Overlay):
         self.start_crop_rect = None
         self.dragging_region = False
 
-    def draw_crop_overlay(self, area, cr, width, height, *args):
+    def draw_overlay(self, drawing_area, cr, width, height):
+        # Get actual displayed image dimensions
+        image_width = self.editor.image_display_width
+        image_height = self.editor.image_display_height
+        x_offset = (width - image_width) // 2
+        y_offset = (height - image_height) // 2
+        
+        # print(f"Drawing Area: {width}x{height}")
+        # print(f"Displayed Image: {image_width}x{image_height}")
+        # print(f"Image Offset: ({x_offset}, {y_offset})")
+        # print(f"Scale: {self.editor.IMAGE_SCALE}")
+        
         # Get the actual image dimensions from the Picture widget
         child = self.get_child()
         if not child or not isinstance(child, Gtk.Picture):
@@ -263,8 +296,9 @@ class CropOverlay(Gtk.Overlay):
         # Calculate the position to center the image
         x_offset = (width - display_width) // 2
         y_offset = (height - display_height) // 2
-        
-        # Set up semi-transparent overlay for the whole area
+
+        # Draw crop overlay
+        cr.set_operator(cairo.OPERATOR_OVER)
         cr.set_source_rgba(self.overlay_bkg[0], self.overlay_bkg[1], self.overlay_bkg[2], self.overlay_bkg[3])
         cr.rectangle(0, 0, width, height)
         cr.fill()
@@ -280,12 +314,36 @@ class CropOverlay(Gtk.Overlay):
         cr.rectangle(x, y, w, h)
         cr.fill()
         
+        # Draw stored drawings first
+        cr.set_operator(cairo.OPERATOR_OVER)
+        current_frame = self.editor.current_frame_index
+        if current_frame < len(self.editor.drawings):
+            cr.set_line_width(2)
+            for line in self.editor.drawings[current_frame]:
+                if 'color' in line:
+                    color = line['color'].lstrip('#')
+                    r = int(color[0:2], 16) / 255.0
+                    g = int(color[2:4], 16) / 255.0
+                    b = int(color[4:6], 16) / 255.0
+                    cr.set_source_rgb(r, g, b)
+                else:
+                    cr.set_source_rgb(1, 1, 1)
+                
+                points = line['points']
+                if len(points) > 1:
+                    cr.move_to(points[0][0], points[0][1])
+                    for point in points[1:]:
+                        cr.line_to(point[0], point[1])
+                    cr.stroke()
+
         if self.handles_visible:
             cr.set_operator(cairo.OPERATOR_OVER)
             # Draw crop rectangle border
             cr.set_source_rgb(1, 1, 1)
             cr.set_line_width(1)
             cr.rectangle(x, y, w, h)
+            # print crop rect
+            # print(f"Drawing Crop Rect: ({w}, {h})")
             cr.stroke()
             
             if self.show_grid_lines:
@@ -351,19 +409,111 @@ class CropOverlay(Gtk.Overlay):
         self.dragging_region = False
         self.show_grid_lines = False
         self.handles_visible = False
+        self.remove_all_text_entries()
         self.drawing_area.queue_draw()
 
-    def on_click_outside(self, gesture, n_press, x, y):
-        # Check if click is within our widget bounds
-        native = gesture.get_widget().get_native()
-        if native:
-            # Get the bounds of our widget relative to the native window
-            bounds = self.compute_bounds(native)[1]
-            if not (bounds.get_x() <= x <= bounds.get_x() + bounds.get_width() and
-                    bounds.get_y() <= y <= bounds.get_y() + bounds.get_height()):
-                self.handles_visible = False
-                self.active_handle = None
-                self.start_crop_rect = None
-                self.dragging_region = False
-                self.show_grid_lines = False
-                self.drawing_area.queue_draw()
+    def _show_text_entry(self, x, y):
+        """Show text entry at mouse click position"""
+        if self.current_entry:
+            # If there's an existing entry, save it first
+            text = self.current_entry.get_text()
+            if text:
+                self.text_entries.append({
+                    'text': text,
+                    'x': self.current_entry.get_margin_start(),
+                    'y': self.current_entry.get_margin_top()
+                })
+            self.remove_overlay(self.current_entry)
+
+        entry = Gtk.Entry()
+        entry.set_has_frame(False)
+        
+        # Prevent expansion
+        entry.set_hexpand(False)
+        entry.set_vexpand(False)
+        entry.set_halign(Gtk.Align.START)
+        entry.set_valign(Gtk.Align.START)
+        
+        entry.add_css_class('text-entry')
+        
+        # Position the entry at click coordinates
+        entry.set_margin_start(int(x))
+        entry.set_margin_top(int(y))
+
+        # Connect to the "activate" signal (triggered by Enter key)
+        entry.connect('activate', self._on_entry_activated)
+        
+        # Handle key events (for Escape)
+        key_controller = Gtk.EventControllerKey()
+        key_controller.connect('key-pressed', self._on_text_key_pressed, entry)
+        entry.add_controller(key_controller)
+        
+        self.add_overlay(entry)
+        entry.grab_focus()
+        self.current_entry = entry
+
+    def _on_entry_activated(self, entry: Gtk.Entry):
+        """Handle Enter key press"""
+        text = entry.get_text()
+        if text:
+            # Remove focus
+            entry.remove_css_class('focused') 
+            entry.grab_focus_without_selecting()
+            self.get_root().set_focus(None)
+            
+            text_entry = {
+                'entry': entry,
+                'x': entry.get_margin_start(),
+                'y': entry.get_margin_top()
+            }
+            self.text_entries.append(text_entry)
+        self.current_entry = None
+
+
+    def _on_text_key_pressed(self, controller, keyval, keycode, state, entry):
+        """Handle only Escape key now"""
+        if keyval == Gdk.KEY_Escape:
+            self.remove_overlay(entry)
+            self.current_entry = None
+            return Gdk.EVENT_STOP
+        return Gdk.EVENT_PROPAGATE
+    
+    def remove_all_text_entries(self):
+        for entry in self.text_entries:
+            self.remove_overlay(entry['entry'])
+        self.text_entries = []
+        self.current_entry = None
+
+    def on_button_press(self, widget, event):
+        if self.draw_mode and event.button == 1:  # Left mouse button
+            self.editor.drawing = True
+            self.editor.last_point = (event.x, event.y)
+            
+            # Initialize new line for current frame
+            current_frame = self.editor.current_frame_index
+            if current_frame >= len(self.editor.drawings):
+                self.editor.drawings.extend([[] for _ in range(current_frame - len(self.editor.drawings) + 1)])
+            self.editor.drawings[current_frame].append([self.editor.last_point])
+            
+            return True
+        return False
+
+    def on_button_release(self, widget, event):
+        if self.draw_mode:
+            self.editor.drawing = False
+            self.editor.last_point = None
+            return True
+        return False
+
+    def on_motion(self, controller, x, y):
+        if self.draw_mode and self.editor.drawing:
+            current_frame = self.editor.current_frame_index
+            if current_frame < len(self.editor.drawings):
+                current_line = self.editor.drawings[current_frame][-1]  # Get the last line
+                point = (x, y)
+                if not current_line['points'] or current_line['points'][-1] != point:
+                    current_line['points'].append(point)
+                    self.editor.last_point = point
+                    self.drawing_area.queue_draw()
+            return True
+        return False

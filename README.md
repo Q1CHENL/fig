@@ -93,10 +93,12 @@
 - ~~Extract frames~~
 - ~~Export to video~~
 - Pixelize single/all frames
-- Rotate gif
-- Text embedding
+- ~~Rotate gif~~
+- ~~Text embedding~~
 - ~~Drag and drop file~~
-- Flip image
+- ~~Flip image~~
+- ~~Draw on image~~
+- Reset all changes
 
 ## Credits
 
