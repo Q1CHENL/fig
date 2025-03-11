@@ -16,7 +16,7 @@
 
 ## Features
 
-- Crop GIF
+- Crop, flip and rotate GIF
 - Trim GIF to any frame range
 - Reverse GIF
 - Remove specific frames
@@ -25,6 +25,8 @@
 - Extract frames
 - Export GIF as video
 - Play GIF at the original speed
+- Text embedding
+- Draw on gif
 
 > [!TIP]
 > View the Help page for more advanced actions
@@ -56,49 +58,6 @@
 `pip install pytest`
 
 `pytest test/test.py`
-
-## Todos
-
-- ~~Improve UI~~
-- ~~Previews frames~~
-- ~~Preview trimmed gif~~
-- ~~Crop GIF~~
-- ~~Export frame(s)~~
-- Combine frames to GIF
-- ~~Stop icon for the play button~~
-- ~~Reverse GIF: switch handles~~
-- ~~Port to GTK4~~
-- Capture GIF
-- Web version of Fig
-- ~~Make GIF slower/faster~~
-- Make GIF black-and-white
-- ~~Reverse playback~~
-- ~~Append/Insert/Remove frames in frameline~~
-- ~~Design GTK-Style icon~~
-- ~~Button and handles hover effects~~
-- ~~Load GIF faster~~
-- ~~Improve tests and solve warnings~~
-- ~~Use FileDialog instead of FileChooserDialog/Native(GTK-4.10)~~
-- ~~Light mode~~
-- Undo last action
-- ~~Proper default name for edited GIF when saving~~
-- Menu in headerbar: ~~new window~~, ~~about~~, open, ~~help~~ etc.
-- ~~New About page~~
-- ~~Better info label UI~~
-- Loop playback option
-- ~~Light/Dark mode screenshots~~
-- Preferences: fixed color mode, default save folder etc.
-- ~~Info label changes along with frameline changes~~
-- ~~Better controls UI~~
-- ~~Extract frames~~
-- ~~Export to video~~
-- Pixelize single/all frames
-- ~~Rotate gif~~
-- ~~Text embedding~~
-- ~~Drag and drop file~~
-- ~~Flip image~~
-- ~~Draw on image~~
-- Reset all changes
 
 ## Credits
 

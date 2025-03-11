@@ -21,10 +21,12 @@ def load_css(target, css_classes=None):
         
         for css_file in css_files:
             file_path = os.path.join(style_dir, css_file)
-            if os.path.exists(file_path):
+            try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     css_data.append(f.read())
-                    
+            except IOError:
+                continue
+                
         return '\n'.join(css_data) if css_data else None
 
     css_provider = Gtk.CssProvider()
