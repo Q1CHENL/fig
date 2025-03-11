@@ -26,8 +26,16 @@
   <developer_name>Qichen Liu</developer_name>
   <url type="homepage">https://github.com/Q1CHENL/fig</url>
   <releases>
-    <release version="1.0.5" date="2025-03-11"/>
-</releases>
+    <release version="1.0.5" date="2025-03-11" />
+    <p>New feature: Action Bar</p>
+    <ul>
+      <li>Crop image - Select and crop any portion of your GIF</li>
+      <li>Flip image - Mirror your GIF horizontally</li>
+      <li>Rotate image - Rotate your GIF 90 degrees clockwise</li>
+      <li>Embed text - Add custom text overlays to your GIF</li>
+      <li>Draw - Freehand drawing tools with color selection</li>
+    </ul>
+  </releases>
   <content_rating type="oars-1.1" />
   <launchable type="desktop-id">io.github.Q1CHENL.fig.desktop</launchable>
   <screenshots>
