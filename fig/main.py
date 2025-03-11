@@ -332,6 +332,3 @@ class FigApplication(Adw.Application):
 def main():
     app = FigApplication()
     return app.run(None)
-
-if __name__ == "__main__":
-    main()
