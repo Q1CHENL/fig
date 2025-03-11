@@ -80,7 +80,7 @@ class HomeBox(Gtk.Box):
                 file_path = file.get_path()
                 window = self.get_root()
                 window.load_editor_ui()
-                window.editor_box.crop_overlay.reset_crop_rect()
+                window.editor_box.overlay.reset_crop_rect()
                 window.editor_box.load_gif(file_path)
                 original_file_name = os.path.basename(file_path)
                 if original_file_name.endswith('.gif'):

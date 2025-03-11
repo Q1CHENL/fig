@@ -112,7 +112,7 @@ class Fig(Adw.ApplicationWindow):
             file_path = value.get_path()
             if file_path.lower().endswith('.gif'):
                 self.load_editor_ui()
-                self.editor_box.crop_overlay.reset_crop_rect()
+                self.editor_box.overlay.reset_crop_rect()
                 self.editor_box.load_gif(file_path)
                 original_file_name = os.path.basename(file_path)
                 if original_file_name.endswith('.gif'):

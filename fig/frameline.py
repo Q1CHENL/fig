@@ -310,8 +310,8 @@ class FrameLine(Gtk.Widget):
             return
         
         # Hide crop overlay when interacting with frameline
-        self.editor.crop_overlay.handles_visible = False
-        self.editor.crop_overlay.drawing_area.queue_draw()
+        self.editor.overlay.handles_visible = False
+        self.editor.overlay.drawing_area.queue_draw()
         
         width = self.get_width()
         left_handle_x = self.value_to_position(self.left_value, width)

@@ -17,12 +17,7 @@ def load_css(target, css_classes=None):
             return None
             
         css_data = []
-        
-        try:
-            css_files = [f for f in os.listdir(style_dir) 
-                        if f.endswith('.css') and os.path.isfile(os.path.join(style_dir, f))]
-        except OSError:
-            return None
+        css_files = [f for f in os.listdir(style_dir) if f.endswith('.css')]
         
         for css_file in css_files:
             file_path = os.path.join(style_dir, css_file)

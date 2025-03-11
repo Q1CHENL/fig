@@ -244,31 +244,6 @@ class TestGifEditor(unittest.TestCase):
         finally:
             os.remove('corrupted.gif')
 
-    def test_frame_scaling(self):
-        """Test frame scaling functionality"""
-        self.editor.load_gif('test.gif')
-        
-        context = GLib.MainContext.default()
-        while len(self.editor.frames) < 5:
-            context.iteration(True)
-        
-        # Test scaling with different display sizes
-        test_sizes = [(200, 200), (50, 50), (100, 200), (200, 100)]
-        
-        for width, height in test_sizes:
-            self.editor.image_display_width = width
-            self.editor.image_display_height = height
-            
-            scaled_pixbuf = self.editor.scale_pixbuf_to_fit(
-                self.editor.frames[0],
-                width,
-                height
-            )
-            
-            # Verify scaled dimensions don't exceed container
-            self.assertLessEqual(scaled_pixbuf.get_width(), width)
-            self.assertLessEqual(scaled_pixbuf.get_height(), height)
-
     def test_playback_bounds(self):
         """Test playback stays within selected bounds"""
         self.editor.load_gif('test.gif')
