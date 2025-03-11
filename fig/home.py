@@ -1,7 +1,7 @@
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gio, GLib, Adw, Gdk
+from gi.repository import Gtk, Gio, GLib, Adw
 
 
 class HomeBox(Gtk.Box):

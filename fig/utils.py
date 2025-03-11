@@ -17,24 +17,21 @@ def load_css(target, css_classes=None):
             return None
             
         css_data = []
-        css_files = [
-            'headerbar.css',
-            'select-gif-button.css',
-            'about-fig-button.css',
-            'save-button.css',
-            'play-button.css',
-            'menu-item.css',
-            'info-label.css',
-            'controls-box.css',
-            'drag-and-drop.css'
-        ]
+        
+        try:
+            css_files = [f for f in os.listdir(style_dir) 
+                        if f.endswith('.css') and os.path.isfile(os.path.join(style_dir, f))]
+        except OSError:
+            return None
         
         for css_file in css_files:
             file_path = os.path.join(style_dir, css_file)
-            if os.path.exists(file_path):
+            try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     css_data.append(f.read())
-                    
+            except IOError:
+                continue
+                
         return '\n'.join(css_data) if css_data else None
 
     css_provider = Gtk.CssProvider()
