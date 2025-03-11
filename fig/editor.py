@@ -663,6 +663,22 @@ class EditorBox(Gtk.Box):
 
     def on_flip_clicked(self, button):
         """Flip all frames horizontally"""
+        # Reset any active editing modes
+        if self.text_mode:
+            self.text_mode = False
+            self.overlay.text_mode = False
+            self.update_action_bar_button(False, self.text_button)
+            
+        if self.draw_mode:
+            self.draw_mode = False
+            self.overlay.draw_mode = False
+            self.update_action_bar_button(False, self.draw_button)
+            
+        if self.crop_mode:
+            self.crop_mode = False
+            self.overlay.handles_visible = False
+            self.update_action_bar_button(False, self.crop_button)
+        
         self.flipped = not self.flipped
         self.update_action_bar_button(self.flipped, button)
 
@@ -686,6 +702,22 @@ class EditorBox(Gtk.Box):
 
     def on_rotate_clicked(self, button):
         """Rotate all frames 90 degrees clockwise"""
+        # Reset any active editing modes
+        if self.text_mode:
+            self.text_mode = False
+            self.overlay.text_mode = False
+            self.update_action_bar_button(False, self.text_button)
+            
+        if self.draw_mode:
+            self.draw_mode = False
+            self.overlay.draw_mode = False
+            self.update_action_bar_button(False, self.draw_button)
+            
+        if self.crop_mode:
+            self.crop_mode = False
+            self.overlay.handles_visible = False
+            self.update_action_bar_button(False, self.crop_button)
+            
         if not self.frames:
             return
         
@@ -1092,6 +1124,18 @@ class EditorBox(Gtk.Box):
             print(f"Error updating info label: {e}")
 
     def on_crop_clicked(self, button):
+        # Reset other modes first
+        if self.text_mode:
+            self.text_mode = False
+            self.overlay.text_mode = False
+            self.update_action_bar_button(False, self.text_button)
+        
+        if self.draw_mode:
+            self.draw_mode = False
+            self.overlay.draw_mode = False
+            self.update_action_bar_button(False, self.draw_button)
+            
+        # Now toggle crop mode
         if self.crop_mode:
             self.crop_mode = False
             self.overlay.reset_crop_rect()
