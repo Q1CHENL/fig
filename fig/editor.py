@@ -1056,10 +1056,43 @@ class EditorBox(Gtk.Box):
         self.is_playing = False
         self.play_timeout_id = None
         self.playback_finished = False
+        
+        # Reset editing states
+        self.crop_mode = False
+        self.text_mode = False
+        self.draw_mode = False
+        self.drawing = False
+        self.last_point = None
+        
+        # Reset overlays
+        self.overlay.text_mode = False
+        self.overlay.draw_mode = False
+        self.overlay.handles_visible = False
+        self.overlay.remove_all_text_entries()
+        self.overlay.reset_crop_rect()
+        
+        # Clear drawings
+        self.drawings = [[]]
+        
+        # Reset transformations
+        self.flipped = False
+        self.rotated = False
+        if hasattr(self, 'text_rotation'):
+            self.text_rotation = 0
+            
+        # Reset UI button states
+        self.update_action_bar_button(False, self.crop_button)
+        self.update_action_bar_button(False, self.text_button)
+        self.update_action_bar_button(False, self.draw_button) 
+        self.update_action_bar_button(False, self.flip_button)
+        self.update_action_bar_button(False, self.rotate_button)
+        
+        # Reset frameline and display
         self.frameline.reset()
         self.info_label.set_text("")
         self.image_display.set_pixbuf(None)
         self.image_display.queue_draw()
+        self.overlay.drawing_area.queue_draw()
         self.queue_draw()
 
     def _pil_to_pixbuf(self, pil_image):
