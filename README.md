@@ -37,7 +37,7 @@
 
   `pip install -r requirements.txt` (Install dependencies)
 
-  `python -m fig.main`
+  `python -m fig`
 
   - Install stubs for better code completion (optional)
 
