@@ -116,9 +116,13 @@ def show_about_dialog(window):
     about.set_issue_url("https://github.com/fig/issues")
 
     about.set_release_notes("""
+    <p>Action Bar</p>
     <ul>
-        <li>Extract GIF as video</li>
-        <li>Drag and drop to open image</li>
+      <li>Crop image - Select and crop any portion of your GIF</li>
+      <li>Flip image - Mirror your GIF horizontally</li>
+      <li>Rotate image - Rotate your GIF 90 degrees clockwise</li>
+      <li>Embed text - Add custom text overlays to your GIF</li>
+      <li>Draw - Freehand drawing tools with color selection</li>
     </ul>
     """)
     
