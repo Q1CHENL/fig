@@ -176,6 +176,25 @@ class EditorBox(Gtk.Box):
 
         self.color_popover.set_child(color_box)
 
+    def calculate_image_scale(self, image_width, image_height):
+        """Set up a fixed square container based on the longer dimension"""
+        # Determine the longer side of the image
+        long_side = max(image_width, image_height)
+        
+        # Calculate scale to fit the longer dimension within reasonable bounds
+        # Use the same logic as before, but apply it to the square container
+        scale = 1
+        
+        # Set the square container size to the scaled longest dimension
+        self.container_size = int(long_side * scale)
+        
+        # Store scale factor for drawings and text positioning
+        self.IMAGE_SCALE = scale
+        
+        # Store original dimensions for reference
+        self.original_width = image_width
+        self.original_height = image_height
+
     def load_gif(self, file_path):
         """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
         try:
@@ -188,12 +207,21 @@ class EditorBox(Gtk.Box):
 
             # Get dimensions from the first frame
             with Image.open(file_path) as gif:
-                # change size for image +/-
+                # Store the original dimensions
                 self.image_display_width, self.image_display_height = gif.size
                 self.calculate_image_scale(self.image_display_width, self.image_display_height)
+                
+                # Set all containers to the fixed square size
                 self.image_container.set_size_request(
-                    self.image_display_width * self.IMAGE_SCALE,
-                    self.image_display_height * self.IMAGE_SCALE)
+                    self.container_size,
+                    self.container_size)
+                self.overlay.drawing_area.set_size_request(
+                    self.container_size,
+                    self.container_size)
+                self.overlay.set_size_request(
+                    self.container_size,
+                    self.container_size)
+                
                 frame_count = gif.n_frames
 
             def load_frames_thread(batch_size=10):
@@ -246,12 +274,6 @@ class EditorBox(Gtk.Box):
             self.current_frame_index = 0
             self.playhead_frame_index = 0
 
-    def calculate_image_scale(self, image_width, image_height):
-        long = max(image_width, image_height)
-        short = min(image_width, image_height)
-        max_width = 400 if abs(short / long) > 0.8 else 550
-        self.IMAGE_SCALE = max_width / long
-
     def compute_batch_size(self, frame_count):
         return frame_count // 4
 
@@ -299,32 +321,12 @@ class EditorBox(Gtk.Box):
                 pixbuf = frame
 
             if pixbuf:
-                scaled_pixbuf = self.scale_pixbuf_to_fit(pixbuf, self.image_display_width * self.IMAGE_SCALE, self.image_display_height * self.IMAGE_SCALE)
-                if scaled_pixbuf:
-                    self.image_display.set_pixbuf(scaled_pixbuf)
-                    self.image_display.queue_draw()
+                # Display the frame directly without scaling
+                self.image_display.set_pixbuf(pixbuf)
+                self.image_display.queue_draw()
 
         except Exception as e:
             print(f"Error displaying frame: {e}")
-
-    def scale_pixbuf_to_fit(self, pixbuf, max_width, max_height):
-        """Scale pixbuf to fit within the given dimensions while maintaining aspect ratio"""
-        width = pixbuf.get_width()
-        height = pixbuf.get_height()
-
-        # Calculate scale to fill the display area while maintaining aspect ratio
-        scale_width = max_width / width
-        scale_height = max_height / height
-        scale = min(scale_width, scale_height)
-
-        new_width = int(width * scale)
-        new_height = int(height * scale)
-
-        return pixbuf.scale_simple(
-            new_width,
-            new_height,
-            GdkPixbuf.InterpType.HYPER
-        )
 
     def play_edited_frames(self, button):
         """Start or stop playing the edited frames"""
@@ -523,6 +525,7 @@ class EditorBox(Gtk.Box):
                 frame = frame.resize((orig_width, orig_height), Image.Resampling.LANCZOS)
 
             draw = ImageDraw.Draw(frame)
+            long_side = max(orig_width, orig_height)
 
             if self.drawings and self.drawings[0]:
                 for line in self.drawings[0]:
@@ -532,9 +535,11 @@ class EditorBox(Gtk.Box):
                         for point in line['points']:
                             if isinstance(point, (list, tuple)) and len(point) >= 2:
                                 x, y = point[0], point[1]
-                                scaled_x = (x/self.IMAGE_SCALE)
-                                scaled_y = (y/self.IMAGE_SCALE)
-                                scaled_points.append((scaled_x, scaled_y))
+                                if long_side == orig_width:
+                                    y = y - (self.container_size - orig_height)/2
+                                else:
+                                    x = x - (self.container_size - orig_width)/2
+                                scaled_points.append((x, y))
 
                         color = line.get('color', '#FFFFFF')
                         for j in range(len(scaled_points) - 1):  # Changed i to j to avoid variable shadowing
@@ -544,22 +549,22 @@ class EditorBox(Gtk.Box):
             # Handle text with rotation
             for text_entry in self.overlay.text_entries:
                 try:
-                    x = int(text_entry['x']) / self.IMAGE_SCALE
-                    y = int(text_entry['y']) / self.IMAGE_SCALE
+                    x = int(text_entry['x'])
+                    y = int(text_entry['y'])
                     text = text_entry['entry'].get_text()
                     
                     # Check if we need to apply rotation
                     if hasattr(self, 'text_rotation') and self.text_rotation != 0:
                         # Estimate text size - you might want to use a font that supports size measurement
                         # This is an approximation
-                        font_size = 12  # Default font size, adjust based on your app
+                        font_size = 24  # Increased font size for better visibility
                         text_width = len(text) * font_size
                         text_height = font_size * 1.5
                         
                         # Create transparent image large enough for the rotated text
                         text_img = Image.new('RGBA', 
-                                            (int(max(text_width, text_height) * 2), 
-                                             int(max(text_width, text_height) * 2)), 
+                                            (int(max(text_width, text_height) * 3), 
+                                             int(max(text_width, text_height) * 3)), 
                                             (0, 0, 0, 0))
                         
                         # Draw text at the center of this new image
@@ -574,14 +579,27 @@ class EditorBox(Gtk.Box):
                                                       resample=Image.BICUBIC, 
                                                       expand=True)
                         
-                        # Paste the rotated text onto the main image
-                        # Adjust position to account for the rotation and text size
-                        paste_x = int(x) - rotated_text.width//2
-                        paste_y = int(y) - rotated_text.height//2
+                        # Calculate paste coordinates
+                        paste_x = x
+                        paste_y = y
+                        
+                        # Adjust for container padding
+                        if long_side == orig_width:
+                            paste_y -= (self.container_size - orig_height)//2
+                        else:
+                            paste_x -= (self.container_size - orig_width)//2
+                        
+                        # Adjust paste position to center the rotated text at the specified point
+                        paste_x -= rotated_text.width//2
+                        paste_y -= rotated_text.height//2
                         
                         # Paste using the alpha channel as mask
                         frame.paste(rotated_text, (paste_x, paste_y), rotated_text)
                     else:
+                        if long_side == orig_width:
+                            y = y - (self.container_size - orig_height)//2
+                        else:
+                            x = x - (self.container_size - orig_width)//2
                         # No rotation - draw text directly
                         draw.text((x, y), text, fill='white')
                 except Exception as e:
@@ -668,37 +686,23 @@ class EditorBox(Gtk.Box):
 
     def on_rotate_clicked(self, button):
         """Rotate all frames 90 degrees clockwise"""
-        self.rotated = not self.rotated
-        self.update_action_bar_button(self.rotated, button)
         if not self.frames:
             return
+        
+        # Toggle the rotated state
+        self.rotated = not self.rotated
+        self.update_action_bar_button(self.rotated, button)
+        
         try:
-            # Store the current scale - we'll use the same scale after rotation
-            original_scale = self.IMAGE_SCALE
-            # Swap dimensions but don't recalculate the scale
+            # Swap dimensions (logical dimensions only, container stays the same)
             self.image_display_width, self.image_display_height = self.image_display_height, self.image_display_width
-            prev_display_height = self.image_display_width * original_scale  # Width is now height
-                    
-            # Rotate the actual frames
+            
+            # Rotate the frames' content
             for i, frame in enumerate(self.frames):
                 if frame:
                     pil_image = self._pixbuf_to_pil(frame)
                     rotated = pil_image.transpose(Image.ROTATE_270)
                     self.frames[i] = self._pil_to_pixbuf(rotated)
-            
-            # Keep the original scale - don't recalculate
-            self.IMAGE_SCALE = original_scale
-            
-            # Set the container size with the original scale
-            self.image_container.set_size_request(
-                self.image_display_width * original_scale,
-                self.image_display_height * original_scale)
-            self.overlay.drawing_area.set_size_request(
-                self.image_display_width * original_scale,
-                self.image_display_height * original_scale)
-            self.overlay.set_size_request(
-                self.image_display_width * original_scale,
-                self.image_display_height * original_scale)
             
             # Rotate all drawings if they exist
             if hasattr(self, 'drawings'):
@@ -707,19 +711,17 @@ class EditorBox(Gtk.Box):
                         rotated_points = []
                         for point in line['points']:
                             x, y = point
+                            final_x = self.container_size - y
                             final_y = x
-                            final_x = prev_display_height - y
                             rotated_points.append((final_x, final_y))
                         line['points'] = rotated_points
             
-            # Update rotation angle for text entries
+            # Handle text rotation
             if not hasattr(self, 'text_rotation'):
                 self.text_rotation = 0
             
-            # Increase rotation by 90 degrees for each clockwise rotation
             self.text_rotation = (self.text_rotation + 90) % 360
             
-            # Rotate all text entries using the same logic for position
             if hasattr(self.overlay, 'text_entries'):
                 for text_entry in self.overlay.text_entries:
                     # Get current coordinates
@@ -728,7 +730,7 @@ class EditorBox(Gtk.Box):
                     
                     # Apply the same rotation transformation for position
                     final_y = x
-                    final_x = prev_display_height - y
+                    final_x = self.container_size - y
                     
                     # Update the text entry coordinates
                     text_entry['x'] = final_x
@@ -740,7 +742,7 @@ class EditorBox(Gtk.Box):
                         entry_widget.set_margin_start(int(final_x))
                         entry_widget.set_margin_top(int(final_y))
                         
-                        # Apply rotation transform via CSS - GTK4 compatible approach
+                        # Apply rotation transform via CSS
                         css_provider = Gtk.CssProvider()
                         css_data = f"""
                             entry {{
@@ -750,28 +752,26 @@ class EditorBox(Gtk.Box):
                         """
                         css_provider.load_from_data(css_data.encode('utf-8'))
                         
-                        # Get the style context and add our provider
                         style_context = entry_widget.get_style_context()
                         
-                        # Store the provider and rotation info with the widget
                         if hasattr(entry_widget, 'rotation_provider'):
-                            # If we already had a provider, remove it first
                             style_context.remove_provider(entry_widget.rotation_provider)
                         
-                        # Add the new provider and store it on the widget
                         style_context.add_provider(
                             css_provider,
                             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
                         )
-                        # Store the provider on the widget for future updates
                         entry_widget.rotation_provider = css_provider
                         entry_widget.rotation_angle = self.text_rotation
-
+            
+            # Update display
             self.display_frame(self.current_frame_index)
-            self.overlay.drawing_area.queue_resize()
             self.overlay.drawing_area.queue_draw()
+            
         except Exception as e:
             print(f"Error rotating frames: {e}")
+            import traceback
+            traceback.print_exc()
             error_dialog = Gtk.AlertDialog()
             error_dialog.set_message("Error rotating frames")
             error_dialog.set_detail(str(e))
