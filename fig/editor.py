@@ -1103,6 +1103,11 @@ class EditorBox(Gtk.Box):
 
     def on_text_clicked(self, button):
         """Toggle text editing mode"""
+        if self.draw_mode:
+            self.draw_mode = False
+            self.overlay.draw_mode = False
+            self.update_action_bar_button(False, self.draw_button)
+
         self.text_mode = not self.text_mode
         self.update_action_bar_button(self.text_mode, button)
 
@@ -1111,17 +1116,19 @@ class EditorBox(Gtk.Box):
             self.overlay.handles_visible = False
             self.overlay.text_mode = True
             self.overlay.drawing_area.queue_draw()
-            self.text_button.add_css_class('active')
         else:
             self.overlay.handles_visible = False
             self.overlay.text_mode = False
             self.overlay.drawing_area.queue_draw()
-            self.text_button.remove_css_class('active')
 
     def on_draw_clicked(self, button):
         """Toggle drawing mode and show color popover"""
+        if self.text_mode:
+            self.text_mode = False
+            self.overlay.text_mode = False
+            self.update_action_bar_button(False, self.text_button)
+
         if not self.draw_mode:
-            # Show color popover when enabling draw mode
             self.color_popover.popup()
 
         self.draw_mode = not self.draw_mode
@@ -1129,16 +1136,13 @@ class EditorBox(Gtk.Box):
 
         if self.draw_mode:
             self.crop_mode = False
-            self.text_mode = False
-            self.overlay.draw_mode = True
             self.overlay.handles_visible = False
-            self.draw_button.add_css_class('active')
-
+            self.overlay.draw_mode = True
+            
             if not hasattr(self, 'drawings'):
                 self.drawings = [[]]  # Start with empty list for first frame
         else:
             self.overlay.draw_mode = False
-            self.draw_button.remove_css_class('active')
 
         self.overlay.drawing_area.queue_draw()
 
