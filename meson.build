@@ -1,5 +1,5 @@
 project('fig',
-  version: '1.0.4',
+  version: '1.0.5',
   meson_version: '>= 0.59.0'
 )
 
@@ -42,10 +42,13 @@ install_data('io.github.Q1CHENL.fig.metainfo.xml',
 
 # Install main executable
 configure_file(
-  input: 'fig/main.py',
+  configuration: {
+    'PYTHON': python.full_path(),
+    'PKGNAME': 'fig',
+  },
+  input: 'bin/fig.in',
   output: 'fig',
-  copy: true,
   install: true,
   install_dir: get_option('bindir'),
   install_mode: 'rwxr-xr-x'
-) 
+)

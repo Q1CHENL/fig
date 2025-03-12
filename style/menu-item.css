@@ -1,8 +1,17 @@
-.menu-item {
+.menu-item-light {
     background: none;
     border: none;
 }
 
-.menu-item:hover {
+.menu-item-light:hover {
+    background-color: #E5E5E5;
+}
+
+.menu-item-dark {
+    background: none;
+    border: none;
+}
+
+.menu-item-dark:hover {
     background-color: #4e4e4e;
 }

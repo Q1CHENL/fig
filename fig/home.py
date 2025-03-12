@@ -1,7 +1,7 @@
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gio, GLib, Adw, Gdk
+from gi.repository import Gtk, Gio, GLib, Adw
 
 
 class HomeBox(Gtk.Box):
@@ -110,15 +110,19 @@ def show_about_dialog(window):
     
     about.set_application_name("Fig")
     about.set_application_icon("io.github.Q1CHENL.fig")
-    about.set_version("1.0.4")
+    about.set_version("1.0.5")
     about.set_developer_name("Qichen Liu")
     about.set_website("https://github.com/fig")
     about.set_issue_url("https://github.com/fig/issues")
 
     about.set_release_notes("""
+    <p>Action Bar</p>
     <ul>
-        <li>Extract GIF as video</li>
-        <li>Drag and drop to open image</li>
+      <li>Crop image - Select and crop any portion of your GIF</li>
+      <li>Flip image - Mirror your GIF horizontally</li>
+      <li>Rotate image - Rotate your GIF 90 degrees clockwise</li>
+      <li>Embed text - Add custom text overlays to your GIF</li>
+      <li>Draw - Freehand drawing tools with color selection</li>
     </ul>
     """)
     
