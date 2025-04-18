@@ -11,6 +11,7 @@ gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, Gio, GdkPixbuf, Gdk, GLib
 import fig.home, fig.editor
 from fig.utils import clear_css, load_css
+from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 
 class Fig(Adw.ApplicationWindow):
     def __init__(self, app):
@@ -235,8 +236,6 @@ class FigApplication(Adw.Application):
                             "0%",
                             f"{output_dir}"
                         )
-                        progress_dialog.add_response("ok", "OK")
-                        progress_dialog.set_response_enabled("OK", False)
                         GLib.idle_add(progress_dialog.present, window)
 
                         def extraction_thread():
@@ -268,10 +267,13 @@ class FigApplication(Adw.Application):
                                     for batch in batches:
                                         executor.submit(process_batch, batch)
                                     executor.shutdown(wait=True)
+                                
                                 # Extraction complete
-                                progress_dialog.set_heading("Frames Extracted")
-                                progress_dialog.set_body(f"{output_dir}")
-                                progress_dialog.set_response_enabled("OK", True)
+                                GLib.idle_add(progress_dialog.set_heading, "Frames Extracted")
+                                GLib.idle_add(progress_dialog.set_body, f"{output_dir}")
+                                GLib.idle_add(progress_dialog.add_response, "ok", "OK")
+                                GLib.idle_add(progress_dialog.set_response_enabled, "OK", True)
+
                             except Exception as e:
                                 error_dialog = Adw.AlertDialog.new(
                                     "Error",
@@ -336,18 +338,26 @@ class FigApplication(Adw.Application):
                 error_dialog.present(window)
 
     def _export_video(self, window, editor_box, output_path):
-        """Handle the actual video export process with a progress dialog."""
+        """Handle the actual video export process with a progress dialog and cancellation support."""
         try:
+            cancel_event = threading.Event()
+
+            progress_dialog = Adw.AlertDialog.new("Exporting Video...", output_path)
+            progress_dialog.add_response("cancel", "Cancel")
+            progress_dialog.set_default_response("cancel")
+            progress_dialog.set_close_response("cancel")
+
+            def on_response(dialog, response_id):
+                if response_id == "cancel":
+                    cancel_event.set()
+                    dialog.set_heading("Cancelling...")
+                    dialog.set_body("Please wait while the export is being cancelled.")
+
+            progress_dialog.connect("response", on_response)
+            GLib.idle_add(progress_dialog.present, window)
+
             def export_thread():
                 try:
-                    progress_dialog = Adw.AlertDialog.new(
-                        "Exporting Video...",
-                        f"{output_path}"
-                    )
-                    progress_dialog.add_response("ok", "OK")
-                    progress_dialog.set_response_enabled("OK", False)
-                    GLib.idle_add(progress_dialog.present, window)
-
                     durations = [d / 1000.0 for d in editor_box.frame_durations]  # Convert ms to seconds
 
                     with tempfile.TemporaryDirectory() as temp_dir:
@@ -356,15 +366,17 @@ class FigApplication(Adw.Application):
                         processed_frames = 0
 
                         for i, frame in enumerate(editor_box.frames):
+                            if cancel_event.is_set():
+                                raise Exception("Export cancelled by user.")
                             if not editor_box.frameline.is_frame_removed(i):
                                 frame_path = os.path.join(temp_dir, f"frame_{i}.png")
                                 pil_image = editor_box._pixbuf_to_pil(frame)
                                 pil_image.save(frame_path, 'PNG')
                                 frame_paths.append(frame_path)
                             processed_frames += 1
-                            percentage = int((processed_frames / total_frames) * 100)
-                        
-                        from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+
+                        if cancel_event.is_set():
+                            raise Exception("Export cancelled by user.")
 
                         clip = ImageSequenceClip(frame_paths, durations=durations)
                         clip.write_videofile(
@@ -374,30 +386,39 @@ class FigApplication(Adw.Application):
                             audio=False,
                             logger=None
                         )
-                    progress_dialog.set_response_enabled("OK", True)
-                    progress_dialog.set_body(f"{output_path}")
-                    progress_dialog.set_heading("Video Exported")
-                    GLib.idle_add(progress_dialog.present, window)
+
+                    if cancel_event.is_set():
+                        raise Exception("Export cancelled by user.")
+
+                    GLib.idle_add(progress_dialog.set_heading, "Video Exported")
+                    GLib.idle_add(progress_dialog.set_body, output_path)
+                    GLib.idle_add(progress_dialog.add_response, "ok", "OK")
+                    GLib.idle_add(progress_dialog.set_default_response, "ok")
+                    GLib.idle_add(progress_dialog.set_close_response, "ok")
 
                 except Exception as e:
-                    error_dialog = Adw.AlertDialog.new(
-                        "Error",
-                        f"Failed to export video: {str(e)}"
-                    )
-                    error_dialog.add_response("ok", "OK")
-                    GLib.idle_add(error_dialog.present, window)
+                    if os.path.exists(output_path):
+                        try:
+                            os.remove(output_path)
+                            print("removed partial file")
+                        except Exception as remove_error:
+                            print(f"Failed to remove partial file: {remove_error}")
+
+                    GLib.idle_add(progress_dialog.set_heading, "Export Failed")
+                    GLib.idle_add(progress_dialog.set_body, str(e))
+                    GLib.idle_add(progress_dialog.add_response, "ok", "OK")
+                    GLib.idle_add(progress_dialog.set_default_response, "ok")
+                    GLib.idle_add(progress_dialog.set_close_response, "ok")
 
             threading.Thread(target=export_thread).start()
 
         except Exception as e:
-            error_dialog = Adw.AlertDialog.new(
-                "Error",
-                f"Failed to initialize export: {str(e)}"
-            )
+            error_dialog = Adw.AlertDialog.new("Error", f"Failed to initialize export: {str(e)}")
             error_dialog.add_response("ok", "OK")
+            error_dialog.set_default_response("ok")
+            error_dialog.set_close_response("ok")
             error_dialog.present(window)
 
-    
     def compute_batch_size(self, total_frames):
         if total_frames < 20:
             return total_frames
