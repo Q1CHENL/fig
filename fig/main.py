@@ -2,6 +2,10 @@
 
 import os
 import gi
+import threading
+import time
+import tempfile
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, Gio, GdkPixbuf, Gdk, GLib
@@ -223,27 +227,55 @@ class FigApplication(Adw.Application):
                         total_frames = len(frames)
                         BATCH_SIZE = self.compute_batch_size(total_frames)
 
-                        def process_batch(batch_info):
-                            start_idx, end_idx = batch_info
-                            for i in range(start_idx, end_idx):
-                                if isinstance(frames[i], GdkPixbuf.Pixbuf):
-                                    pil_image = window.editor_box._pixbuf_to_pil(frames[i])
-                                    frame_name = f"{window.editor_box.original_file_name}-{str(i+1).zfill(3)}.png"
-                                    frame_path = os.path.join(output_dir, frame_name)
-                                    pil_image.save(frame_path, 'PNG')
-                            return end_idx
+                        progress_dialog = Adw.AlertDialog.new(
+                            "0%",
+                            f"{output_dir}"
+                        )
+                        progress_dialog.add_response("ok", "OK")
+                        progress_dialog.set_response_enabled("OK", False)
+                        GLib.idle_add(progress_dialog.present, window)
 
-                        batches = [
-                            (i, min(i + BATCH_SIZE, total_frames))
-                            for i in range(0, total_frames, BATCH_SIZE)
-                        ]
+                        def extraction_thread():
+                            try:
+                                extracted = 0
+                                def process_batch(batch_info):
+                                    nonlocal extracted
+                                    start_idx, end_idx = batch_info
+                                    for i in range(start_idx, end_idx):
+                                        if isinstance(frames[i], GdkPixbuf.Pixbuf):
+                                            pil_image = window.editor_box._pixbuf_to_pil(frames[i])
+                                            frame_name = f"{window.editor_box.original_file_name}-{str(i+1).zfill(3)}.png"
+                                            frame_path = os.path.join(output_dir, frame_name)
+                                            pil_image.save(frame_path, 'PNG')
+                                        extracted += 1
+                                    GLib.idle_add(
+                                        progress_dialog.set_heading,
+                                        f"{int((extracted / total_frames) * 100)}%"
+                                    )
+                                    return end_idx
 
-                        import concurrent.futures
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-                            for batch in batches:
-                                executor.submit(process_batch, batch)
-                            executor.shutdown(wait=False)
-                        self.show_extraction_complete_dialog(window, output_dir)
+                                batches = [
+                                    (i, min(i + BATCH_SIZE, total_frames))
+                                    for i in range(0, total_frames, BATCH_SIZE)
+                                ]
+
+                                import concurrent.futures
+                                with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                                    for batch in batches:
+                                        executor.submit(process_batch, batch)
+                                    executor.shutdown(wait=True)
+                                # Extraction complete
+                                progress_dialog.set_heading("Frames Extracted")
+                                progress_dialog.set_body(f"{output_dir}")
+                                progress_dialog.set_response_enabled("OK", True)
+                            except Exception as e:
+                                error_dialog = Adw.AlertDialog.new(
+                                    "Error",
+                                    f"Failed to extract frames: {str(e)}"
+                                )
+                                error_dialog.add_response("ok", "OK")
+                                GLib.idle_add(error_dialog.present, window)
+                        threading.Thread(target=extraction_thread).start()
                 except GLib.Error:
                     # user cancelled or error opening dialog
                     pass
@@ -297,43 +329,67 @@ class FigApplication(Adw.Application):
                 error_dialog.present(window)
 
     def _export_video(self, window, editor_box, output_path):
-        """Handle the actual video export process"""
+        """Handle the actual video export process with a progress dialog."""
         try:
-            from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-            import tempfile
-            
-            durations = [d/1000.0 for d in editor_box.frame_durations]  # Convert ms to seconds
-            
-            with tempfile.TemporaryDirectory() as temp_dir:
-                frame_paths = []
-                
-                for i, frame in enumerate(editor_box.frames):
-                    if not editor_box.frameline.is_frame_removed(i):
-                        frame_path = os.path.join(temp_dir, f"frame_{i}.png")
-                        pil_image = editor_box._pixbuf_to_pil(frame)
-                        pil_image.save(frame_path, 'PNG')
-                        frame_paths.append(frame_path)
-                
-                clip = ImageSequenceClip(frame_paths, durations=durations)
-                clip.write_videofile(output_path, 
-                                   fps=30,
-                                   codec='libvpx-vp9',
-                                   audio=False)
-                
-                success_dialog = Adw.AlertDialog.new(
-                    "Video Exported\n",
-                    f"{output_path}"
-                )
-                success_dialog.add_response("ok", "OK")
-                success_dialog.present(window)
-                
+            def export_thread():
+                try:
+                    progress_dialog = Adw.AlertDialog.new(
+                        "Exporting Video...",
+                        f"{output_path}"
+                    )
+                    progress_dialog.add_response("ok", "OK")
+                    progress_dialog.set_response_enabled("OK", False)
+                    GLib.idle_add(progress_dialog.present, window)
+
+                    durations = [d / 1000.0 for d in editor_box.frame_durations]  # Convert ms to seconds
+
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        frame_paths = []
+                        total_frames = len(editor_box.frames)
+                        processed_frames = 0
+
+                        for i, frame in enumerate(editor_box.frames):
+                            if not editor_box.frameline.is_frame_removed(i):
+                                frame_path = os.path.join(temp_dir, f"frame_{i}.png")
+                                pil_image = editor_box._pixbuf_to_pil(frame)
+                                pil_image.save(frame_path, 'PNG')
+                                frame_paths.append(frame_path)
+                            processed_frames += 1
+                            percentage = int((processed_frames / total_frames) * 100)
+                        
+                        from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+
+                        clip = ImageSequenceClip(frame_paths, durations=durations)
+                        clip.write_videofile(
+                            output_path,
+                            fps=30,
+                            codec='libvpx-vp9',
+                            audio=False,
+                            logger=None
+                        )
+                    progress_dialog.set_response_enabled("OK", True)
+                    progress_dialog.set_body(f"{output_path}")
+                    progress_dialog.set_heading("Video Exported")
+                    GLib.idle_add(progress_dialog.present, window)
+
+                except Exception as e:
+                    error_dialog = Adw.AlertDialog.new(
+                        "Error",
+                        f"Failed to export video: {str(e)}"
+                    )
+                    error_dialog.add_response("ok", "OK")
+                    GLib.idle_add(error_dialog.present, window)
+
+            threading.Thread(target=export_thread).start()
+
         except Exception as e:
             error_dialog = Adw.AlertDialog.new(
                 "Error",
-                f"Failed to export video: {str(e)}"
+                f"Failed to initialize export: {str(e)}"
             )
             error_dialog.add_response("ok", "OK")
             error_dialog.present(window)
+
     
     def compute_batch_size(self, total_frames):
         if total_frames < 20:
