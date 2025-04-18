@@ -202,48 +202,61 @@ class FigApplication(Adw.Application):
             fig.home.show_about_dialog(window)
 
     def on_extract_frames(self, action, parameter):
-        """Extract frames from the currently loaded GIF"""
+        # Prompt user to choose output folder instead of writing to read-only source location
         window = self.get_active_window()
-        if window and hasattr(window.editor_box, 'original_file_path'):
-            try:
-                output_dir = window.editor_box.original_file_path[:-4]
-                if not os.path.exists(output_dir):
-                    os.makedirs(output_dir)
+        if not window or not hasattr(window.editor_box, 'original_file_path'):
+            return
 
-                frames = window.editor_box.frames
-                total_frames = len(frames)
-                BATCH_SIZE = self.compute_batch_size(total_frames)
+        try:
+            dialog = Gtk.FileDialog.new()
+            dialog.set_title("Extract Frames")
+            if hasattr(window.editor_box, 'original_file_name'):
+                dialog.set_initial_name(window.editor_box.original_file_name)
+            def save_callback(dialog, result):
+                try:
+                    folder = dialog.save_finish(result)
+                    if folder:
+                        output_dir = folder.get_path()
+                        os.makedirs(output_dir, exist_ok=True)
 
-                def process_batch(batch_info):
-                    start_idx, end_idx = batch_info
-                    for i in range(start_idx, end_idx):
-                        if isinstance(frames[i], GdkPixbuf.Pixbuf):
-                            pil_image = window.editor_box._pixbuf_to_pil(frames[i])
-                            frame_name = f"{window.editor_box.original_file_name}-{str(i+1).zfill(3)}.png"
-                            frame_path = os.path.join(output_dir, frame_name)
-                            pil_image.save(frame_path, 'PNG')
-                    return end_idx
+                        frames = window.editor_box.frames
+                        total_frames = len(frames)
+                        BATCH_SIZE = self.compute_batch_size(total_frames)
 
-                batches = [
-                    (i, min(i + BATCH_SIZE, total_frames))
-                    for i in range(0, total_frames, BATCH_SIZE)
-                ]
+                        def process_batch(batch_info):
+                            start_idx, end_idx = batch_info
+                            for i in range(start_idx, end_idx):
+                                if isinstance(frames[i], GdkPixbuf.Pixbuf):
+                                    pil_image = window.editor_box._pixbuf_to_pil(frames[i])
+                                    frame_name = f"{window.editor_box.original_file_name}-{str(i+1).zfill(3)}.png"
+                                    frame_path = os.path.join(output_dir, frame_name)
+                                    pil_image.save(frame_path, 'PNG')
+                            return end_idx
 
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-                    for batch in batches:
-                        executor.submit(process_batch, batch) 
-                    executor.shutdown(wait=False)
-                self.show_extraction_complete_dialog(window, output_dir)
+                        batches = [
+                            (i, min(i + BATCH_SIZE, total_frames))
+                            for i in range(0, total_frames, BATCH_SIZE)
+                        ]
 
-            except Exception as e:
-                dialog = Adw.AlertDialog.new(
-                    "Error",
-                    f"Failed to extract frames: {str(e)}"
-                )
-                dialog.add_response("ok", "OK")
-                dialog.present(window)
-                
+                        import concurrent.futures
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                            for batch in batches:
+                                executor.submit(process_batch, batch)
+                            executor.shutdown(wait=False)
+                        self.show_extraction_complete_dialog(window, output_dir)
+                except GLib.Error:
+                    # user cancelled or error opening dialog
+                    pass
+
+            dialog.save(window, None, save_callback)
+        except Exception as e:
+            error_dialog = Adw.AlertDialog.new(
+                "Error",
+                f"Failed to extract frames: {str(e)}"
+            )
+            error_dialog.add_response("ok", "OK")
+            error_dialog.present(window)
+
     def on_export_to_video(self, action, parameter):
         """Export the current GIF frames to a video file"""
         window = self.get_active_window()
@@ -304,7 +317,7 @@ class FigApplication(Adw.Application):
                 clip = ImageSequenceClip(frame_paths, durations=durations)
                 clip.write_videofile(output_path, 
                                    fps=30,
-                                   codec='libx264',
+                                   codec='libvpx-vp9',
                                    audio=False)
                 
                 success_dialog = Adw.AlertDialog.new(
