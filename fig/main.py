@@ -214,6 +214,10 @@ class FigApplication(Adw.Application):
         try:
             dialog = Gtk.FileDialog.new()
             dialog.set_title("Extract Frames")
+            original_dir = os.path.dirname(window.editor_box.original_file_path)
+            initial_folder = Gio.File.new_for_path(original_dir)
+            dialog.set_initial_folder(initial_folder)
+
             if hasattr(window.editor_box, 'original_file_name'):
                 dialog.set_initial_name(window.editor_box.original_file_name)
             def save_callback(dialog, result):
@@ -296,6 +300,9 @@ class FigApplication(Adw.Application):
             try:
                 dialog = Gtk.FileDialog.new()
                 dialog.set_title("Export to Video")
+                original_dir = os.path.dirname(window.editor_box.original_file_path)
+                initial_folder = Gio.File.new_for_path(original_dir)
+                dialog.set_initial_folder(initial_folder)
                 
                 if hasattr(window.editor_box, 'original_file_name'):
                     dialog.set_initial_name(f"{window.editor_box.original_file_name}.mp4")
