@@ -119,7 +119,7 @@ def show_about_dialog(window):
     <ul>
       <li>Customized speedup</li>
       <li>Duplicate frame range</li>
-      <li>Fixed export frames or export to video issues</li>
+      <li>Fixed Export Frames and Export to Video permission issues</li>
     </ul>
     """)
     
