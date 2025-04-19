@@ -655,21 +655,77 @@ class FrameLine(Gtk.Widget):
         
         # Speed options
         speeds = [
-            ("2.0x", 2.0),
-            ("1.5x", 1.5),
-            ("1.2x", 1.2),
-            ("1.0x", 1.0),
+            ("2.0x ", 2.0),
+            ("1.5x ", 1.5),
+            ("1.2x ", 1.2),
+            ("1.0x ", 1.0),
             ("0.75x", 0.75),
-            ("0.5x", 0.5)
+            ("0.5x ", 0.5)
         ]
         
         for label, speed in speeds:
             speed_btn = Gtk.Button(label=label)
             speed_btn.add_css_class('menu-item-dark' if self.is_dark else 'menu-item-light')
-            speed_btn.set_halign(Gtk.Align.START)
+            speed_btn.set_hexpand(True)
+            speed_btn.set_halign(Gtk.Align.FILL)
             speed_btn.connect('clicked', self.on_speed_selected, speed)
             speed_box.append(speed_btn)
-        
+            button_width = speed_btn.get_allocated_width()
+
+        # Add custom input box for speed
+        custom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        custom_entry = Gtk.Entry()
+        custom_entry.set_placeholder_text("Customized")
+        custom_entry.set_width_chars(3)  # Minimum width
+        custom_entry.set_max_width_chars(2)
+        custom_entry.add_css_class('menu-item-dark' if self.is_dark else 'menu-item-light')
+        # Add a style class for small font size
+        style_provider = Gtk.CssProvider()
+        style_provider.load_from_data(b".mini-font { font-size: 15px; padding: 0 2px; }")
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+        custom_entry.set_css_classes(list(custom_entry.get_css_classes()) + ["mini-font"])
+
+        def on_custom_entry_activate(entry):
+            text = entry.get_text().strip()
+            try:
+                value = float(text)
+                if value > 10.0:
+                    value = 10.0
+                elif value < 0.01:
+                    value = 0.01  # minimum allowed
+                # Mimic on_speed_selected logic
+                start = min(self.left_value, self.right_value)
+                end = max(self.left_value, self.right_value)
+                self.speed_ranges.append((int(start) - 1, int(end) - 1, value))
+                self.speed_ranges.sort()
+                merged = []
+                for range_start, range_end, speed in self.speed_ranges:
+                    if not merged or merged[-1][1] + 1 < range_start:
+                        merged.append([range_start, range_end, speed])
+                    else:
+                        merged[-1][1] = max(merged[-1][1], range_end)
+                        merged[-1][2] = speed
+                self.speed_ranges = [tuple(x) for x in merged]
+                self.emit('speed-changed', start, end, value)
+                # Close the popover
+                widget = entry
+                while widget and not isinstance(widget, Gtk.Popover):
+                    widget = widget.get_parent()
+                if widget:
+                    widget.popdown()
+                self.queue_draw()
+            except ValueError:
+                # Optionally, show a warning or shake the entry
+                entry.set_text("")
+                entry.set_placeholder_text("Invalid")
+
+        custom_entry.connect('activate', on_custom_entry_activate)
+        custom_box.append(custom_entry)
+        speed_box.append(custom_box)
         speed_popover.set_child(speed_box)
         
         # Position the popover near the clicked handle
