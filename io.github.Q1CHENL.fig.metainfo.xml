@@ -8,17 +8,9 @@
       Fig is a simple and intuitive GIF editor that lets you edit GIFs with ease.
     </p>
     <ul>
-      <li>Crop, flip and rotate GIF</li>
-      <li>Trim GIF to any frame range</li>
-      <li>Reverse GIF</li>
-      <li>Remove specific frames</li>
-      <li>Insert GIF/image(s) at any position</li>
-      <li>Change playback speed for specific frames</li>
-      <li>Extract frames</li>
-      <li>Export GIF as video</li>
-      <li>Play GIF at the original speed</li>
-      <li>Text embedding</li>
-      <li>Draw on gif</li>
+      <li>Customized speedup</li>
+      <li>Duplicate frame range</li>
+      <li>Fixed export frames or export to video issues</li>
     </ul>
   </description>
   <metadata_license>CC0-1.0</metadata_license>
@@ -26,19 +18,8 @@
   <developer_name>Qichen Liu</developer_name>
   <url type="homepage">https://github.com/Q1CHENL/fig</url>
   <releases>
-    <release version="1.0.5" date="2025-03-11">
-      <description>
-        <p>New feature: Action Bar</p>
-        <ul>
-          <li>Crop image - Select and crop any portion of your GIF</li>
-          <li>Flip image - Mirror your GIF horizontally</li>
-          <li>Rotate image - Rotate your GIF 90 degrees clockwise</li>
-          <li>Embed text - Add custom text overlays to your GIF</li>
-          <li>Draw - Freehand drawing tools with color selection</li>
-        </ul>
-      </description>
-    </release>
-  </releases>
+    <release version="1.0.6" date="2025-04-19"/>
+</releases>
   <content_rating type="oars-1.1" />
   <launchable type="desktop-id">io.github.Q1CHENL.fig.desktop</launchable>
   <screenshots>

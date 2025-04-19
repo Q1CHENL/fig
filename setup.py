@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="fig-editor",
-    version="1.0.5",
+    version="1.0.6",
     author="Qichen Liu",
     author_email="",
     description="A simple and usable GIF editor",

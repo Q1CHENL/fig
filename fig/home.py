@@ -110,19 +110,16 @@ def show_about_dialog(window):
     
     about.set_application_name("Fig")
     about.set_application_icon("io.github.Q1CHENL.fig")
-    about.set_version("1.0.5")
+    about.set_version("1.0.6")
     about.set_developer_name("Qichen Liu")
     about.set_website("https://github.com/fig")
     about.set_issue_url("https://github.com/fig/issues")
 
     about.set_release_notes("""
-    <p>Action Bar</p>
     <ul>
-      <li>Crop image - Select and crop any portion of your GIF</li>
-      <li>Flip image - Mirror your GIF horizontally</li>
-      <li>Rotate image - Rotate your GIF 90 degrees clockwise</li>
-      <li>Embed text - Add custom text overlays to your GIF</li>
-      <li>Draw - Freehand drawing tools with color selection</li>
+      <li>Customized speedup</li>
+      <li>Duplicate frame range</li>
+      <li>Fixed export frames or export to video issues</li>
     </ul>
     """)
     

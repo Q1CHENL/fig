@@ -22,6 +22,7 @@
 - Remove specific frames
 - Insert GIF/image(s) at any position
 - Change playback speed for specific frames
+- Duplicate frame range
 - Extract frames
 - Export GIF as video
 - Play GIF at the original speed
