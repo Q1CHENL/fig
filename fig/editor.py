@@ -932,8 +932,26 @@ class EditorBox(Gtk.Box):
                     new_right = self.frameline.right_value + len(new_frames)
                     self.frameline.right_value = min(new_right, new_max)
 
-                self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
+                # --- Update inserted_ranges (shift ranges after insertion) ---
+                updated_inserted_ranges = []
+                for start, end in self.frameline.inserted_ranges:
+                    if start > insert_idx:
+                        # Range is after insertion point - shift it
+                        updated_inserted_ranges.append((start + num_new_frames, end + num_new_frames))
+                    elif end < insert_idx:
+                        # Range is before insertion point - keep it unchanged
+                        updated_inserted_ranges.append((start, end))
+                    else:
+                        # Range overlaps insertion point - split or shift as needed
+                        # For simplicity, shift the part after insertion
+                        if start < insert_idx:
+                            updated_inserted_ranges.append((start, insert_idx - 1))
+                        updated_inserted_ranges.append((insert_idx + num_new_frames, end + num_new_frames))
 
+                self.frameline.inserted_ranges = updated_inserted_ranges
+                # Append the new inserted range
+                self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
+                
                 for i, r in enumerate(self.frameline.removed_ranges):
                     # Shift removed ranges after insertion point
                     if r[0] >= insert_idx:
