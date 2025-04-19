@@ -177,7 +177,7 @@ class FigApplication(Adw.Application):
         window = self.get_active_window()
         
         dialog = Adw.AlertDialog.new(
-            "Fig - Help",
+            "Help",
             None
         )
         
