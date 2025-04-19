@@ -432,30 +432,7 @@ class EditorBox(Gtk.Box):
                         if not save_path.lower().endswith('.gif'):
                             save_path += '.gif'
 
-                        # Check if file exists
-                        if os.path.exists(save_path):
-                            confirm_dialog = Gtk.AlertDialog()
-                            confirm_dialog.set_message("File already exists. Do you want to overwrite it?")
-                            confirm_dialog.set_modal(True)
-                            confirm_dialog.set_buttons(["Cancel", "Overwrite"])
-                            confirm_dialog.set_default_button(0)
-                            confirm_dialog.set_cancel_button(0)
-
-                            def confirm_callback(dialog, result):
-                                try:
-                                    response = dialog.choose_finish(result)
-                                    if response == 1:  # "Overwrite" was chosen
-                                        self._save_gif(save_path, start_idx, end_idx)
-                                except GLib.Error as e:
-                                    print(f"Error in confirmation dialog: {e}")
-
-                            confirm_dialog.choose(
-                                self.get_root(),
-                                None,
-                                confirm_callback
-                            )
-                        else:
-                            self._save_gif(save_path, start_idx, end_idx)
+                        self._save_gif(save_path, start_idx, end_idx)
 
                 except GLib.Error as e:
                     # Only show error dialog if it's not a user dismissal
