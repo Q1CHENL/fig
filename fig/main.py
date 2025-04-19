@@ -395,6 +395,7 @@ class FigApplication(Adw.Application):
                     GLib.idle_add(progress_dialog.add_response, "ok", "OK")
                     GLib.idle_add(progress_dialog.set_default_response, "ok")
                     GLib.idle_add(progress_dialog.set_close_response, "ok")
+                    GLib.idle_add(progress_dialog.remove_response, "cancel")
 
                 except Exception as e:
                     if os.path.exists(output_path):
