@@ -6,7 +6,7 @@ import gi
 gi.require_version('Adw', '1')
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
-from gi.repository import Gtk, GLib, Gio, GdkPixbuf
+from gi.repository import Gtk, GLib, Gio, GdkPixbuf, Adw
 
 from fig.utils import clear_css, load_css
 from fig.frameline import FrameLine
@@ -432,30 +432,7 @@ class EditorBox(Gtk.Box):
                         if not save_path.lower().endswith('.gif'):
                             save_path += '.gif'
 
-                        # Check if file exists
-                        if os.path.exists(save_path):
-                            confirm_dialog = Gtk.AlertDialog()
-                            confirm_dialog.set_message("File already exists. Do you want to overwrite it?")
-                            confirm_dialog.set_modal(True)
-                            confirm_dialog.set_buttons(["Cancel", "Overwrite"])
-                            confirm_dialog.set_default_button(0)
-                            confirm_dialog.set_cancel_button(0)
-
-                            def confirm_callback(dialog, result):
-                                try:
-                                    response = dialog.choose_finish(result)
-                                    if response == 1:  # "Overwrite" was chosen
-                                        self._save_gif(save_path, start_idx, end_idx)
-                                except GLib.Error as e:
-                                    print(f"Error in confirmation dialog: {e}")
-
-                            confirm_dialog.choose(
-                                self.get_root(),
-                                None,
-                                confirm_callback
-                            )
-                        else:
-                            self._save_gif(save_path, start_idx, end_idx)
+                        self._save_gif(save_path, start_idx, end_idx)
 
                 except GLib.Error as e:
                     # Only show error dialog if it's not a user dismissal
@@ -955,8 +932,26 @@ class EditorBox(Gtk.Box):
                     new_right = self.frameline.right_value + len(new_frames)
                     self.frameline.right_value = min(new_right, new_max)
 
-                self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
+                # --- Update inserted_ranges (shift ranges after insertion) ---
+                updated_inserted_ranges = []
+                for start, end in self.frameline.inserted_ranges:
+                    if start > insert_idx:
+                        # Range is after insertion point - shift it
+                        updated_inserted_ranges.append((start + num_new_frames, end + num_new_frames))
+                    elif end < insert_idx:
+                        # Range is before insertion point - keep it unchanged
+                        updated_inserted_ranges.append((start, end))
+                    else:
+                        # Range overlaps insertion point - split or shift as needed
+                        # For simplicity, shift the part after insertion
+                        if start < insert_idx:
+                            updated_inserted_ranges.append((start, insert_idx - 1))
+                        updated_inserted_ranges.append((insert_idx + num_new_frames, end + num_new_frames))
 
+                self.frameline.inserted_ranges = updated_inserted_ranges
+                # Append the new inserted range
+                self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
+                
                 for i, r in enumerate(self.frameline.removed_ranges):
                     # Shift removed ranges after insertion point
                     if r[0] >= insert_idx:
@@ -1002,36 +997,72 @@ class EditorBox(Gtk.Box):
                 if i < len(self.original_frame_durations):
                     self.frame_durations[i] = int(self.original_frame_durations[i] / speed_factor)
 
-            # Remove speed range if speed factor is 1.0
-            if speed_factor == 1.0:
-                self.frameline.speed_ranges = [
-                    (s, e, spd) for s, e, spd in self.frameline.speed_ranges
-                    if not (s == start_idx and e == end_idx)
-                ]
+            # Warn if any frame duration in the affected range is < 10ms
+            min_duration = min(self.frame_durations[start_idx:end_idx+1]) if self.frame_durations[start_idx:end_idx+1] else 1000
+            if min_duration < 10:
+                # Compute the maximum applicable speedup for this range
+                if hasattr(self, 'original_frame_durations') and self.original_frame_durations:
+                    min_orig = min(self.original_frame_durations[i] for i in range(start_idx, end_idx+1))
+                    max_speedup = round(min_orig / 10.0, 2)
+                else:
+                    max_speedup = 'N/A'
+                alert = Adw.AlertDialog()
+                alert.set_heading("Warning: GIF May Lag")
+                alert.set_body(
+                    f"At least one frame duration is less than 10ms. "
+                    f"GIF may be laggy or not play smoothly in some viewers when exported.\n\n"
+                    f"Maximum applicable speedup for this GIF: {max_speedup}x"
+                )
+                alert.add_response("ok", "Proceed Anyway")
+                alert.add_response("cancel", "Cancel Change")
+                alert.set_default_response("ok")
+                alert.set_close_response("cancel")
+                def on_response(dialog, response_id):
+                    if response_id == "cancel":
+                        # Revert the frame durations in the affected range
+                        for i in range(start_idx, end_idx + 1):
+                            if i < len(self.original_frame_durations):
+                                self.frame_durations[i] = self.original_frame_durations[i]
+                        # Remove the speed range for the affected region
+                        self.frameline.speed_ranges = [
+                            (s, e, spd) for s, e, spd in self.frameline.speed_ranges
+                            if not (s == start_idx and e == end_idx)
+                        ]
+                        self.update_info_label()
+                        self.frameline.queue_draw()
+                alert.connect("response", on_response)
+                alert.present(self.get_root())
             else:
-                self.frameline.add_speed_range(start_idx, end_idx, speed_factor)
+                # Remove speed range if speed factor is 1.0
+                if speed_factor == 1.0:
+                    self.frameline.speed_ranges = [
+                        (s, e, spd) for s, e, spd in self.frameline.speed_ranges
+                        if not (s == start_idx and e == end_idx)
+                    ]
+                else:
+                    self.frameline.add_speed_range(start_idx, end_idx, speed_factor)
 
-            # Sort ranges by start index
-            self.frameline.speed_ranges.sort()
+                # Sort ranges by start index
+                self.frameline.speed_ranges.sort()
 
-            # Merge only adjacent (not overlapping) ranges with same speed
-            merged = []
-            for range_start, range_end, speed in self.frameline.speed_ranges:
-                if not merged or merged[-1][1] + 1 < range_start or merged[-1][2] != speed:
-                    merged.append([range_start, range_end, speed])
-                elif merged[-1][2] == speed:  # Only merge if speeds match
-                    merged[-1][1] = max(merged[-1][1], range_end)
-                    
-            self.frameline.speed_ranges = [tuple(x) for x in merged]
-            self.update_info_label()
+                # Merge only adjacent (not overlapping) ranges with same speed
+                merged = []
+                for range_start, range_end, speed in self.frameline.speed_ranges:
+                    if not merged or merged[-1][1] + 1 < range_start or merged[-1][2] != speed:
+                        merged.append([range_start, range_end, speed])
+                    elif merged[-1][2] == speed:  # Only merge if speeds match
+                        merged[-1][1] = max(merged[-1][1], range_end)
 
-            # If currently playing, restart playback to apply new speeds immediately
-            if self.is_playing:
-                self.stop_playback()
-                self.play_edited_frames(None)
+                self.frameline.speed_ranges = [tuple(x) for x in merged]
+                self.update_info_label()
 
-            # Trigger redraw of frameline
-            self.frameline.queue_draw()
+                # If currently playing, restart playback to apply new speeds immediately
+                if self.is_playing:
+                    self.stop_playback()
+                    self.play_edited_frames(None)
+
+                # Trigger redraw of frameline
+                self.frameline.queue_draw()
 
         except Exception as e:
             print(f"Error changing speed: {e}")

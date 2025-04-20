@@ -101,6 +101,12 @@ class FrameLine(Gtk.Widget):
         self.insert_frames_btn = Gtk.Button(label="Insert Frames")
         self.insert_frames_btn.connect('clicked', self.on_insert_frames_clicked)
 
+        self.duplicate_range_btn = Gtk.Button()
+        label = Gtk.Label.new("Duplicate Range")
+        label.set_halign(Gtk.Align.START)
+        self.duplicate_range_btn.set_child(label)
+        self.duplicate_range_btn.connect('clicked', self.on_duplicate_range_clicked)
+
         self.changespeed_frames_btn = Gtk.Button(label="Change Speed...")
         self.changespeed_frames_btn.connect('clicked', self.on_changespeed_frames_clicked)
 
@@ -108,11 +114,13 @@ class FrameLine(Gtk.Widget):
         self.remove_range_btn.set_halign(Gtk.Align.START)
         self.remove_frame_btn.set_halign(Gtk.Align.START)
         self.insert_frames_btn.set_halign(Gtk.Align.START)
+        self.duplicate_range_btn.set_halign(Gtk.Align.START)
         self.changespeed_frames_btn.set_halign(Gtk.Align.START)
 
         self.remove_range_btn.add_css_class('menu-item-dark')
         self.remove_frame_btn.add_css_class('menu-item-dark')
         self.insert_frames_btn.add_css_class('menu-item-dark')
+        self.duplicate_range_btn.add_css_class('menu-item-dark')
         self.changespeed_frames_btn.add_css_class('menu-item-dark')
 
         # Add hover controllers
@@ -136,9 +144,15 @@ class FrameLine(Gtk.Widget):
         changespeed_motion.connect('leave', self.on_menu_item_hover_leave)
         self.changespeed_frames_btn.add_controller(changespeed_motion)
 
+        duplicate_range_motion = Gtk.EventControllerMotion.new()
+        duplicate_range_motion.connect('enter', self.on_duplicate_range_hover_enter)
+        duplicate_range_motion.connect('leave', self.on_menu_item_hover_leave)
+        self.duplicate_range_btn.add_controller(duplicate_range_motion)
+
         menu_box.append(self.remove_range_btn)
         menu_box.append(self.remove_frame_btn)
         menu_box.append(self.insert_frames_btn)
+        menu_box.append(self.duplicate_range_btn)
         menu_box.append(self.changespeed_frames_btn)
 
         self.popup_menu.set_child(menu_box)
@@ -163,6 +177,14 @@ class FrameLine(Gtk.Widget):
 
     def on_insert_frames_hover_enter(self, controller, x, y):
         self.hover_action = 'insert'
+        self.queue_draw()
+    
+    def on_duplicate_range_hover_enter(self, controller, x, y):
+        self.hover_action = 'duplicate_range'
+        self.queue_draw()
+
+    def on_duplicate_frame_hover_enter(self, controller, x, y):
+        self.hover_action = 'duplicate_frame'
         self.queue_draw()
 
     def on_changespeed_frames_hover_enter(self, controller, x, y):
@@ -504,6 +526,97 @@ class FrameLine(Gtk.Widget):
             frame = int(self.right_value)
         self.add_removed_range(frame, frame)
         self.popup_menu.popdown()
+    
+    def on_duplicate_range_clicked(self, button):
+        """Duplicate the selected range of frames in the editor, inserting them after the current range.
+        Also updates speed_ranges and removed_ranges as needed."""
+        if not self.editor:
+            return
+        
+        # Get the selected range (1-based)
+        start = int(min(self.left_value, self.right_value))
+        end = int(max(self.left_value, self.right_value))
+        if start < 1 or end < 1 or end < start:
+            return
+        
+        # Convert to 0-based indices
+        start_idx = start - 1
+        end_idx = end - 1
+
+        # Get the frames and durations to duplicate
+        frames_to_duplicate = self.editor.frames[start_idx:end_idx+1]
+        durations_to_duplicate = self.editor.frame_durations[start_idx:end_idx+1]
+        if not frames_to_duplicate:
+            return
+
+        num_new_frames = len(frames_to_duplicate)
+        insert_idx = end_idx + 1
+
+        # --- Update speed_ranges (shift, and duplicate overlapping) ---
+        updated_speed_ranges = []
+        for s_start, s_end, speed in self.speed_ranges:
+            if insert_idx <= s_start:
+                # Speed range is after insertion point - shift it
+                updated_speed_ranges.append((s_start + num_new_frames, s_end + num_new_frames, speed))
+            elif insert_idx > s_end:
+                # Speed range is before insertion point - keep it unchanged
+                updated_speed_ranges.append((s_start, s_end, speed))
+            else:
+                # Speed range contains insertion point - split it into two parts
+                if s_start < insert_idx:
+                    # Keep the part before insertion
+                    updated_speed_ranges.append((s_start, insert_idx - 1, speed))
+                # Keep the part after insertion (shifted by the number of new frames)
+                updated_speed_ranges.append((insert_idx + num_new_frames, s_end + num_new_frames, speed))
+
+        # Duplicate speed ranges that overlap the duplicated range
+        for s_start, s_end, speed in self.speed_ranges:
+            overlap_start = max(s_start, start_idx)
+            overlap_end = min(s_end, end_idx)
+            if overlap_start <= overlap_end:
+                # The duplicated range overlaps this speed range
+                dup_start = insert_idx + (overlap_start - start_idx)
+                dup_end = insert_idx + (overlap_end - start_idx)
+                updated_speed_ranges.append((dup_start, dup_end, speed))
+
+        self.speed_ranges = updated_speed_ranges
+
+        # --- Update removed_ranges (shift ranges after insertion) ---
+        for i, r in enumerate(self.removed_ranges):
+            if r[0] >= insert_idx:
+                self.removed_ranges[i] = (r[0] + num_new_frames, r[1] + num_new_frames)
+
+        # --- Update inserted_ranges (shift ranges after insertion) ---
+        updated_inserted_ranges = []
+        for start, end in self.inserted_ranges:
+            if start > insert_idx:
+                # Range is after insertion point - shift it
+                updated_inserted_ranges.append((start + num_new_frames, end + num_new_frames))
+            elif end < insert_idx:
+                # Range is before insertion point - keep it unchanged
+                updated_inserted_ranges.append((start, end))
+            else:
+                # Range overlaps insertion point - split or shift as needed
+                # For simplicity, shift the part after insertion
+                if start < insert_idx:
+                    updated_inserted_ranges.append((start, insert_idx - 1))
+                updated_inserted_ranges.append((insert_idx + num_new_frames, end + num_new_frames))
+        self.inserted_ranges = updated_inserted_ranges
+        # Update inserted_ranges for visual feedback
+        self.inserted_ranges.append((insert_idx+1, insert_idx+len(frames_to_duplicate)))
+
+        # Insert duplicated frames immediately after the range
+        self.editor.frames[insert_idx:insert_idx] = [f.copy() for f in frames_to_duplicate]
+        self.editor.frame_durations[insert_idx:insert_idx] = durations_to_duplicate[:]
+        self.max_value = len(self.editor.frames)
+
+        self.queue_draw()
+        self.editor.display_frame(insert_idx)
+        self.editor.update_info_label()
+        self.popup_menu.popdown()
+
+    def on_duplicate_frame_clicked(self, button):
+        pass
 
     def add_removed_range(self, start, end):
         """Add a range of frames to be removed"""
@@ -655,21 +768,77 @@ class FrameLine(Gtk.Widget):
         
         # Speed options
         speeds = [
-            ("2.0x", 2.0),
-            ("1.5x", 1.5),
-            ("1.2x", 1.2),
-            ("1.0x", 1.0),
+            ("2.0x ", 2.0),
+            ("1.5x ", 1.5),
+            ("1.2x ", 1.2),
+            ("1.0x ", 1.0),
             ("0.75x", 0.75),
-            ("0.5x", 0.5)
+            ("0.5x ", 0.5)
         ]
         
         for label, speed in speeds:
             speed_btn = Gtk.Button(label=label)
             speed_btn.add_css_class('menu-item-dark' if self.is_dark else 'menu-item-light')
-            speed_btn.set_halign(Gtk.Align.START)
+            speed_btn.set_hexpand(True)
+            speed_btn.set_halign(Gtk.Align.FILL)
             speed_btn.connect('clicked', self.on_speed_selected, speed)
             speed_box.append(speed_btn)
-        
+            button_width = speed_btn.get_allocated_width()
+
+        # Add custom input box for speed
+        custom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        custom_entry = Gtk.Entry()
+        custom_entry.set_placeholder_text("Customized")
+        custom_entry.set_width_chars(3)  # Minimum width
+        custom_entry.set_max_width_chars(2)
+        custom_entry.add_css_class('menu-item-dark' if self.is_dark else 'menu-item-light')
+        # Add a style class for small font size
+        style_provider = Gtk.CssProvider()
+        style_provider.load_from_data(b".mini-font { font-size: 15px; padding: 0 2px; }")
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+        custom_entry.set_css_classes(list(custom_entry.get_css_classes()) + ["mini-font"])
+
+        def on_custom_entry_activate(entry):
+            text = entry.get_text().strip()
+            try:
+                value = float(text)
+                if value > 10.0:
+                    value = 10.0
+                elif value < 0.01:
+                    value = 0.01  # minimum allowed
+                # Mimic on_speed_selected logic
+                start = min(self.left_value, self.right_value)
+                end = max(self.left_value, self.right_value)
+                self.speed_ranges.append((int(start) - 1, int(end) - 1, value))
+                self.speed_ranges.sort()
+                merged = []
+                for range_start, range_end, speed in self.speed_ranges:
+                    if not merged or merged[-1][1] + 1 < range_start:
+                        merged.append([range_start, range_end, speed])
+                    else:
+                        merged[-1][1] = max(merged[-1][1], range_end)
+                        merged[-1][2] = speed
+                self.speed_ranges = [tuple(x) for x in merged]
+                self.emit('speed-changed', start, end, value)
+                # Close the popover
+                widget = entry
+                while widget and not isinstance(widget, Gtk.Popover):
+                    widget = widget.get_parent()
+                if widget:
+                    widget.popdown()
+                self.queue_draw()
+            except ValueError:
+                # Optionally, show a warning or shake the entry
+                entry.set_text("")
+                entry.set_placeholder_text("Invalid")
+
+        custom_entry.connect('activate', on_custom_entry_activate)
+        custom_box.append(custom_entry)
+        speed_box.append(custom_box)
         speed_popover.set_child(speed_box)
         
         # Position the popover near the clicked handle
@@ -767,6 +936,7 @@ class FrameLine(Gtk.Widget):
             self.remove_range_btn.add_css_class('menu-item-dark')
             self.insert_frames_btn.add_css_class('menu-item-dark')
             self.changespeed_frames_btn.add_css_class('menu-item-dark')
+            self.duplicate_range_btn.add_css_class('menu-item-dark')
             self.track_color = (1, 1, 1, 0.1)    
             self.handle_color = (1, 1, 1, 1)
             self.text_color = (0, 0, 0, 1)       
@@ -777,6 +947,7 @@ class FrameLine(Gtk.Widget):
             self.remove_range_btn.add_css_class('menu-item-light')
             self.insert_frames_btn.add_css_class('menu-item-light')
             self.changespeed_frames_btn.add_css_class('menu-item-light')
+            self.duplicate_range_btn.add_css_class('menu-item-light')
             self.track_color = (0, 0, 0, 0.1)  
             self.handle_color = (0.141, 0.141, 0.141, 1)     
             self.text_color = (1, 1, 1, 1)
