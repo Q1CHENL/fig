@@ -8,9 +8,18 @@
       Fig is a simple and intuitive GIF editor that lets you edit GIFs with ease.
     </p>
     <ul>
-      <li>Customized speedup</li>
+      <li>Crop, flip and rotate GIF</li>
+      <li>Trim GIF to any frame range</li>
+      <li>Reverse GIF</li>
+      <li>Remove specific frames</li>
+      <li>Insert GIF/image(s) at any position</li>
+      <li>Change playback speed for specific frames</li>
       <li>Duplicate frame range</li>
-      <li>Fixed Export Frames and Export to Video permission issues</li>
+      <li>Extract frames</li>
+      <li>Export GIF as video</li>
+      <li>Play GIF at the original speed</li>
+      <li>Text embedding</li>
+      <li>Draw on gif</li>
     </ul>
   </description>
   <metadata_license>CC0-1.0</metadata_license>
@@ -18,8 +27,16 @@
   <developer_name>Qichen Liu</developer_name>
   <url type="homepage">https://github.com/Q1CHENL/fig</url>
   <releases>
-    <release version="1.0.6" date="2025-04-19"/>
-</releases>
+    <release version="1.0.6" date="2025-04-20">
+      <description>
+        <ul>
+          <li>Customized speedup</li>
+          <li>Duplicate frame range</li>
+          <li>Fixed Export Frames and Export to Video permission issues</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
   <content_rating type="oars-1.1" />
   <launchable type="desktop-id">io.github.Q1CHENL.fig.desktop</launchable>
   <screenshots>
