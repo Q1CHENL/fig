@@ -120,6 +120,7 @@ def show_about_dialog(window):
       <li>Loop playback button</li>
       <li>Use arrow keys to move handles</li>
       <li>Updated help page</li>
+      <li>Fixed Extract Frames permission issue</li>
     </ul>
     """)
     
