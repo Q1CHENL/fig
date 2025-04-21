@@ -184,10 +184,8 @@ class FigApplication(Adw.Application):
         label = Gtk.Label(
             label=
             "• You can drag and drop a GIF file to start editing.\n\n" + 
-            "• Left-click on the image to activate crop.\n\n" +
-            "• Right-click on the timeline handles to\n"
-            "  discovery more advanced actions.\n"
-            
+            "• Right-click on the timeline handles to\n\n"
+            "• Press Left/Right arrow keys to move handles\n"            
         )
         label.set_halign(Gtk.Align.END)
         label.set_justify(Gtk.Justification.LEFT)

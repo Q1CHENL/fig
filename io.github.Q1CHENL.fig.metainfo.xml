@@ -27,12 +27,13 @@
   <developer_name>Qichen Liu</developer_name>
   <url type="homepage">https://github.com/Q1CHENL/fig</url>
   <releases>
-    <release version="1.0.6" date="2025-04-20">
+    <release version="1.0.7" date="2025-04-21">
       <description>
         <ul>
-          <li>Customized speedup</li>
-          <li>Duplicate frame range</li>
-          <li>Fixed Export Frames and Export to Video permission issues</li>
+          <li>Loop playback button</li>
+          <li>Use arrow keys to move handles</li>
+          <li>Updated help page</li>
+          <li>Fixed Extract Frames permission issue</li>
         </ul>
       </description>
     </release>

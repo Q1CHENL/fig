@@ -1,5 +1,5 @@
 project('fig',
-  version: '1.0.6',
+  version: '1.0.7',
   meson_version: '>= 0.59.0'
 )
 

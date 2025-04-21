@@ -72,6 +72,7 @@ class FrameLine(Gtk.Widget):
         # Keep these for red highlight feature
         self.menu_active = False
         self.active_handle = None
+        self.last_clicked_handle = None  # Track last clicked handle for keyboard navigation
         self.hover_action = None  # Track which menu item is being hovered
 
         # Add right click gesture (add this near other gesture controllers)
@@ -79,6 +80,11 @@ class FrameLine(Gtk.Widget):
         self.right_click_gesture.set_button(3)  # 3 is right click
         self.right_click_gesture.connect('pressed', self.on_right_click)
         self.add_controller(self.right_click_gesture)
+
+        # Add key controller for arrow key navigation
+        key_controller_nav = Gtk.EventControllerKey.new()
+        key_controller_nav.connect('key-pressed', self.on_key_pressed)
+        self.add_controller(key_controller_nav)
 
         self.popup_menu = Gtk.Popover()
         self.popup_menu.set_has_arrow(False)
@@ -344,10 +350,14 @@ class FrameLine(Gtk.Widget):
             self.dragging_left = True
             self.drag_offset = left_handle_x - x
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            self.last_clicked_handle = 'left'
+            self.grab_focus()
         elif abs(x - right_handle_x) <= self.HANDLE_RADIUS:
             self.dragging_right = True
             self.drag_offset = right_handle_x - x
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            self.last_clicked_handle = 'right'
+            self.grab_focus()
 
         # Clear any existing menu state
         self.menu_active = False
@@ -421,6 +431,7 @@ class FrameLine(Gtk.Widget):
         # Check if click is on handles
         if abs(x - left_handle_x) <= self.HANDLE_RADIUS:
             self.active_handle = 'left'
+            self.last_clicked_handle = 'left'
             rect = Gdk.Rectangle()
             rect.x = int(x)
             rect.y = int(y)
@@ -430,6 +441,7 @@ class FrameLine(Gtk.Widget):
             self.popup_menu.popup()
         elif abs(x - right_handle_x) <= self.HANDLE_RADIUS:
             self.active_handle = 'right'
+            self.last_clicked_handle = 'right'
             rect = Gdk.Rectangle()
             rect.x = int(x)
             rect.y = int(y)
@@ -500,9 +512,27 @@ class FrameLine(Gtk.Widget):
         self.queue_draw()
 
     def on_key_pressed(self, controller, keyval, keycode, state):
-        """Handle escape key to close popover"""
+        """Handle escape and arrow keys to close popover and navigate handles"""
         if keyval == Gdk.KEY_Escape:
             self.popup_menu.popdown()
+            return True
+        # Handle arrow key navigation
+        if keyval in (Gdk.KEY_Left, Gdk.KEY_Right):
+            if self.last_clicked_handle is None:
+                return False
+            direction = -1 if keyval == Gdk.KEY_Left else 1
+            if self.last_clicked_handle == 'left':
+                self.set_left_value(self.left_value + direction * self.STRIDE)
+            else:
+                self.set_right_value(self.right_value + direction * self.STRIDE)
+            start, end = (self.left_value, self.right_value) if self.left_value <= self.right_value else (self.right_value, self.left_value)
+            self.emit('frames-changed', start, end)
+            self.queue_draw()
+            if self.editor:
+                # Update displayed frame to match handle movement
+                handle_val = self.left_value if self.last_clicked_handle == 'left' else self.right_value
+                self.editor.on_handle_drag(handle_val)
+                self.editor.update_info_label()
             return True
         return False
 
@@ -974,6 +1004,7 @@ class FrameLine(Gtk.Widget):
         self.right_handle_hover = False
         self.menu_active = False
         self.active_handle = None
+        self.last_clicked_handle = None
         self.hover_action = None
         self.queue_draw()
 
@@ -1029,7 +1060,7 @@ class FrameLine(Gtk.Widget):
         self.queue_draw()
         
     def set_playhead_pos(self, position):
-        """Set playhead position"""
+        """Set playhead position (starting from 1)"""
         self.playhead_pos = position
         # If position is -1, hide the playhead
         if position == -1:

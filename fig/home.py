@@ -110,16 +110,17 @@ def show_about_dialog(window):
     
     about.set_application_name("Fig")
     about.set_application_icon("io.github.Q1CHENL.fig")
-    about.set_version("1.0.6")
+    about.set_version("1.0.7")
     about.set_developer_name("Qichen Liu")
     about.set_website("https://github.com/fig")
     about.set_issue_url("https://github.com/fig/issues")
 
     about.set_release_notes("""
     <ul>
-      <li>Customized speedup</li>
-      <li>Duplicate frame range</li>
-      <li>Fixed Export Frames and Export to Video permission issues</li>
+      <li>Loop playback button</li>
+      <li>Use arrow keys to move handles</li>
+      <li>Updated help page</li>
+      <li>Fixed Extract Frames permission issue</li>
     </ul>
     """)
     
