@@ -107,7 +107,9 @@ class EditorBox(Gtk.Box):
 
         self.play_btn = self.play_button()
         self.save_btn = self.save_button()
+        self.loop_btn = self.loop_button()
         buttons_box.append(self.play_btn)
+        buttons_box.append(self.loop_btn)
         buttons_box.append(self.save_btn)
 
         self.controls_box.append(buttons_box)
@@ -175,6 +177,8 @@ class EditorBox(Gtk.Box):
             color_box.append(color_button)
 
         self.color_popover.set_child(color_box)
+
+        self.loop_playback = False
 
     def calculate_image_scale(self, image_width, image_height):
         """Set up a fixed square container based on the longer dimension"""
@@ -358,7 +362,7 @@ class EditorBox(Gtk.Box):
             self.play_next_frame()
 
     def play_next_frame(self):
-        """Play the next frame in the sequence"""
+        """Play the next frame in the sequence, with loop support."""
         if not self.is_playing:
             return False
 
@@ -375,14 +379,26 @@ class EditorBox(Gtk.Box):
 
         # Check if we've reached the end
         if next_frame == -1 or (direction > 0 and next_frame > end) or (direction < 0 and next_frame < end):
-            self.is_playing = False
-            self.update_play_button_icon(False)
-            self.hide_playhead()
-            self.frameline.playhead_visible = False
-            if self.play_timeout_id:
-                GLib.source_remove(self.play_timeout_id)
-                self.play_timeout_id = None
-            return False
+            if self.loop_playback:
+                # Loop to the start
+                self.current_frame_index = start
+                self.playhead_frame_index = start
+                self.display_frame(self.current_frame_index)
+                self.show_playhead()
+                self.frameline.set_playhead_pos(self.current_frame_index + 1)
+                current_duration = self.frame_durations[self.current_frame_index]
+                self.play_timeout_id = GLib.timeout_add(
+                    current_duration, self.play_next_frame)
+                return False
+            else:
+                self.is_playing = False
+                self.update_play_button_icon(False)
+                self.hide_playhead()
+                self.frameline.playhead_visible = False
+                if self.play_timeout_id:
+                    GLib.source_remove(self.play_timeout_id)
+                    self.play_timeout_id = None
+                return False
 
         self.display_frame(next_frame)
         self.current_frame_index = next_frame
@@ -808,6 +824,20 @@ class EditorBox(Gtk.Box):
 
         return play_button
 
+    def loop_button(self):
+        loop_button = Gtk.Button()
+        loop_button.set_size_request(40, self.BUTTON_HEIGHT)
+        loop_button.set_valign(Gtk.Align.CENTER)
+        loop_button.set_halign(Gtk.Align.CENTER)
+        loop_button.connect('clicked', self.toggle_loop)
+
+        icon_name = "media-playlist-repeat-symbolic"
+        icon = Gio.ThemedIcon(name=icon_name)
+        image = Gtk.Image.new_from_gicon(icon)
+        loop_button.set_child(image)
+
+        return loop_button
+
     def update_theme(self, is_dark):
         """Update theme for all buttons"""
         self.is_dark = is_dark
@@ -818,6 +848,9 @@ class EditorBox(Gtk.Box):
 
         clear_css(self.play_btn)
         self.play_btn.add_css_class("play-button-dark" if is_dark else "play-button-light")
+
+        clear_css(self.loop_btn)
+        self.loop_btn.add_css_class("loop-button-dark" if is_dark else "loop-button-light")
 
         clear_css(self.info_label)
         self.info_label.add_css_class("info-label-dark" if is_dark else "info-label-light")
@@ -1258,3 +1291,11 @@ class EditorBox(Gtk.Box):
         """Handle color selection"""
         self.current_draw_color = color[0]
         self.color_popover.popdown()
+
+    def toggle_loop(self, button):
+        """Toggle looping playback on/off."""
+        self.loop_playback = not self.loop_playback
+        if self.loop_playback:
+            self.loop_btn.add_css_class("loop-button-active")
+        else:
+            self.loop_btn.remove_css_class("loop-button-active")

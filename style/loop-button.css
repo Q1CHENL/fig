@@ -1,0 +1,39 @@
+.loop-button-light {
+    border-radius: 20px;
+    color: #242424;
+    background-color: #CCCCCC;
+    border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.loop-button-dark {
+    border-radius: 20px;
+    color: #FFFFFF;
+    background-color: #383838;
+    border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.loop-button-light:hover {
+    background-color: #CCCCCC;
+    color: #242424;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.loop-button-dark:hover {
+    background-color: #454545;
+    color: #FFFFFF;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.loop-button-light.loop-button-active, .loop-button-light:active {
+    background-color: #242424;
+    color: #FFFFFF;
+}
+
+.loop-button-dark.loop-button-active, .loop-button-dark:active {
+    background-color: #FFFFFF;
+    color: #000000;
+}
