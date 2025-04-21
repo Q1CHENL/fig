@@ -11,8 +11,8 @@
   </a>
 </p>
 
-![UI](assets/screenshots/screenshot-home-split.png)
-![UI](assets/screenshots/screenshot-editor-split-v1.0.5.png)
+![UI](assets/screenshots/screenshot-home-split-latest.png)
+![UI](assets/screenshots/screenshot-editor-split-latest.png)
 
 ## Features
 
