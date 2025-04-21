@@ -1060,7 +1060,7 @@ class FrameLine(Gtk.Widget):
         self.queue_draw()
         
     def set_playhead_pos(self, position):
-        """Set playhead position"""
+        """Set playhead position (starting from 1)"""
         self.playhead_pos = position
         # If position is -1, hide the playhead
         if position == -1:
