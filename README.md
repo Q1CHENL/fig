@@ -63,7 +63,6 @@
 ## Credits
 
 - Homepage UI is inspired by [sly](https://github.com/kra-mo/sly)
-- Thanks to Cursor/Windsurf/Copilot :)
 
 ## Contribute
 
