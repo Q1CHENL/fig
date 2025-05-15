@@ -816,7 +816,7 @@ class FrameLine(Gtk.Widget):
         custom_entry.set_placeholder_text("Customized")
         custom_entry.set_width_chars(3)  # Minimum width
         custom_entry.set_max_width_chars(2)
-        custom_entry.add_css_class('menu-item-dark' if self.is_dark else 'menu-item-light')
+        custom_entry.add_css_class('speed-entry-dark' if self.is_dark else 'speed-entry-light')
         # Add a style class for small font size
         style_provider = Gtk.CssProvider()
         style_provider.load_from_data(b".mini-font { font-size: 15px; padding: 0 2px; }")
