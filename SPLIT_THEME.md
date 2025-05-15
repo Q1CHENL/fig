@@ -1,0 +1,18 @@
+# Make a Split Theme Screenshot
+
+1. Open GIMP and go to File > Open as Layers.
+   Select both screenshots. Each will be added as a separate layer.
+
+2. Select the Top Layer:
+   As before, ensure the top screenshot layer is active.
+
+3. Add a Layer Mask:
+   Add a layer mask (choose White (full opacity)).
+
+4. Select the Gradient Tool:
+   Select the Gradient Tool (shortcut G).
+   Set the gradient type to Linear.
+
+5. Draw the Gradient:
+   Drag diagonally across the canvas to create a smooth transition from one screenshot to the other.
+   Adjust as needed for a sharper diagonal effect.
