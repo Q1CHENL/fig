@@ -536,10 +536,6 @@ class FrameLine(Gtk.Widget):
             return True
         return False
 
-    def on_changespeed_frames_hover_enter(self, controller, x, y):
-        self.hover_action = 'changespeed'
-        self.queue_draw()
-
     def on_remove_range_clicked(self, button):
         # Get current range values (1-based)
         start = min(self.left_value, self.right_value)
@@ -813,7 +809,6 @@ class FrameLine(Gtk.Widget):
             speed_btn.set_halign(Gtk.Align.FILL)
             speed_btn.connect('clicked', self.on_speed_selected, speed)
             speed_box.append(speed_btn)
-            button_width = speed_btn.get_allocated_width()
 
         # Add custom input box for speed
         custom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
@@ -1041,13 +1036,6 @@ class FrameLine(Gtk.Widget):
         usable_width = width - 2 * self.HANDLE_RADIUS
         normalized_pos = max(0, min(1, (position - self.HANDLE_RADIUS) / usable_width))
         return self.min_value + normalized_pos * (self.max_value - self.min_value)
-
-    def is_frame_removed(self, frame_index):
-        """Internal method to check if a frame is in a removed range"""
-        for start, end in self.removed_ranges:
-            if start <= frame_index <= end:
-                return True
-        return False
 
     def show_playhead(self):
         """Show the playhead"""

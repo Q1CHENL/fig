@@ -3,7 +3,6 @@
 import os
 import gi
 import threading
-import time
 import tempfile
 
 gi.require_version('Gtk', '4.0')
@@ -360,7 +359,6 @@ class FigApplication(Adw.Application):
 
                     with tempfile.TemporaryDirectory() as temp_dir:
                         frame_paths = []
-                        total_frames = len(editor_box.frames)
                         processed_frames = 0
 
                         for i, frame in enumerate(editor_box.frames):
