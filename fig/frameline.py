@@ -955,6 +955,7 @@ class FrameLine(Gtk.Widget):
         clear_css(self.remove_range_btn)
         clear_css(self.insert_frames_btn)
         clear_css(self.changespeed_frames_btn)
+        clear_css(self.duplicate_range_btn)
         
         if is_dark:
             self.remove_frame_btn.add_css_class('menu-item-dark')
