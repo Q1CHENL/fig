@@ -4,8 +4,9 @@ from fig.frameline import FrameLine
 from fig.utils import clear_css, load_css
 from fig.image_converter import ImageConverter
 from fig.gif_loader import GifLoader, LoadProgress, LoadResult
+from fig.frame_processor import FrameProcessor, ProcessingOptions
 import os
-from PIL import Image, ImageDraw
+from PIL import Image
 import gi
 gi.require_version('Adw', '1')
 gi.require_version('Gtk', '4.0')
@@ -119,8 +120,9 @@ class EditorBox(Gtk.Box):
         # Initialize state management
         self.state = EditorState()
         
-        # Initialize GIF loader
+        # Initialize GIF loader and frame processor
         self.gif_loader = GifLoader()
+        self.frame_processor = FrameProcessor()
 
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.set_spacing(0)
@@ -540,159 +542,52 @@ class EditorBox(Gtk.Box):
         dialog.destroy()
 
     def _save_gif(self, save_path, start_idx, end_idx):
-        """Save GIF including inserted frames, drawings, and excluding removed ranges"""
-        import traceback
-
-        is_reversed = start_idx > end_idx
-        if is_reversed:
-            start_idx, end_idx = end_idx, start_idx
-
-        frames_to_save = []
-        durations = []
-
-        # Get reference dimensions from the first non-removed frame
-        ref_frame = None
-        for frame in self.state.frames:
-            if frame:
-                ref_frame = ImageConverter.pixbuf_to_pil(frame)
-                break
-
-        if not ref_frame:
-            return  # No valid frames to save
-
-        # Calculate crop box in absolute pixels
-        crop_rect = self.overlay.crop_rect
-        orig_width, orig_height = ref_frame.size
-        left = int(crop_rect[0] * orig_width)
-        top = int(crop_rect[1] * orig_height)
-        right = int((crop_rect[0] + crop_rect[2]) * orig_width)
-        bottom = int((crop_rect[1] + crop_rect[3]) * orig_height)
-        crop_box = (left, top, right, bottom)
-
-        for i in range(start_idx, end_idx + 1):
-            if self.frameline.is_frame_removed(i):
-                continue
-            if i < 0 or i >= len(self.state.frames):
-                continue
-            if not self.state.frames[i]:
-                continue
-            # Get the frame and its duration
-            frame = ImageConverter.pixbuf_to_pil(self.state.frames[i])
-            duration = self.state.frame_durations[i]
-            is_inserted = any(start <= i <= end for start,
-                              end in self.frameline.inserted_ranges)
-
-            # For inserted frames, resize to match original size before cropping
-            if is_inserted and frame.size != (orig_width, orig_height):
-                frame = frame.resize(
-                    (orig_width, orig_height), Image.Resampling.LANCZOS)
-
-            draw = ImageDraw.Draw(frame)
-            long_side = max(orig_width, orig_height)
-
-            if self.state.drawings and self.state.drawings[0]:
-                for line in self.state.drawings[0]:
-                    if len(line['points']) > 1:
-                        # Convert coordinates to image space
-                        scaled_points = []
-                        for point in line['points']:
-                            if isinstance(point, (list, tuple)) and len(point) >= 2:
-                                x, y = point[0], point[1]
-                                if long_side == orig_width:
-                                    y = y - (self.state.container_size -
-                                             orig_height)/2
-                                else:
-                                    x = x - (self.state.container_size -
-                                             orig_width)/2
-                                scaled_points.append((x, y))
-
-                        color = line.get('color', '#FFFFFF')
-                        # Changed i to j to avoid variable shadowing
-                        for j in range(len(scaled_points) - 1):
-                            draw.line([scaled_points[j], scaled_points[j + 1]],
-                                      fill=color, width=2)
-
-            # Handle text with rotation
-            for text_entry in self.overlay.text_entries:
-                try:
-                    x = int(text_entry['x'])
-                    y = int(text_entry['y'])
-                    text = text_entry['entry'].get_text()
-
-                    # Check if we need to apply rotation
-                    if hasattr(self.state, 'text_rotation') and self.state.text_rotation != 0:
-                        # Estimate text size - you might want to use a font that supports size measurement
-                        # This is an approximation
-                        font_size = 24  # Increased font size for better visibility
-                        text_width = len(text) * font_size
-                        text_height = font_size * 1.5
-
-                        # Create transparent image large enough for the rotated text
-                        text_img = Image.new('RGBA',
-                                             (int(max(text_width, text_height) * 3),
-                                              int(max(text_width, text_height) * 3)),
-                                             (0, 0, 0, 0))
-
-                        # Draw text at the center of this new image
-                        text_draw = ImageDraw.Draw(text_img)
-                        text_draw.text((text_img.width//2, text_img.height//2),
-                                       text,
-                                       fill='white',
-                                       anchor='mm')  # Center alignment
-
-                        # Rotate the text image
-                        rotated_text = text_img.rotate(-self.state.text_rotation,
-                                                       resample=Image.BICUBIC,
-                                                       expand=True)
-
-                        # Calculate paste coordinates
-                        paste_x = x
-                        paste_y = y
-
-                        # Adjust for container padding
-                        if long_side == orig_width:
-                            paste_y -= (self.state.container_size -
-                                        orig_height)//2
-                        else:
-                            paste_x -= (self.state.container_size -
-                                        orig_width)//2
-
-                        # Adjust paste position to center the rotated text at the specified point
-                        paste_x -= rotated_text.width//2
-                        paste_y -= rotated_text.height//2
-
-                        # Paste using the alpha channel as mask
-                        frame.paste(
-                            rotated_text, (paste_x, paste_y), rotated_text)
-                    else:
-                        if long_side == orig_width:
-                            y = y - (self.state.container_size -
-                                     orig_height)//2
-                        else:
-                            x = x - (self.state.container_size - orig_width)//2
-                        # No rotation - draw text directly
-                        draw.text((x, y), text, fill='white')
-                except Exception as e:
-                    print(f"Error drawing text: {e}")
-                    traceback.print_exc()
-
-            frame = frame.crop(crop_box)
-            frames_to_save.append(frame)
-            durations.append(duration)
-
-        if is_reversed:
-            frames_to_save.reverse()
-            durations.reverse()
-
-        if frames_to_save:
-            frames_to_save[0].save(
-                save_path,
-                save_all=True,
-                append_images=frames_to_save[1:],
-                duration=durations,
-                loop=0,
-                format='GIF'
+        """Save GIF using FrameProcessor for consistent processing"""
+        try:
+            # Prepare processing options
+            processing_options = ProcessingOptions(
+                crop_rect=self.overlay.crop_rect,
+                container_size=self.state.container_size,
+                text_rotation=getattr(self.state, 'text_rotation', 0)
             )
+            
+            # Prepare excluded ranges (removed frames)
+            excluded_ranges = []
+            for i, frame in enumerate(self.state.frames):
+                if self.frameline.is_frame_removed(i):
+                    excluded_ranges.append((i, i))
+            
+            # Prepare text entries for processing
+            text_entries = []
+            if hasattr(self.overlay, 'text_entries'):
+                for text_entry in self.overlay.text_entries:
+                    if 'entry' in text_entry and text_entry['entry']:
+                        text_entries.append({
+                            'x': text_entry.get('x', 0),
+                            'y': text_entry.get('y', 0),
+                            'text': text_entry['entry'].get_text()
+                        })
+            
+            # Use FrameProcessor to handle the entire save operation
+            self.frame_processor.process_and_save_gif(
+                frames=self.state.frames,
+                durations=self.state.frame_durations,
+                save_path=save_path,
+                start_idx=start_idx,
+                end_idx=end_idx,
+                excluded_ranges=excluded_ranges,
+                inserted_ranges=getattr(self.frameline, 'inserted_ranges', []),
+                drawings=getattr(self.state, 'drawings', None),
+                text_entries=text_entries,
+                processing_options=processing_options
+            )
+            
+        except Exception as e:
+            print(f"Error saving GIF: {e}")
+            import traceback
+            traceback.print_exc()
+            # Re-raise to allow calling code to handle
+            raise
 
     def on_frames_changed(self, frameline, start, end):
         """Handle frame range changes from the frameline"""
@@ -757,13 +652,8 @@ class EditorBox(Gtk.Box):
         if not self.state.frames:
             return
         try:
-            for i, frame in enumerate(self.state.frames):
-                if frame:
-                    pil_image = ImageConverter.pixbuf_to_pil(frame)
-                    flipped = pil_image.transpose(Image.FLIP_LEFT_RIGHT)
-                    self.state.frames[i] = ImageConverter.pil_to_pixbuf(
-                        flipped)
-
+            # Use FrameProcessor to flip frames
+            self.state.frames = self.frame_processor.flip_frames_horizontal(self.state.frames)
             self.display_frame(self.state.current_frame_index)
 
         except Exception as e:
@@ -802,71 +692,54 @@ class EditorBox(Gtk.Box):
             # Swap dimensions (logical dimensions only, container stays the same)
             self.state.image_display_width, self.state.image_display_height = self.state.image_display_height, self.state.image_display_width
 
-            # Rotate the frames' content
-            for i, frame in enumerate(self.state.frames):
-                if frame:
-                    pil_image = ImageConverter.pixbuf_to_pil(frame)
-                    rotated = pil_image.transpose(Image.ROTATE_270)
-                    self.state.frames[i] = ImageConverter.pil_to_pixbuf(
-                        rotated)
+            # Use FrameProcessor to rotate frames
+            self.state.frames = self.frame_processor.rotate_frames_90(self.state.frames)
 
             # Rotate all drawings if they exist
             if hasattr(self.state, 'drawings'):
-                for frame_drawings in self.state.drawings:
-                    for line in frame_drawings:
-                        rotated_points = []
-                        for point in line['points']:
-                            x, y = point
-                            final_x = self.state.container_size - y
-                            final_y = x
-                            rotated_points.append((final_x, final_y))
-                        line['points'] = rotated_points
+                self.state.drawings = self.frame_processor.rotate_drawings(
+                    self.state.drawings, self.state.container_size)
 
             # Handle text rotation
             self.state.text_rotation = (self.state.text_rotation + 90) % 360
 
             if hasattr(self.overlay, 'text_entries'):
-                for text_entry in self.overlay.text_entries:
-                    # Get current coordinates
-                    x = text_entry['x']
-                    y = text_entry['y']
+                rotated_entries, rotation_increment = self.frame_processor.rotate_text_entries(
+                    self.overlay.text_entries, self.state.container_size)
+                
+                # Update the entries
+                for i, rotated_entry in enumerate(rotated_entries):
+                    if i < len(self.overlay.text_entries):
+                        self.overlay.text_entries[i].update(rotated_entry)
+                        
+                        # Update the actual widget position if it exists
+                        if 'entry' in self.overlay.text_entries[i] and self.overlay.text_entries[i]['entry']:
+                            entry_widget = self.overlay.text_entries[i]['entry']
+                            entry_widget.set_margin_start(int(rotated_entry['x']))
+                            entry_widget.set_margin_top(int(rotated_entry['y']))
 
-                    # Apply the same rotation transformation for position
-                    final_y = x
-                    final_x = self.state.container_size - y
+                            # Apply rotation transform via CSS
+                            css_provider = Gtk.CssProvider()
+                            css_data = f"""
+                                entry {{
+                                    transform: rotate({self.state.text_rotation}deg);
+                                    transform-origin: 0 0;
+                                }}
+                            """
+                            css_provider.load_from_data(css_data.encode('utf-8'))
 
-                    # Update the text entry coordinates
-                    text_entry['x'] = final_x
-                    text_entry['y'] = final_y
+                            style_context = entry_widget.get_style_context()
 
-                    # Update the actual widget position if it exists
-                    if 'entry' in text_entry and text_entry['entry']:
-                        entry_widget = text_entry['entry']
-                        entry_widget.set_margin_start(int(final_x))
-                        entry_widget.set_margin_top(int(final_y))
+                            if hasattr(entry_widget, 'rotation_provider'):
+                                style_context.remove_provider(
+                                    entry_widget.rotation_provider)
 
-                        # Apply rotation transform via CSS
-                        css_provider = Gtk.CssProvider()
-                        css_data = f"""
-                            entry {{
-                                transform: rotate({self.state.text_rotation}deg);
-                                transform-origin: 0 0;
-                            }}
-                        """
-                        css_provider.load_from_data(css_data.encode('utf-8'))
-
-                        style_context = entry_widget.get_style_context()
-
-                        if hasattr(entry_widget, 'rotation_provider'):
-                            style_context.remove_provider(
-                                entry_widget.rotation_provider)
-
-                        style_context.add_provider(
-                            css_provider,
-                            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-                        )
-                        entry_widget.rotation_provider = css_provider
-                        entry_widget.rotation_angle = self.state.text_rotation
+                            style_context.add_provider(
+                                css_provider,
+                                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                            )
+                            entry_widget.rotation_provider = css_provider
+                            entry_widget.rotation_angle = self.state.text_rotation
 
             # Update display
             self.display_frame(self.state.current_frame_index)
