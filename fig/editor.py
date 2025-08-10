@@ -3,12 +3,13 @@ from fig.overlay import CropTextOverlay
 from fig.frameline import FrameLine
 from fig.action_bar import EditorActionBar
 from fig.playback_controls import PlaybackControls
-from fig.utils import clear_css, load_css
+from fig.utils import load_css, clear_css
 from fig.image_converter import ImageConverter
 from fig.gif_loader import GifLoader, LoadProgress, LoadResult
 from fig.frame_processor import FrameProcessor, ProcessingOptions
 from fig.constants import EditorConstants
 from fig.state import EditorState
+from fig.colorpicker import ColorPicker
 import os
 from PIL import Image
 import gi
@@ -106,49 +107,13 @@ class EditorBox(Gtk.Box):
 
         self.append(self.controls_box)
 
-        # Initialize drawing-related state that wasn't in EditorState
-        self.color_popover = Gtk.Popover()
-        self.color_popover.set_parent(self.draw_button)
-
-        color_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
-                            spacing=EditorConstants.COLOR_POPOVER_MARGIN)
-        color_box.set_margin_top(EditorConstants.COLOR_POPOVER_MARGIN)
-        color_box.set_margin_bottom(EditorConstants.COLOR_POPOVER_MARGIN)
-        color_box.set_margin_start(EditorConstants.COLOR_POPOVER_MARGIN)
-        color_box.set_margin_end(EditorConstants.COLOR_POPOVER_MARGIN)
-
-        colors = [
-            (EditorConstants.COLOR_WHITE, 'White'),
-            (EditorConstants.COLOR_BLACK, 'Black'),
-            (EditorConstants.COLOR_RED, 'Red'),
-            (EditorConstants.COLOR_GREEN, 'Green'),
-            (EditorConstants.COLOR_BLUE, 'Blue'),
-            (EditorConstants.COLOR_YELLOW, 'Yellow'),
-            # ('#FF00FF', 'Magenta'),
-            # ('#00FFFF', 'Cyan'),
-        ]
-
-        self.state.current_draw_color = colors[0][0]
-        for color_hex in colors:
-            color_button = Gtk.Button()
-            color_button.set_size_request(
-                EditorConstants.COLOR_BUTTON_SIZE, EditorConstants.COLOR_BUTTON_SIZE)
-            color_button.add_css_class(EditorConstants.CSS_COLOR_BUTTON)
-
-            css_provider = Gtk.CssProvider()
-            css_data = f"""
-                .{EditorConstants.CSS_COLOR_BUTTON} {{
-                    background: {color_hex[0]};
-                }}
-            """
-            css_provider.load_from_data(css_data.encode('utf-8'))
-            color_button.get_style_context().add_provider(
-                css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-            color_button.connect('clicked', self.on_color_selected, color_hex)
-            color_box.append(color_button)
-
-        self.color_popover.set_child(color_box)
+        # Initialize color picker for drawing
+        self.color_picker = ColorPicker(
+            parent_widget=self.draw_button,
+            on_color_selected_callback=self.on_color_selected
+        )
+        # Set initial color in state
+        self.state.current_draw_color = self.color_picker.get_current_color()
 
         # Initialize theme
         self.update_theme(is_dark=True)
@@ -975,7 +940,7 @@ class EditorBox(Gtk.Box):
             self.update_action_bar_button(False, self.text_button)
 
         if not self.state.draw_mode:
-            self.color_popover.popup()
+            self.color_picker.show()
 
         self.state.draw_mode = not self.state.draw_mode
         self.update_action_bar_button(self.state.draw_mode, button)
@@ -993,10 +958,9 @@ class EditorBox(Gtk.Box):
 
         self.overlay.drawing_area.queue_draw()
 
-    def on_color_selected(self, button, color):
-        """Handle color selection"""
-        self.state.current_draw_color = color[0]
-        self.color_popover.popdown()
+    def on_color_selected(self, color_hex, color_name):
+        """Handle color selection from color picker"""
+        self.state.current_draw_color = color_hex
 
     def toggle_loop(self, button):
         """Toggle looping playback on/off."""
