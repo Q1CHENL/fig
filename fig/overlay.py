@@ -1,7 +1,7 @@
+from gi.repository import Gtk, Gdk
 import cairo
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gdk
 
 
 class CropTextOverlay(Gtk.Overlay):
@@ -44,11 +44,7 @@ class CropTextOverlay(Gtk.Overlay):
         self.handles_visible = False
 
         self.draw_mode = False
-        self.editor.drawing = False
-        self.editor.last_point = None
-        # Remove initial empty list - we'll initialize it properly when loading frames
-        self.editor.drawings = []
-        self.editor.apply_to_all_frames = True
+        # Remove references to editor state variables - they're now in editor.state
         self.overlay_bkg = (36/255, 36/255, 36/255, 0.85)
 
     def get_handle_at_position(self, x, y, display_width, display_height, x_offset, y_offset):
@@ -109,19 +105,19 @@ class CropTextOverlay(Gtk.Overlay):
 
     def on_press(self, gesture, n_press, x, y):
         if self.draw_mode:
-            self.editor.drawing = True
+            self.editor.state.drawing = True
             point = (x, y)
-            self.editor.last_point = point
+            self.editor.state.last_point = point
 
-            current_frame = self.editor.current_frame_index
-            if current_frame >= len(self.editor.drawings):
-                self.editor.drawings.extend(
-                    [[] for _ in range(current_frame - len(self.editor.drawings) + 1)])
+            current_frame = self.editor.state.current_frame_index
+            if current_frame >= len(self.editor.state.drawings):
+                self.editor.state.drawings.extend(
+                    [[] for _ in range(current_frame - len(self.editor.state.drawings) + 1)])
 
             # Store the line with its color
-            self.editor.drawings[current_frame].append({
+            self.editor.state.drawings[current_frame].append({
                 'points': [point],
-                'color': self.editor.current_draw_color
+                'color': self.editor.state.current_draw_color
             })
             self.drawing_area.queue_draw()
             return True
@@ -157,7 +153,7 @@ class CropTextOverlay(Gtk.Overlay):
         x_offset = (width - display_width) // 2
         y_offset = (height - display_height) // 2
 
-        if self.editor.crop_mode:
+        if self.editor.state.crop_mode:
             self.handles_visible = True
             # Check if we clicked on a handle or within the region
             self.active_handle = self.get_handle_at_position(
@@ -178,8 +174,8 @@ class CropTextOverlay(Gtk.Overlay):
 
     def on_release(self, gesture, n_press, x, y):
         if self.draw_mode:
-            self.editor.drawing = False
-            self.editor.last_point = None
+            self.editor.state.drawing = False
+            self.editor.state.last_point = None
             self.drawing_area.queue_draw()
             return True
 
@@ -274,15 +270,15 @@ class CropTextOverlay(Gtk.Overlay):
 
     def draw_overlay(self, drawing_area, cr, width, height):
         # Get actual displayed image dimensions
-        image_width = self.editor.image_display_width
-        image_height = self.editor.image_display_height
+        image_width = self.editor.state.image_display_width
+        image_height = self.editor.state.image_display_height
         x_offset = (width - image_width) // 2
         y_offset = (height - image_height) // 2
 
         # print(f"Drawing Area: {width}x{height}")
         # print(f"Displayed Image: {image_width}x{image_height}")
         # print(f"Image Offset: ({x_offset}, {y_offset})")
-        # print(f"Scale: {self.editor.IMAGE_SCALE}")
+        # print(f"Scale: {self.editor.state.IMAGE_SCALE}")
 
         # Get the actual image dimensions from the Picture widget
         child = self.get_child()
@@ -329,10 +325,10 @@ class CropTextOverlay(Gtk.Overlay):
 
         # Draw stored drawings first
         cr.set_operator(cairo.OPERATOR_OVER)
-        current_frame = self.editor.current_frame_index
-        if current_frame < len(self.editor.drawings):
+        current_frame = self.editor.state.current_frame_index
+        if current_frame < len(self.editor.state.drawings):
             cr.set_line_width(2)
-            for line in self.editor.drawings[current_frame]:
+            for line in self.editor.state.drawings[current_frame]:
                 if 'color' in line:
                     color = line['color'].lstrip('#')
                     r = int(color[0:2], 16) / 255.0
@@ -502,37 +498,37 @@ class CropTextOverlay(Gtk.Overlay):
 
     def on_button_press(self, widget, event):
         if self.draw_mode and event.button == 1:  # Left mouse button
-            self.editor.drawing = True
-            self.editor.last_point = (event.x, event.y)
+            self.editor.state.drawing = True
+            self.editor.state.last_point = (event.x, event.y)
 
             # Initialize new line for current frame
-            current_frame = self.editor.current_frame_index
-            if current_frame >= len(self.editor.drawings):
-                self.editor.drawings.extend(
-                    [[] for _ in range(current_frame - len(self.editor.drawings) + 1)])
-            self.editor.drawings[current_frame].append(
-                [self.editor.last_point])
+            current_frame = self.editor.state.current_frame_index
+            if current_frame >= len(self.editor.state.drawings):
+                self.editor.state.drawings.extend(
+                    [[] for _ in range(current_frame - len(self.editor.state.drawings) + 1)])
+            self.editor.state.drawings[current_frame].append(
+                [self.editor.state.last_point])
 
             return True
         return False
 
     def on_button_release(self, widget, event):
         if self.draw_mode:
-            self.editor.drawing = False
-            self.editor.last_point = None
+            self.editor.state.drawing = False
+            self.editor.state.last_point = None
             return True
         return False
 
     def on_motion(self, controller, x, y):
-        if self.draw_mode and self.editor.drawing:
-            current_frame = self.editor.current_frame_index
-            if current_frame < len(self.editor.drawings):
+        if self.draw_mode and self.editor.state.drawing:
+            current_frame = self.editor.state.current_frame_index
+            if current_frame < len(self.editor.state.drawings):
                 # Get the last line
-                current_line = self.editor.drawings[current_frame][-1]
+                current_line = self.editor.state.drawings[current_frame][-1]
                 point = (x, y)
                 if not current_line['points'] or current_line['points'][-1] != point:
                     current_line['points'].append(point)
-                    self.editor.last_point = point
+                    self.editor.state.last_point = point
                     self.drawing_area.queue_draw()
             return True
         return False
