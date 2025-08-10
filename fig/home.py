@@ -1,28 +1,28 @@
+from gi.repository import Gtk, Gio, GLib, Adw
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gio, GLib, Adw
 
 
 class HomeBox(Gtk.Box):
     def __init__(self):
         super().__init__()
-        
+
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.button_box.set_spacing(10)
         self.button_box.set_margin_top(220)
         self.button_box.set_margin_bottom(220)
         self.button_box.set_margin_start(20)
         self.button_box.set_margin_end(20)
-        
+
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        
+
         self.select_btn = self.select_button()
         self.about_btn = self.about_button()
-        
+
         self.button_box.append(self.select_btn)
         self.button_box.append(self.about_btn)
-        
+
         self.append(self.button_box)
 
     def select_button(self):
@@ -38,7 +38,7 @@ class HomeBox(Gtk.Box):
         about_button.set_halign(Gtk.Align.CENTER)
         about_button.connect('clicked', self.show_about)
         return about_button
-    
+
     def select_gif(self, button):
         """Open native file chooser dialog for GIF selection"""
         try:
@@ -49,11 +49,11 @@ class HomeBox(Gtk.Box):
             filter_gif = Gtk.FileFilter()
             filter_gif.set_name("GIF files")
             filter_gif.add_mime_type("image/gif")
-            
+
             filter_all = Gtk.FileFilter()
             filter_all.set_name("All files")
             filter_all.add_pattern("*")
-            
+
             filters = Gio.ListStore.new(Gtk.FileFilter)
             filters.append(filter_gif)
             filters.append(filter_all)
@@ -87,7 +87,7 @@ class HomeBox(Gtk.Box):
                     window.editor_box.original_file_name = original_file_name[:-4]
                 else:
                     window.editor_box.original_file_name = original_file_name
-                
+
         except GLib.Error as e:
             print(f"Error selecting file: {e.message}")
 
@@ -97,17 +97,19 @@ class HomeBox(Gtk.Box):
     def update_theme(self, is_dark):
         """Update theme for all buttons"""
         from fig.utils import clear_css
-        
+
         clear_css(self.select_btn)
-        self.select_btn.add_css_class("select-gif-button-dark" if is_dark else "select-gif-button-light")
-        
+        self.select_btn.add_css_class(
+            "select-gif-button-dark" if is_dark else "select-gif-button-light")
+
         clear_css(self.about_btn)
-        self.about_btn.add_css_class("about-fig-button-dark" if is_dark else "about-fig-button-light")
+        self.about_btn.add_css_class(
+            "about-fig-button-dark" if is_dark else "about-fig-button-light")
 
 
 def show_about_dialog(window):
     about = Adw.AboutDialog.new()
-    
+
     about.set_application_name("Fig")
     about.set_application_icon("io.github.Q1CHENL.fig")
     about.set_version("1.0.7")
@@ -123,18 +125,18 @@ def show_about_dialog(window):
       <li>Fixed Extract Frames permission issue</li>
     </ul>
     """)
-    
+
     developers = [
         "Qichen Liu https://github.com/Q1CHENL",
     ]
     designers = ["Qichen Liu", "Homepage UI is inspired by sly"]
     artists = ["Qichen Liu"]
-    
+
     about.set_developers(developers)
     about.set_designers(designers)
     about.set_artists(artists)
 
     about.set_copyright("© 2024 Qichen Liu")
     about.set_license_type(Gtk.License.MIT_X11)
-    
+
     about.present(window)

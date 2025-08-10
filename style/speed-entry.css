@@ -1,27 +1,27 @@
 .speed-entry-light {
-    background: none;
-    border: none;
+  background: none;
+  border: none;
 }
 
 .speed-entry-light:hover {
-    background-color: #E5E5E5;
+  background-color: #e5e5e5;
 }
 
 entry.speed-entry-light text placeholder {
-    color: #888888;
-    opacity: 1.0;
+  color: #888888;
+  opacity: 1;
 }
 
 .speed-entry-dark {
-    background: none;
-    border: none;
+  background: none;
+  border: none;
 }
 
 .speed-entry-dark:hover {
-    background-color: #4e4e4e;
+  background-color: #4e4e4e;
 }
 
 entry.speed-entry-dark text placeholder {
-    color: #aaaaaa;
-    opacity: 1.0;
+  color: #aaaaaa;
+  opacity: 1;
 }

@@ -1,16 +1,16 @@
-import os
 
 from PIL import Image, ImageDraw
-import gi
-
-gi.require_version('Adw', '1')
-gi.require_version('Gtk', '4.0')
-gi.require_version('Gdk', '4.0')
-from gi.repository import Gtk, GLib, Gio, GdkPixbuf, Adw
-
+import os
 from fig.utils import clear_css, load_css
 from fig.frameline import FrameLine
 from fig.overlay import CropTextOverlay
+
+import gi
+gi.require_version('Adw', '1')
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gdk', '4.0')
+
+from gi.repository import Gtk, GLib, Gio, GdkPixbuf, Adw
 
 class EditorBox(Gtk.Box):
     def __init__(self):
@@ -51,31 +51,38 @@ class EditorBox(Gtk.Box):
 
         self.flip_button = Gtk.Button(icon_name="view-mirror-symbolic")
         self.flip_button.set_tooltip_text("Flip")
-        self.flip_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.flip_button.set_size_request(
+            action_button_size[0], action_button_size[1])
         self.flip_button.connect('clicked', self.on_flip_clicked)
 
-        self.rotate_button = Gtk.Button(icon_name="object-rotate-right-symbolic")
+        self.rotate_button = Gtk.Button(
+            icon_name="object-rotate-right-symbolic")
         self.rotate_button.set_tooltip_text("Rotate")
-        self.rotate_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.rotate_button.set_size_request(
+            action_button_size[0], action_button_size[1])
         self.rotate_button.connect('clicked', self.on_rotate_clicked)
 
         self.text_button = Gtk.Button(icon_name="format-text-rich-symbolic")
-        self.text_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.text_button.set_size_request(
+            action_button_size[0], action_button_size[1])
         self.text_button.set_tooltip_text("Add Text")
         self.text_button.connect('clicked', self.on_text_clicked)
 
         # todo colors
         self.draw_button = Gtk.Button(icon_name="document-edit-symbolic")
         self.draw_button.set_tooltip_text("Draw")
-        self.draw_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.draw_button.set_size_request(
+            action_button_size[0], action_button_size[1])
         self.draw_button.connect('clicked', self.on_draw_clicked)
 
         self.crop_button = Gtk.Button(icon_name="edit-select-all-symbolic")
         self.crop_button.set_tooltip_text("Crop")
-        self.crop_button.set_size_request(action_button_size[0], action_button_size[1])
+        self.crop_button.set_size_request(
+            action_button_size[0], action_button_size[1])
         self.crop_button.connect('clicked', self.on_crop_clicked)
 
-        self.action_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.action_bar = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.action_bar.append(self.text_button)
         self.action_bar.append(self.crop_button)
         self.action_bar.append(self.flip_button)
@@ -87,13 +94,15 @@ class EditorBox(Gtk.Box):
         self.append(self.action_bar)
         self.append(self.image_container)
 
-        self.controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.controls_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.controls_box.set_margin_top(15)
         self.controls_box.set_margin_bottom(5)
         self.controls_box.set_margin_start(5)
         self.controls_box.set_margin_end(5)
         self.controls_box.set_vexpand(False)
-        load_css(self.controls_box, ["controls-box-dark"])  # Initial dark theme
+        # Initial dark theme
+        load_css(self.controls_box, ["controls-box-dark"])
 
         self.frameline = FrameLine(self)
         self.frameline.set_hexpand(True)
@@ -102,7 +111,8 @@ class EditorBox(Gtk.Box):
         self.frameline.connect('speed-changed', self.on_speed_changed)
         self.controls_box.append(self.frameline)
 
-        buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        buttons_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         buttons_box.set_halign(Gtk.Align.END)  # Align buttons to the right
 
         self.play_btn = self.play_button()
@@ -184,17 +194,17 @@ class EditorBox(Gtk.Box):
         """Set up a fixed square container based on the longer dimension"""
         # Determine the longer side of the image
         long_side = max(image_width, image_height)
-        
+
         # Calculate scale to fit the longer dimension within reasonable bounds
         # Use the same logic as before, but apply it to the square container
         scale = 1
-        
+
         # Set the square container size to the scaled longest dimension
         self.container_size = int(long_side * scale)
-        
+
         # Store scale factor for drawings and text positioning
         self.IMAGE_SCALE = scale
-        
+
         # Store original dimensions for reference
         self.original_width = image_width
         self.original_height = image_height
@@ -213,8 +223,9 @@ class EditorBox(Gtk.Box):
             with Image.open(file_path) as gif:
                 # Store the original dimensions
                 self.image_display_width, self.image_display_height = gif.size
-                self.calculate_image_scale(self.image_display_width, self.image_display_height)
-                
+                self.calculate_image_scale(
+                    self.image_display_width, self.image_display_height)
+
                 # Set all containers to the fixed square size
                 self.image_container.set_size_request(
                     self.container_size,
@@ -225,7 +236,7 @@ class EditorBox(Gtk.Box):
                 self.overlay.set_size_request(
                     self.container_size,
                     self.container_size)
-                
+
                 frame_count = gif.n_frames
 
             def load_frames_thread(batch_size=10):
@@ -266,7 +277,8 @@ class EditorBox(Gtk.Box):
 
             self.info_label.set_text(f"Loading frames 0/{frame_count}")
             import threading
-            thread = threading.Thread(target=load_frames_thread, args=(self.compute_batch_size(frame_count),))
+            thread = threading.Thread(target=load_frames_thread, args=(
+                self.compute_batch_size(frame_count),))
             thread.daemon = True
             thread.start()
 
@@ -287,7 +299,8 @@ class EditorBox(Gtk.Box):
         self.frame_durations = durations
         self.original_frame_durations = durations.copy()
 
-        self.info_label.set_text(f"Loading frames {current_frame}/{total_frames}")
+        self.info_label.set_text(
+            f"Loading frames {current_frame}/{total_frames}")
 
         # If this is the final update
         if total_duration is not None:
@@ -411,7 +424,6 @@ class EditorBox(Gtk.Box):
             current_duration, self.play_next_frame)
         return False
 
-
     def show_playhead(self):
         self.frameline.show_playhead()
 
@@ -436,7 +448,8 @@ class EditorBox(Gtk.Box):
             dialog.set_filters(filters)
             dialog.set_default_filter(filter_gif)
 
-            original_file_name = self.original_file_name if hasattr(self, 'original_file_name') else "untitled"  # Remove .fig
+            original_file_name = self.original_file_name if hasattr(
+                self, 'original_file_name') else "untitled"  # Remove .fig
             dialog.set_initial_name(f"{original_file_name}-edited.gif")
 
             def save_callback(dialog, result):
@@ -473,8 +486,7 @@ class EditorBox(Gtk.Box):
     def _save_gif(self, save_path, start_idx, end_idx):
         """Save GIF including inserted frames, drawings, and excluding removed ranges"""
         import traceback
-        from PIL import Image, ImageDraw, ImageFont  # Move imports to the top of the method
-        
+
         is_reversed = start_idx > end_idx
         if is_reversed:
             start_idx, end_idx = end_idx, start_idx
@@ -511,11 +523,13 @@ class EditorBox(Gtk.Box):
             # Get the frame and its duration
             frame = self._pixbuf_to_pil(self.frames[i])
             duration = self.frame_durations[i]
-            is_inserted = any(start <= i <= end for start, end in self.frameline.inserted_ranges)
+            is_inserted = any(start <= i <= end for start,
+                              end in self.frameline.inserted_ranges)
 
             # For inserted frames, resize to match original size before cropping
             if is_inserted and frame.size != (orig_width, orig_height):
-                frame = frame.resize((orig_width, orig_height), Image.Resampling.LANCZOS)
+                frame = frame.resize(
+                    (orig_width, orig_height), Image.Resampling.LANCZOS)
 
             draw = ImageDraw.Draw(frame)
             long_side = max(orig_width, orig_height)
@@ -529,15 +543,18 @@ class EditorBox(Gtk.Box):
                             if isinstance(point, (list, tuple)) and len(point) >= 2:
                                 x, y = point[0], point[1]
                                 if long_side == orig_width:
-                                    y = y - (self.container_size - orig_height)/2
+                                    y = y - (self.container_size -
+                                             orig_height)/2
                                 else:
-                                    x = x - (self.container_size - orig_width)/2
+                                    x = x - (self.container_size -
+                                             orig_width)/2
                                 scaled_points.append((x, y))
 
                         color = line.get('color', '#FFFFFF')
-                        for j in range(len(scaled_points) - 1):  # Changed i to j to avoid variable shadowing
+                        # Changed i to j to avoid variable shadowing
+                        for j in range(len(scaled_points) - 1):
                             draw.line([scaled_points[j], scaled_points[j + 1]],
-                                    fill=color, width=2)
+                                      fill=color, width=2)
 
             # Handle text with rotation
             for text_entry in self.overlay.text_entries:
@@ -545,7 +562,7 @@ class EditorBox(Gtk.Box):
                     x = int(text_entry['x'])
                     y = int(text_entry['y'])
                     text = text_entry['entry'].get_text()
-                    
+
                     # Check if we need to apply rotation
                     if hasattr(self, 'text_rotation') and self.text_rotation != 0:
                         # Estimate text size - you might want to use a font that supports size measurement
@@ -553,41 +570,42 @@ class EditorBox(Gtk.Box):
                         font_size = 24  # Increased font size for better visibility
                         text_width = len(text) * font_size
                         text_height = font_size * 1.5
-                        
+
                         # Create transparent image large enough for the rotated text
-                        text_img = Image.new('RGBA', 
-                                            (int(max(text_width, text_height) * 3), 
-                                             int(max(text_width, text_height) * 3)), 
-                                            (0, 0, 0, 0))
-                        
+                        text_img = Image.new('RGBA',
+                                             (int(max(text_width, text_height) * 3),
+                                              int(max(text_width, text_height) * 3)),
+                                             (0, 0, 0, 0))
+
                         # Draw text at the center of this new image
                         text_draw = ImageDraw.Draw(text_img)
-                        text_draw.text((text_img.width//2, text_img.height//2), 
-                                       text, 
+                        text_draw.text((text_img.width//2, text_img.height//2),
+                                       text,
                                        fill='white',
                                        anchor='mm')  # Center alignment
-                        
+
                         # Rotate the text image
-                        rotated_text = text_img.rotate(-self.text_rotation, 
-                                                      resample=Image.BICUBIC, 
-                                                      expand=True)
-                        
+                        rotated_text = text_img.rotate(-self.text_rotation,
+                                                       resample=Image.BICUBIC,
+                                                       expand=True)
+
                         # Calculate paste coordinates
                         paste_x = x
                         paste_y = y
-                        
+
                         # Adjust for container padding
                         if long_side == orig_width:
                             paste_y -= (self.container_size - orig_height)//2
                         else:
                             paste_x -= (self.container_size - orig_width)//2
-                        
+
                         # Adjust paste position to center the rotated text at the specified point
                         paste_x -= rotated_text.width//2
                         paste_y -= rotated_text.height//2
-                        
+
                         # Paste using the alpha channel as mask
-                        frame.paste(rotated_text, (paste_x, paste_y), rotated_text)
+                        frame.paste(
+                            rotated_text, (paste_x, paste_y), rotated_text)
                     else:
                         if long_side == orig_width:
                             y = y - (self.container_size - orig_height)//2
@@ -627,7 +645,8 @@ class EditorBox(Gtk.Box):
         end_frame_index = int(round(end)) - 1
 
         # Ensure we're within valid frame range
-        start_frame_index = max(0, min(start_frame_index, len(self.frames) - 1))
+        start_frame_index = max(
+            0, min(start_frame_index, len(self.frames) - 1))
         end_frame_index = max(0, min(end_frame_index, len(self.frames) - 1))
 
         # Update display during dragging if not previously playing
@@ -644,15 +663,15 @@ class EditorBox(Gtk.Box):
                 self.display_frame(frame_index)
         self.update_info_label()
 
-
     def update_action_bar_button(self, set, button):
         """Update CSS class for action bar button"""
-        from fig.utils import clear_css
         clear_css(button)
         if set:
-            button.add_css_class("action-button-dark-active" if self.is_dark else "action-button-light-active")
+            button.add_css_class(
+                "action-button-dark-active" if self.is_dark else "action-button-light-active")
         else:
-            button.add_css_class("action-button-dark" if self.is_dark else "action-button-light")
+            button.add_css_class(
+                "action-button-dark" if self.is_dark else "action-button-light")
 
     def on_flip_clicked(self, button):
         """Flip all frames horizontally"""
@@ -661,17 +680,17 @@ class EditorBox(Gtk.Box):
             self.text_mode = False
             self.overlay.text_mode = False
             self.update_action_bar_button(False, self.text_button)
-            
+
         if self.draw_mode:
             self.draw_mode = False
             self.overlay.draw_mode = False
             self.update_action_bar_button(False, self.draw_button)
-            
+
         if self.crop_mode:
             self.crop_mode = False
             self.overlay.handles_visible = False
             self.update_action_bar_button(False, self.crop_button)
-        
+
         self.flipped = not self.flipped
         self.update_action_bar_button(self.flipped, button)
 
@@ -700,35 +719,35 @@ class EditorBox(Gtk.Box):
             self.text_mode = False
             self.overlay.text_mode = False
             self.update_action_bar_button(False, self.text_button)
-            
+
         if self.draw_mode:
             self.draw_mode = False
             self.overlay.draw_mode = False
             self.update_action_bar_button(False, self.draw_button)
-            
+
         if self.crop_mode:
             self.crop_mode = False
             self.overlay.handles_visible = False
             self.update_action_bar_button(False, self.crop_button)
-            
+
         if not self.frames:
             return
-        
+
         # Toggle the rotated state
         self.rotated = not self.rotated
         self.update_action_bar_button(self.rotated, button)
-        
+
         try:
             # Swap dimensions (logical dimensions only, container stays the same)
             self.image_display_width, self.image_display_height = self.image_display_height, self.image_display_width
-            
+
             # Rotate the frames' content
             for i, frame in enumerate(self.frames):
                 if frame:
                     pil_image = self._pixbuf_to_pil(frame)
                     rotated = pil_image.transpose(Image.ROTATE_270)
                     self.frames[i] = self._pil_to_pixbuf(rotated)
-            
+
             # Rotate all drawings if they exist
             if hasattr(self, 'drawings'):
                 for frame_drawings in self.drawings:
@@ -740,33 +759,33 @@ class EditorBox(Gtk.Box):
                             final_y = x
                             rotated_points.append((final_x, final_y))
                         line['points'] = rotated_points
-            
+
             # Handle text rotation
             if not hasattr(self, 'text_rotation'):
                 self.text_rotation = 0
-            
+
             self.text_rotation = (self.text_rotation + 90) % 360
-            
+
             if hasattr(self.overlay, 'text_entries'):
                 for text_entry in self.overlay.text_entries:
                     # Get current coordinates
                     x = text_entry['x']
                     y = text_entry['y']
-                    
+
                     # Apply the same rotation transformation for position
                     final_y = x
                     final_x = self.container_size - y
-                    
+
                     # Update the text entry coordinates
                     text_entry['x'] = final_x
                     text_entry['y'] = final_y
-                    
+
                     # Update the actual widget position if it exists
                     if 'entry' in text_entry and text_entry['entry']:
                         entry_widget = text_entry['entry']
                         entry_widget.set_margin_start(int(final_x))
                         entry_widget.set_margin_top(int(final_y))
-                        
+
                         # Apply rotation transform via CSS
                         css_provider = Gtk.CssProvider()
                         css_data = f"""
@@ -776,23 +795,24 @@ class EditorBox(Gtk.Box):
                             }}
                         """
                         css_provider.load_from_data(css_data.encode('utf-8'))
-                        
+
                         style_context = entry_widget.get_style_context()
-                        
+
                         if hasattr(entry_widget, 'rotation_provider'):
-                            style_context.remove_provider(entry_widget.rotation_provider)
-                        
+                            style_context.remove_provider(
+                                entry_widget.rotation_provider)
+
                         style_context.add_provider(
                             css_provider,
                             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
                         )
                         entry_widget.rotation_provider = css_provider
                         entry_widget.rotation_angle = self.text_rotation
-            
+
             # Update display
             self.display_frame(self.current_frame_index)
             self.overlay.drawing_area.queue_draw()
-            
+
         except Exception as e:
             print(f"Error rotating frames: {e}")
             import traceback
@@ -841,55 +861,70 @@ class EditorBox(Gtk.Box):
     def update_theme(self, is_dark):
         """Update theme for all buttons"""
         self.is_dark = is_dark
-        from fig.utils import clear_css
 
         clear_css(self.save_btn)
-        self.save_btn.add_css_class("save-button-dark" if is_dark else "save-button-light")
+        self.save_btn.add_css_class(
+            "save-button-dark" if is_dark else "save-button-light")
 
         clear_css(self.play_btn)
-        self.play_btn.add_css_class("play-button-dark" if is_dark else "play-button-light")
+        self.play_btn.add_css_class(
+            "play-button-dark" if is_dark else "play-button-light")
 
         clear_css(self.loop_btn)
-        self.loop_btn.add_css_class("loop-button-dark" if is_dark else "loop-button-light")
+        self.loop_btn.add_css_class(
+            "loop-button-dark" if is_dark else "loop-button-light")
 
         clear_css(self.info_label)
-        self.info_label.add_css_class("info-label-dark" if is_dark else "info-label-light")
+        self.info_label.add_css_class(
+            "info-label-dark" if is_dark else "info-label-light")
 
         clear_css(self.controls_box)
-        self.controls_box.add_css_class("controls-box-dark" if is_dark else "controls-box-light")
+        self.controls_box.add_css_class(
+            "controls-box-dark" if is_dark else "controls-box-light")
 
         clear_css(self.action_bar)
-        self.action_bar.add_css_class("action-bar-dark" if is_dark else "action-bar-light")
+        self.action_bar.add_css_class(
+            "action-bar-dark" if is_dark else "action-bar-light")
 
         clear_css(self.flip_button)
         if self.flipped:
-            self.flip_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+            self.flip_button.add_css_class(
+                "action-button-dark-active" if is_dark else "action-button-light-active")
         else:
-            self.flip_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+            self.flip_button.add_css_class(
+                "action-button-dark" if is_dark else "action-button-light")
 
         clear_css(self.crop_button)
         if self.crop_mode:
-            self.crop_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+            self.crop_button.add_css_class(
+                "action-button-dark-active" if is_dark else "action-button-light-active")
         else:
-            self.crop_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+            self.crop_button.add_css_class(
+                "action-button-dark" if is_dark else "action-button-light")
 
         clear_css(self.rotate_button)
         if self.rotated:
-            self.rotate_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+            self.rotate_button.add_css_class(
+                "action-button-dark-active" if is_dark else "action-button-light-active")
         else:
-            self.rotate_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+            self.rotate_button.add_css_class(
+                "action-button-dark" if is_dark else "action-button-light")
 
         clear_css(self.text_button)
         if self.text_mode:
-            self.text_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+            self.text_button.add_css_class(
+                "action-button-dark-active" if is_dark else "action-button-light-active")
         else:
-            self.text_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+            self.text_button.add_css_class(
+                "action-button-dark" if is_dark else "action-button-light")
 
         clear_css(self.draw_button)
         if self.draw_mode:
-            self.draw_button.add_css_class("action-button-dark-active" if is_dark else "action-button-light-active")
+            self.draw_button.add_css_class(
+                "action-button-dark-active" if is_dark else "action-button-light-active")
         else:
-            self.draw_button.add_css_class("action-button-dark" if is_dark else "action-button-light")
+            self.draw_button.add_css_class(
+                "action-button-dark" if is_dark else "action-button-light")
 
         self.frameline.update_theme(is_dark)
         self.overlay.update_theme(is_dark)
@@ -906,7 +941,7 @@ class EditorBox(Gtk.Box):
 
         # Important: handle_position is 1-based, but playhead_frame_index is 0-based
         if (self.playhead_frame_index < min_val - 1 or
-            self.playhead_frame_index > max_val - 1):
+                self.playhead_frame_index > max_val - 1):
             self.frameline.playhead_visible = False
             self.hide_playhead()
 
@@ -942,7 +977,8 @@ class EditorBox(Gtk.Box):
                 for start, end, speed in self.frameline.speed_ranges:
                     if insert_idx <= start:
                         # Speed range is after insertion point - shift it
-                        updated_speed_ranges.append((start + num_new_frames, end + num_new_frames, speed))
+                        updated_speed_ranges.append(
+                            (start + num_new_frames, end + num_new_frames, speed))
                     elif insert_idx > end:
                         # Speed range is before insertion point - keep it unchanged
                         updated_speed_ranges.append((start, end, speed))
@@ -950,9 +986,11 @@ class EditorBox(Gtk.Box):
                         # Speed range contains insertion point - split it into two parts
                         if start < insert_idx:
                             # Keep the part before insertion
-                            updated_speed_ranges.append((start, insert_idx - 1, speed))
+                            updated_speed_ranges.append(
+                                (start, insert_idx - 1, speed))
                         # Keep the part after insertion (shifted by the number of new frames)
-                        updated_speed_ranges.append((insert_idx + num_new_frames, end + num_new_frames, speed))
+                        updated_speed_ranges.append(
+                            (insert_idx + num_new_frames, end + num_new_frames, speed))
 
                 self.frameline.speed_ranges = updated_speed_ranges
                 self.frames[insert_idx:insert_idx] = new_frames
@@ -970,7 +1008,8 @@ class EditorBox(Gtk.Box):
                 for start, end in self.frameline.inserted_ranges:
                     if start > insert_idx:
                         # Range is after insertion point - shift it
-                        updated_inserted_ranges.append((start + num_new_frames, end + num_new_frames))
+                        updated_inserted_ranges.append(
+                            (start + num_new_frames, end + num_new_frames))
                     elif end < insert_idx:
                         # Range is before insertion point - keep it unchanged
                         updated_inserted_ranges.append((start, end))
@@ -978,17 +1017,21 @@ class EditorBox(Gtk.Box):
                         # Range overlaps insertion point - split or shift as needed
                         # For simplicity, shift the part after insertion
                         if start < insert_idx:
-                            updated_inserted_ranges.append((start, insert_idx - 1))
-                        updated_inserted_ranges.append((insert_idx + num_new_frames, end + num_new_frames))
+                            updated_inserted_ranges.append(
+                                (start, insert_idx - 1))
+                        updated_inserted_ranges.append(
+                            (insert_idx + num_new_frames, end + num_new_frames))
 
                 self.frameline.inserted_ranges = updated_inserted_ranges
                 # Append the new inserted range
-                self.frameline.inserted_ranges.append((position, position + len(new_frames) - 1))
-                
+                self.frameline.inserted_ranges.append(
+                    (position, position + len(new_frames) - 1))
+
                 for i, r in enumerate(self.frameline.removed_ranges):
                     # Shift removed ranges after insertion point
                     if r[0] >= insert_idx:
-                        self.frameline.removed_ranges[i] = (r[0] + num_new_frames, r[1] + num_new_frames)
+                        self.frameline.removed_ranges[i] = (
+                            r[0] + num_new_frames, r[1] + num_new_frames)
 
                 self.frameline.queue_draw()
                 self.display_frame(insert_idx)
@@ -1017,8 +1060,10 @@ class EditorBox(Gtk.Box):
                 self.original_frame_durations = self.frame_durations.copy()
             elif len(self.original_frame_durations) != len(self.frames):
                 # Extend original_frame_durations for inserted frames
-                inserted_count = len(self.frames) - len(self.original_frame_durations)
-                self.original_frame_durations.extend(self.frame_durations[-inserted_count:])
+                inserted_count = len(self.frames) - \
+                    len(self.original_frame_durations)
+                self.original_frame_durations.extend(
+                    self.frame_durations[-inserted_count:])
 
             # Verify we have valid frames and durations
             if not self.frames or not self.frame_durations:
@@ -1028,14 +1073,17 @@ class EditorBox(Gtk.Box):
             # Adjust frame durations for the selected range
             for i in range(start_idx, end_idx + 1):
                 if i < len(self.original_frame_durations):
-                    self.frame_durations[i] = int(self.original_frame_durations[i] / speed_factor)
+                    self.frame_durations[i] = int(
+                        self.original_frame_durations[i] / speed_factor)
 
             # Warn if any frame duration in the affected range is < 10ms
-            min_duration = min(self.frame_durations[start_idx:end_idx+1]) if self.frame_durations[start_idx:end_idx+1] else 1000
+            min_duration = min(
+                self.frame_durations[start_idx:end_idx+1]) if self.frame_durations[start_idx:end_idx+1] else 1000
             if min_duration < 10:
                 # Compute the maximum applicable speedup for this range
                 if hasattr(self, 'original_frame_durations') and self.original_frame_durations:
-                    min_orig = min(self.original_frame_durations[i] for i in range(start_idx, end_idx+1))
+                    min_orig = min(self.original_frame_durations[i] for i in range(
+                        start_idx, end_idx+1))
                     max_speedup = round(min_orig / 10.0, 2)
                 else:
                     max_speedup = 'N/A'
@@ -1050,6 +1098,7 @@ class EditorBox(Gtk.Box):
                 alert.add_response("cancel", "Cancel Change")
                 alert.set_default_response("ok")
                 alert.set_close_response("cancel")
+
                 def on_response(dialog, response_id):
                     if response_id == "cancel":
                         # Revert the frame durations in the affected range
@@ -1073,7 +1122,8 @@ class EditorBox(Gtk.Box):
                         if not (s == start_idx and e == end_idx)
                     ]
                 else:
-                    self.frameline.add_speed_range(start_idx, end_idx, speed_factor)
+                    self.frameline.add_speed_range(
+                        start_idx, end_idx, speed_factor)
 
                 # Sort ranges by start index
                 self.frameline.speed_ranges.sort()
@@ -1120,37 +1170,37 @@ class EditorBox(Gtk.Box):
         self.is_playing = False
         self.play_timeout_id = None
         self.playback_finished = False
-        
+
         # Reset editing states
         self.crop_mode = False
         self.text_mode = False
         self.draw_mode = False
         self.drawing = False
         self.last_point = None
-        
+
         # Reset overlays
         self.overlay.text_mode = False
         self.overlay.draw_mode = False
         self.overlay.handles_visible = False
         self.overlay.remove_all_text_entries()
         self.overlay.reset_crop_rect()
-        
+
         # Clear drawings
         self.drawings = [[]]
-        
+
         # Reset transformations
         self.flipped = False
         self.rotated = False
         if hasattr(self, 'text_rotation'):
             self.text_rotation = 0
-            
+
         # Reset UI button states
         self.update_action_bar_button(False, self.crop_button)
         self.update_action_bar_button(False, self.text_button)
-        self.update_action_bar_button(False, self.draw_button) 
+        self.update_action_bar_button(False, self.draw_button)
         self.update_action_bar_button(False, self.flip_button)
         self.update_action_bar_button(False, self.rotate_button)
-        
+
         # Reset frameline and display
         self.frameline.reset()
         self.info_label.set_text("")
@@ -1226,12 +1276,12 @@ class EditorBox(Gtk.Box):
             self.text_mode = False
             self.overlay.text_mode = False
             self.update_action_bar_button(False, self.text_button)
-        
+
         if self.draw_mode:
             self.draw_mode = False
             self.overlay.draw_mode = False
             self.update_action_bar_button(False, self.draw_button)
-            
+
         # Now toggle crop mode
         if self.crop_mode:
             self.crop_mode = False
@@ -1279,7 +1329,7 @@ class EditorBox(Gtk.Box):
             self.crop_mode = False
             self.overlay.handles_visible = False
             self.overlay.draw_mode = True
-            
+
             if not hasattr(self, 'drawings'):
                 self.drawings = [[]]  # Start with empty list for first frame
         else:

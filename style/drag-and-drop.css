@@ -1,4 +1,4 @@
 .drag-and-drop {
-    outline: 3px solid @accent_color;
-    border-radius: 12px;
+  outline: 3px solid var(--accent-color);
+  border-radius: 12px;
 }

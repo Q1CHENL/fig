@@ -3,10 +3,11 @@ from gi.repository import Gtk, Gdk, GLib
 import gi
 gi.require_version('Gtk', '4.0')
 
+
 def load_css(target, css_classes=None):
     """
     Load CSS styles from individual CSS files
-    
+
     Args:
         target: Widget to add CSS classes to, or Display to load CSS provider for
         css_classes: List of CSS classes to add to the widget
@@ -15,10 +16,10 @@ def load_css(target, css_classes=None):
         """Try to load all CSS files from style directory"""
         if not os.path.exists(style_dir):
             return None
-            
+
         css_data = []
         css_files = [f for f in os.listdir(style_dir) if f.endswith('.css')]
-        
+
         for css_file in css_files:
             file_path = os.path.join(style_dir, css_file)
             try:
@@ -26,11 +27,11 @@ def load_css(target, css_classes=None):
                     css_data.append(f.read())
             except IOError:
                 continue
-                
+
         return '\n'.join(css_data) if css_data else None
 
     css_provider = Gtk.CssProvider()
-    
+
     try:
         # Try possible style directory locations
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -38,16 +39,16 @@ def load_css(target, css_classes=None):
             os.path.join(current_dir, 'style'),
             os.path.join(os.path.dirname(current_dir), 'style')
         ]
-        
+
         css_data = None
         for style_dir in style_paths:
             css_data = try_load_css_files(style_dir)
             if css_data:
                 break
-                
+
         if not css_data:
             raise FileNotFoundError(f"CSS files not found in: {style_paths}")
-            
+
         css_provider.load_from_bytes(GLib.Bytes.new(css_data.encode('utf-8')))
 
         # If target is a Display, add provider to display
@@ -70,6 +71,7 @@ def load_css(target, css_classes=None):
 
     except Exception as e:
         print(f"Error loading CSS: {e}")
+
 
 def clear_css(widget):
     """
