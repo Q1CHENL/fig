@@ -1,15 +1,15 @@
 
-from gi.repository import Gtk, GLib, Gio, GdkPixbuf, Adw
-from PIL import Image, ImageDraw
-import os
-from fig.utils import clear_css, load_css
-from fig.frameline import FrameLine
 from fig.overlay import CropTextOverlay
-
+from fig.frameline import FrameLine
+from fig.utils import clear_css, load_css
+from fig.image_converter import ImageConverter
+import os
+from PIL import Image, ImageDraw
 import gi
 gi.require_version('Adw', '1')
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
+from gi.repository import Gtk, GLib, Gio, Adw
 
 
 class EditorState:
@@ -324,7 +324,7 @@ class EditorBox(Gtk.Box):
                         else:
                             frame_image = gif
 
-                        pixbuf = self._pil_to_pixbuf(frame_image)
+                        pixbuf = ImageConverter.pil_to_pixbuf(frame_image)
                         frames.append(pixbuf)
                         durations.append(duration * 1000)
 
@@ -399,7 +399,7 @@ class EditorBox(Gtk.Box):
             frame = self.state.frames[frame_index]
 
             if isinstance(frame, Image.Image):
-                pixbuf = self._pil_to_pixbuf(frame)
+                pixbuf = ImageConverter.pil_to_pixbuf(frame)
             else:
                 pixbuf = frame
 
@@ -565,7 +565,7 @@ class EditorBox(Gtk.Box):
         ref_frame = None
         for frame in self.state.frames:
             if frame:
-                ref_frame = self._pixbuf_to_pil(frame)
+                ref_frame = ImageConverter.pixbuf_to_pil(frame)
                 break
 
         if not ref_frame:
@@ -588,7 +588,7 @@ class EditorBox(Gtk.Box):
             if not self.state.frames[i]:
                 continue
             # Get the frame and its duration
-            frame = self._pixbuf_to_pil(self.state.frames[i])
+            frame = ImageConverter.pixbuf_to_pil(self.state.frames[i])
             duration = self.state.frame_durations[i]
             is_inserted = any(start <= i <= end for start,
                               end in self.frameline.inserted_ranges)
@@ -770,9 +770,10 @@ class EditorBox(Gtk.Box):
         try:
             for i, frame in enumerate(self.state.frames):
                 if frame:
-                    pil_image = self._pixbuf_to_pil(frame)
+                    pil_image = ImageConverter.pixbuf_to_pil(frame)
                     flipped = pil_image.transpose(Image.FLIP_LEFT_RIGHT)
-                    self.state.frames[i] = self._pil_to_pixbuf(flipped)
+                    self.state.frames[i] = ImageConverter.pil_to_pixbuf(
+                        flipped)
 
             self.display_frame(self.state.current_frame_index)
 
@@ -815,9 +816,10 @@ class EditorBox(Gtk.Box):
             # Rotate the frames' content
             for i, frame in enumerate(self.state.frames):
                 if frame:
-                    pil_image = self._pixbuf_to_pil(frame)
+                    pil_image = ImageConverter.pixbuf_to_pil(frame)
                     rotated = pil_image.transpose(Image.ROTATE_270)
-                    self.state.frames[i] = self._pil_to_pixbuf(rotated)
+                    self.state.frames[i] = ImageConverter.pil_to_pixbuf(
+                        rotated)
 
             # Rotate all drawings if they exist
             if hasattr(self.state, 'drawings'):
@@ -1027,12 +1029,14 @@ class EditorBox(Gtk.Box):
                         # Handle animated GIFs
                         for frame in range(img.n_frames):
                             img.seek(frame)
-                            pixbuf = self._pil_to_pixbuf(img.convert('RGBA'))
+                            pixbuf = ImageConverter.pil_to_pixbuf(
+                                img.convert('RGBA'))
                             new_frames.append(pixbuf)
                             new_durations.append(img.info.get('duration', 100))
                     else:
                         # Handle static images
-                        pixbuf = self._pil_to_pixbuf(img.convert('RGBA'))
+                        pixbuf = ImageConverter.pil_to_pixbuf(
+                            img.convert('RGBA'))
                         new_frames.append(pixbuf)
                         new_durations.append(100)  # Default 100ms duration
 
@@ -1254,37 +1258,6 @@ class EditorBox(Gtk.Box):
         self.image_display.queue_draw()
         self.overlay.drawing_area.queue_draw()
         self.queue_draw()
-
-    def _pil_to_pixbuf(self, pil_image):
-        """Convert PIL image to GdkPixbuf more efficiently"""
-        # Get image data
-        width, height = pil_image.size
-        data = pil_image.tobytes()
-
-        # Create pixbuf directly from data
-        has_alpha = pil_image.mode == 'RGBA'
-        colorspace = GdkPixbuf.Colorspace.RGB
-        bps = 8
-        rowstride = width * (4 if has_alpha else 3)
-
-        return GdkPixbuf.Pixbuf.new_from_data(
-            data,
-            colorspace,
-            has_alpha,
-            bps,
-            width,
-            height,
-            rowstride
-        )
-
-    def _pixbuf_to_pil(self, pixbuf):
-        """Convert GdkPixbuf to PIL Image"""
-        width, height = pixbuf.get_width(), pixbuf.get_height()
-        pixels = pixbuf.get_pixels()
-        stride = pixbuf.get_rowstride()
-        mode = "RGBA" if pixbuf.get_has_alpha() else "RGB"
-
-        return Image.frombytes(mode, (width, height), pixels, "raw", mode, stride)
 
     def update_play_button_icon(self, playing):
         """Update the play button icon based on playing state"""
