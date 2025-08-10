@@ -10,7 +10,7 @@ import os
 import threading
 from dataclasses import dataclass
 from typing import List, Tuple, Callable, Optional
-from fig.image_converter import ImageConverter
+from fig.imagecvt import ImageConverter
 from PIL import Image
 import gi
 gi.require_version('GLib', '2.0')

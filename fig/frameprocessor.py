@@ -9,7 +9,7 @@ import traceback
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict
 from PIL import Image, ImageDraw
-from fig.image_converter import ImageConverter
+from fig.imagecvt import ImageConverter
 
 
 @dataclass

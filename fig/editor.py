@@ -1,12 +1,12 @@
 
 from fig.overlay import CropTextOverlay
 from fig.frameline import FrameLine
-from fig.action_bar import EditorActionBar
-from fig.playback_controls import PlaybackControls
+from fig.actionbar import EditorActionBar
+from fig.playback import PlaybackControls
 from fig.utils import load_css, clear_css
-from fig.image_converter import ImageConverter
-from fig.gif_loader import GifLoader, LoadProgress, LoadResult
-from fig.frame_processor import FrameProcessor, ProcessingOptions
+from fig.imagecvt import ImageConverter
+from fig.gifloader import GifLoader, LoadProgress, LoadResult
+from fig.frameprocessor import FrameProcessor, ProcessingOptions
 from fig.constants import EditorConstants
 from fig.state import EditorState
 from fig.colorpicker import ColorPicker
@@ -28,7 +28,7 @@ class EditorBox(Gtk.Box):
         self.state = EditorState()
 
         # Initialize GIF loader and frame processor
-        self.gif_loader = GifLoader()
+        self.gifloader = GifLoader()
         self.frame_processor = FrameProcessor()
 
         self.set_orientation(Gtk.Orientation.VERTICAL)
@@ -96,14 +96,14 @@ class EditorBox(Gtk.Box):
         self.controls_box.append(self.frameline)
 
         # Create playback controls
-        self.playback_controls = PlaybackControls(self)
+        self.playback = PlaybackControls(self)
 
         # Keep references to individual buttons for compatibility
-        self.play_btn = self.playback_controls.play_btn
-        self.save_btn = self.playback_controls.save_btn
-        self.loop_btn = self.playback_controls.loop_btn
+        self.play_btn = self.playback.play_btn
+        self.save_btn = self.playback.save_btn
+        self.loop_btn = self.playback.loop_btn
 
-        self.controls_box.append(self.playback_controls)
+        self.controls_box.append(self.playback)
 
         self.append(self.controls_box)
 
@@ -155,7 +155,7 @@ class EditorBox(Gtk.Box):
             self.info_label.set_text(
                 EditorConstants.LOADING_MESSAGE_TEMPLATE.format(current=0, total=frame_count))
 
-            self.gif_loader.load_gif_async(
+            self.gifloader.load_gif_async(
                 file_path=file_path,
                 progress_callback=self._on_loading_progress,
                 completion_callback=self._on_loading_complete
@@ -601,7 +601,7 @@ class EditorBox(Gtk.Box):
         self.state.is_dark = is_dark
 
         # Update playback controls theme
-        self.playback_controls.update_theme(is_dark)
+        self.playback.update_theme(is_dark)
 
         clear_css(self.info_label)
         self.info_label.add_css_class(
@@ -636,7 +636,7 @@ class EditorBox(Gtk.Box):
     def on_insert_frames(self, frameline, position, file_paths):
         try:
             # Use the GifLoader to load frames for insertion
-            new_frames, new_durations = self.gif_loader.load_images_for_insertion(
+            new_frames, new_durations = self.gifloader.load_images_for_insertion(
                 file_paths)
 
             if new_frames:
@@ -864,7 +864,7 @@ class EditorBox(Gtk.Box):
 
     def update_play_button_icon(self, playing):
         """Update the play button icon based on playing state"""
-        self.playback_controls.update_play_button_icon(playing)
+        self.playback.update_play_button_icon(playing)
 
     def update_info_label(self):
         """Update info label with current frame count and total duration"""
@@ -965,5 +965,5 @@ class EditorBox(Gtk.Box):
     def toggle_loop(self, button):
         """Toggle looping playback on/off."""
         self.state.loop_playback = not self.state.loop_playback
-        self.playback_controls.update_loop_button_state(
+        self.playback.update_loop_button_state(
             self.state.loop_playback)
