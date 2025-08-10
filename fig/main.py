@@ -3,7 +3,6 @@
 import os
 import gi
 import threading
-import time
 import tempfile
 
 gi.require_version('Gtk', '4.0')
@@ -184,7 +183,7 @@ class FigApplication(Adw.Application):
         label = Gtk.Label(
             label=
             "• You can drag and drop a GIF file to start editing.\n\n" + 
-            "• Right-click on the timeline handles to\n\n"
+            "• Right-click on the timeline handles for more advanced actions.\n\n"
             "• Press Left/Right arrow keys to move handles\n"            
         )
         label.set_halign(Gtk.Align.END)
@@ -360,7 +359,6 @@ class FigApplication(Adw.Application):
 
                     with tempfile.TemporaryDirectory() as temp_dir:
                         frame_paths = []
-                        total_frames = len(editor_box.frames)
                         processed_frames = 0
 
                         for i, frame in enumerate(editor_box.frames):
