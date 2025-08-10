@@ -3,6 +3,7 @@ from fig.overlay import CropTextOverlay
 from fig.frameline import FrameLine
 from fig.utils import clear_css, load_css
 from fig.image_converter import ImageConverter
+from fig.gif_loader import GifLoader, LoadProgress, LoadResult
 import os
 from PIL import Image, ImageDraw
 import gi
@@ -117,6 +118,9 @@ class EditorBox(Gtk.Box):
 
         # Initialize state management
         self.state = EditorState()
+        
+        # Initialize GIF loader
+        self.gif_loader = GifLoader()
 
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.set_spacing(0)
@@ -278,8 +282,9 @@ class EditorBox(Gtk.Box):
         self.state.set_image_dimensions(image_width, image_height)
 
     def load_gif(self, file_path):
-        """Load a GIF file using PIL for frame info and GdkPixbuf for display"""
+        """Load a GIF file using the new GifLoader class"""
         try:
+            # Reset state
             self.state.frames = []
             self.state.frame_durations = []
             self.state.original_frame_durations = []
@@ -287,106 +292,90 @@ class EditorBox(Gtk.Box):
             self.state.playhead_frame_index = 0
             self.overlay.reset_crop_rect()
 
-            # Get dimensions from the first frame
-            with Image.open(file_path) as gif:
-                # Store the original dimensions
-                self.calculate_image_scale(gif.size[0], gif.size[1])
+            # Get image info for initial setup
+            width, height, frame_count = GifLoader.get_image_info(file_path)
+            
+            # Store the original dimensions and calculate scale
+            self.calculate_image_scale(width, height)
 
-                # Set all containers to the fixed square size
-                self.image_container.set_size_request(
-                    self.state.container_size,
-                    self.state.container_size)
-                self.overlay.drawing_area.set_size_request(
-                    self.state.container_size,
-                    self.state.container_size)
-                self.overlay.set_size_request(
-                    self.state.container_size,
-                    self.state.container_size)
+            # Set all containers to the fixed square size
+            self.image_container.set_size_request(
+                self.state.container_size,
+                self.state.container_size)
+            self.overlay.drawing_area.set_size_request(
+                self.state.container_size,
+                self.state.container_size)
+            self.overlay.set_size_request(
+                self.state.container_size,
+                self.state.container_size)
 
-                frame_count = gif.n_frames
-
-            def load_frames_thread(batch_size=10):
-                frames = []
-                durations = []
-                total_duration = 0
-                update_batch = []
-
-                with Image.open(file_path) as gif:
-                    self.state.original_file_path = file_path
-                    for frame in range(frame_count):
-                        gif.seek(frame)
-                        duration = gif.info.get('duration', 100) / 1000.0
-                        total_duration += duration
-
-                        # Convert to RGBA only if needed
-                        if gif.mode != 'RGBA':
-                            frame_image = gif.convert('RGBA')
-                        else:
-                            frame_image = gif
-
-                        pixbuf = ImageConverter.pil_to_pixbuf(frame_image)
-                        frames.append(pixbuf)
-                        durations.append(duration * 1000)
-
-                        if len(update_batch) < batch_size and frame < frame_count - 1:
-                            update_batch.append(frame)
-                        else:
-                            GLib.idle_add(
-                                self.update_loading_progress,
-                                frame + 1,
-                                frame_count,
-                                frames[:],
-                                durations[:],
-                                total_duration if frame == frame_count - 1 else None
-                            )
-                            update_batch = []
-
+            # Start loading
             self.info_label.set_text(f"Loading frames 0/{frame_count}")
-            import threading
-            thread = threading.Thread(target=load_frames_thread, args=(
-                self.compute_batch_size(frame_count),))
-            thread.daemon = True
-            thread.start()
+            
+            self.gif_loader.load_gif_async(
+                file_path=file_path,
+                progress_callback=self._on_loading_progress,
+                completion_callback=self._on_loading_complete
+            )
 
         except Exception as e:
             print(f"Error loading GIF: {e}")
-            self.state.frames = []
-            self.state.frame_durations = []
-            self.state.original_frame_durations = []
-            self.state.current_frame_index = 0
-            self.state.playhead_frame_index = 0
-
-    def compute_batch_size(self, frame_count):
-        return frame_count // 4
-
-    def update_loading_progress(self, current_frame, total_frames, frames, durations, total_duration=None):
-        """Update loading progress from background thread"""
-        self.state.frames = frames
-        self.state.frame_durations = durations
-        self.state.original_frame_durations = durations.copy()
+            self._reset_loading_state()
+    
+    def _on_loading_progress(self, progress: LoadProgress):
+        """Handle loading progress updates"""
+        self.state.frames = progress.frames
+        self.state.frame_durations = progress.durations
+        self.state.original_frame_durations = progress.durations.copy()
 
         self.info_label.set_text(
-            f"Loading frames {current_frame}/{total_frames}")
+            f"Loading frames {progress.current_frame}/{progress.total_frames}")
 
         # If this is the final update
-        if total_duration is not None:
+        if progress.total_duration is not None:
             # Update frameline with 1-based frame range
             self.frameline.min_value = 1
-            self.frameline.max_value = total_frames
+            self.frameline.max_value = progress.total_frames
             self.frameline.left_value = 1
-            self.frameline.right_value = total_frames
+            self.frameline.right_value = progress.total_frames
             self.frameline.queue_draw()
 
             self.info_label.set_text(
-                f"{total_frames} Frames • {total_duration:.2f} Seconds"
+                f"{progress.total_frames} Frames • {progress.total_duration:.2f} Seconds"
             )
 
             if self.state.frames:
                 self.display_frame(0)
                 self.overlay.drawing_area.queue_resize()
                 self.overlay.drawing_area.queue_draw()
+    
+    def _on_loading_complete(self, result: LoadResult = None, error: Exception = None):
+        """Handle loading completion"""
+        if error:
+            print(f"Error loading GIF: {error}")
+            self._reset_loading_state()
+            
+            # Show error dialog
+            error_dialog = Gtk.AlertDialog()
+            error_dialog.set_message("Error loading GIF")
+            error_dialog.set_detail(str(error))
+            error_dialog.show(self.get_root())
+        elif result:
+            # Store file information
+            self.state.original_file_path = result.file_path
+            # Extract filename without extension for saving
+            filename = os.path.basename(result.file_path)
+            self.state.original_file_name = os.path.splitext(filename)[0]
+    
+    def _reset_loading_state(self):
+        """Reset loading state on error"""
+        self.state.frames = []
+        self.state.frame_durations = []
+        self.state.original_frame_durations = []
+        self.state.current_frame_index = 0
+        self.state.playhead_frame_index = 0
 
-        return False  # Required for GLib.idle_add
+
 
     def display_frame(self, frame_index):
         """Display a specific frame in the image display"""
@@ -1017,28 +1006,8 @@ class EditorBox(Gtk.Box):
 
     def on_insert_frames(self, frameline, position, file_paths):
         try:
-            new_frames = []
-            new_durations = []
-
-            for path in file_paths:
-                if not os.path.exists(path):
-                    raise FileNotFoundError(f"File not found: {path}")
-
-                with Image.open(path) as img:
-                    if getattr(img, 'is_animated', False):
-                        # Handle animated GIFs
-                        for frame in range(img.n_frames):
-                            img.seek(frame)
-                            pixbuf = ImageConverter.pil_to_pixbuf(
-                                img.convert('RGBA'))
-                            new_frames.append(pixbuf)
-                            new_durations.append(img.info.get('duration', 100))
-                    else:
-                        # Handle static images
-                        pixbuf = ImageConverter.pil_to_pixbuf(
-                            img.convert('RGBA'))
-                        new_frames.append(pixbuf)
-                        new_durations.append(100)  # Default 100ms duration
+            # Use the GifLoader to load frames for insertion
+            new_frames, new_durations = self.gif_loader.load_images_for_insertion(file_paths)
 
             if new_frames:
                 insert_idx = max(0, position - 1)
