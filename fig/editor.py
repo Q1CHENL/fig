@@ -1,6 +1,7 @@
 
 from fig.overlay import CropTextOverlay
 from fig.frameline import FrameLine
+from fig.action_bar import EditorActionBar
 from fig.utils import clear_css, load_css
 from fig.image_converter import ImageConverter
 from fig.gif_loader import GifLoader, LoadProgress, LoadResult
@@ -154,49 +155,15 @@ class EditorBox(Gtk.Box):
         self.info_label.set_halign(Gtk.Align.CENTER)
         self.append(self.info_label)
 
-        action_button_size = (30, 30)
-
-        self.flip_button = Gtk.Button(icon_name="view-mirror-symbolic")
-        self.flip_button.set_tooltip_text("Flip")
-        self.flip_button.set_size_request(
-            action_button_size[0], action_button_size[1])
-        self.flip_button.connect('clicked', self.on_flip_clicked)
-
-        self.rotate_button = Gtk.Button(
-            icon_name="object-rotate-right-symbolic")
-        self.rotate_button.set_tooltip_text("Rotate")
-        self.rotate_button.set_size_request(
-            action_button_size[0], action_button_size[1])
-        self.rotate_button.connect('clicked', self.on_rotate_clicked)
-
-        self.text_button = Gtk.Button(icon_name="format-text-rich-symbolic")
-        self.text_button.set_size_request(
-            action_button_size[0], action_button_size[1])
-        self.text_button.set_tooltip_text("Add Text")
-        self.text_button.connect('clicked', self.on_text_clicked)
-
-        # todo colors
-        self.draw_button = Gtk.Button(icon_name="document-edit-symbolic")
-        self.draw_button.set_tooltip_text("Draw")
-        self.draw_button.set_size_request(
-            action_button_size[0], action_button_size[1])
-        self.draw_button.connect('clicked', self.on_draw_clicked)
-
-        self.crop_button = Gtk.Button(icon_name="edit-select-all-symbolic")
-        self.crop_button.set_tooltip_text("Crop")
-        self.crop_button.set_size_request(
-            action_button_size[0], action_button_size[1])
-        self.crop_button.connect('clicked', self.on_crop_clicked)
-
-        self.action_bar = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        self.action_bar.append(self.text_button)
-        self.action_bar.append(self.crop_button)
-        self.action_bar.append(self.flip_button)
-        self.action_bar.append(self.rotate_button)
-        self.action_bar.append(self.draw_button)
-        self.action_bar.set_halign(Gtk.Align.CENTER)
-        self.action_bar.set_margin_bottom(10)
+        # Create action bar with all editing buttons
+        self.action_bar = EditorActionBar(self)
+        
+        # Keep references to individual buttons for compatibility
+        self.flip_button = self.action_bar.flip_button
+        self.rotate_button = self.action_bar.rotate_button
+        self.text_button = self.action_bar.text_button
+        self.draw_button = self.action_bar.draw_button
+        self.crop_button = self.action_bar.crop_button
 
         self.append(self.action_bar)
         self.append(self.image_container)
@@ -620,13 +587,7 @@ class EditorBox(Gtk.Box):
 
     def update_action_bar_button(self, set, button):
         """Update CSS class for action bar button"""
-        clear_css(button)
-        if set:
-            button.add_css_class(
-                "action-button-dark-active" if self.state.is_dark else "action-button-light-active")
-        else:
-            button.add_css_class(
-                "action-button-dark" if self.state.is_dark else "action-button-light")
+        self.action_bar.update_button_state(button, set)
 
     def on_flip_clicked(self, button):
         """Flip all frames horizontally"""
@@ -814,49 +775,8 @@ class EditorBox(Gtk.Box):
         self.controls_box.add_css_class(
             "controls-box-dark" if is_dark else "controls-box-light")
 
-        clear_css(self.action_bar)
-        self.action_bar.add_css_class(
-            "action-bar-dark" if is_dark else "action-bar-light")
-
-        clear_css(self.flip_button)
-        if self.state.flipped:
-            self.flip_button.add_css_class(
-                "action-button-dark-active" if is_dark else "action-button-light-active")
-        else:
-            self.flip_button.add_css_class(
-                "action-button-dark" if is_dark else "action-button-light")
-
-        clear_css(self.crop_button)
-        if self.state.crop_mode:
-            self.crop_button.add_css_class(
-                "action-button-dark-active" if is_dark else "action-button-light-active")
-        else:
-            self.crop_button.add_css_class(
-                "action-button-dark" if is_dark else "action-button-light")
-
-        clear_css(self.rotate_button)
-        if self.state.rotated:
-            self.rotate_button.add_css_class(
-                "action-button-dark-active" if is_dark else "action-button-light-active")
-        else:
-            self.rotate_button.add_css_class(
-                "action-button-dark" if is_dark else "action-button-light")
-
-        clear_css(self.text_button)
-        if self.state.text_mode:
-            self.text_button.add_css_class(
-                "action-button-dark-active" if is_dark else "action-button-light-active")
-        else:
-            self.text_button.add_css_class(
-                "action-button-dark" if is_dark else "action-button-light")
-
-        clear_css(self.draw_button)
-        if self.state.draw_mode:
-            self.draw_button.add_css_class(
-                "action-button-dark-active" if is_dark else "action-button-light-active")
-        else:
-            self.draw_button.add_css_class(
-                "action-button-dark" if is_dark else "action-button-light")
+        # Update action bar theme
+        self.action_bar.update_theme(is_dark)
 
         self.frameline.update_theme(is_dark)
         self.overlay.update_theme(is_dark)
