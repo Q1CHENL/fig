@@ -112,8 +112,8 @@ def show_about_dialog(window):
     about.set_application_icon("io.github.Q1CHENL.fig")
     about.set_version("1.0.7")
     about.set_developer_name("Qichen Liu")
-    about.set_website("https://github.com/fig")
-    about.set_issue_url("https://github.com/fig/issues")
+    about.set_website("https://github.com/Q1CHENL/fig")
+    about.set_issue_url("https://github.com/Q1CHENL/fig/issues")
 
     about.set_release_notes("""
     <ul>
